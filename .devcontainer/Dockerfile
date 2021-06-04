@@ -44,6 +44,17 @@ ENV DEVCONTAINER=true
 COPY scripts/node.sh /tmp/
 RUN /tmp/node.sh 12.x
 
+# docker-client
+COPY scripts/docker-client.sh /tmp/
+RUN /tmp/docker-client.sh
+
+#Add user to docker group
+RUN sudo groupadd docker && sudo usermod -aG docker $USERNAME && newgrp docker
+
+# act
+COPY scripts/act.sh /tmp/
+RUN /tmp/act.sh
+
 # __DEVCONTAINER_SNIPPET_INSERT__ (control where snippets get inserted using the devcontainer CLI)
 
 # Switch back to dialog for any ad-hoc use of apt-get

@@ -7,6 +7,9 @@
 	"mounts": [
 		// Keep command history 
 		"source=devcontainer-build-run-bashhistory,target=/home/vscode/commandhistory",
+		// Mount host docker socket
+		"type=bind,source=/var/run/docker.sock,target=/var/run/docker.sock"
+	
 	],
 
 	// Set *default* container specific settings.json values on container create.
@@ -25,4 +28,7 @@
 	// "postCreateCommand": "echo hello",
 
 	"remoteUser": "vscode",
+	"extensions": [
+		"ms-azuretools.vscode-docker",
+	]
 }
