@@ -19,6 +19,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
 
+      - run: |
+          if [[ $GITHUB_ACTOR == "nektos/act" ]]; then checkout_path="devcontainer-build-run"; else checkout_path=""; fi
+          echo "::set-output name=checkout-path::$checkout_path"
+        id: checkout-path
+
       # Perform checkout to specific path when we're running in nektos/act - see https://github.com/nektos/act/commit/f29b1f2523f5162fa42554870269160a4fb51419
       - name: Checkout (nektos/act)
         uses: actions/checkout@v2
@@ -39,4 +44,6 @@ jobs:
 
       - uses: ./
         with:
+          checkoutPath: ${{ steps.checkout-path.outputs.checkout-path }}
+          imageName: ghcr.io/stuartleeks/test-devcontainer
           milliseconds: 1000
