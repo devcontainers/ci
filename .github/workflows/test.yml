@@ -18,9 +18,18 @@ jobs:
   test: # make sure the action works on a clean machine without building
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+
+      # Perform checkout to specific path when we're running in nektos/act - see https://github.com/nektos/act/commit/f29b1f2523f5162fa42554870269160a4fb51419
+      - name: Checkout (nektos/act)
+        uses: actions/checkout@v2
+        if: ${{ github.actor == "nektos/act" }}
         with:
-          path: devcontainer-build-run # https://github.com/nektos/act/commit/f29b1f2523f5162fa42554870269160a4fb51419
+           path: devcontainer-build-run
+      - name: Checkout (GitHub)
+        uses: actions/checkout@v2
+        if: ${{ github.actor != "nektos/act" }}
+
+      # - run: ls /workspaces/devcontainer-build-run
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v1

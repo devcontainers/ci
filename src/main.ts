@@ -5,9 +5,9 @@ import {wait} from './wait'
 async function run(): Promise<void> {
   try {
     core.info('Hello 👋')
+
     const r = await exec('docker', 'version')
     core.info(`Got exit code: ${r.exitCode}`)
-    core.info(`Stdout: ${r.stdout}`)
     core.info('Done')
     
     const ms: string = core.getInput('milliseconds')
@@ -34,6 +34,7 @@ async function exec(command: string, ...args: string[]): Promise<ExecResponse> {
 
   const options: actions_exec.ExecOptions = {
     ignoreReturnCode: true,
+    silent: true,
     listeners: {
       stdout: (data: Buffer) => {
         stdout += data.toString()
