@@ -19,7 +19,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
 
-      - run: |
+      - name: Determine checkout-path
+        run: |
           if [[ $GITHUB_ACTOR == "nektos/act" ]]; then checkout_path="devcontainer-build-run"; else checkout_path=""; fi
           echo "::set-output name=checkout-path::$checkout_path"
         id: checkout-path
@@ -42,8 +43,8 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v1
 
-      - uses: ./
+      - name: dev container!
+        uses: ./
         with:
           checkoutPath: ${{ steps.checkout-path.outputs.checkout-path }}
           imageName: ghcr.io/stuartleeks/test-devcontainer
-          milliseconds: 1000

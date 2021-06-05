@@ -5,6 +5,10 @@ inputs:
   image:
     required: true
     description: Image name (including registry)
+  checkoutPath:
+    required: false
+    description: Specify path to checked out folder if not using default (or for testing with nektos/act)
+    default: ""
 runs:
   using: 'node12'
   main: 'dist/index.js'
