@@ -42,10 +42,10 @@ const wait_1 = __webpack_require__(817);
 function run() {
     return __awaiter(this, void 0, void 0, function* () {
         try {
-            console.log("Hello 👋");
-            const r = yield exec("docker", "version");
-            console.log(`Got exit code: ${r.exitCode}`);
-            console.log(`Stdout: ${r.stdout}`);
+            core.info('Hello 👋');
+            const r = yield exec('docker', 'version');
+            core.info(`Got exit code: ${r.exitCode}`);
+            core.info(`Stdout: ${r.stdout}`);
             const ms = core.getInput('milliseconds');
             core.debug(`Waiting ${ms} milliseconds ...`); // debug is only output if you set the secret `ACTIONS_RUNNER_DEBUG` to true
             core.debug(new Date().toTimeString());
@@ -60,8 +60,8 @@ function run() {
 }
 function exec(command, ...args) {
     return __awaiter(this, void 0, void 0, function* () {
-        let stdout = "";
-        let stderr = "";
+        let stdout = '';
+        let stderr = '';
         const options = {
             ignoreReturnCode: true,
             listeners: {

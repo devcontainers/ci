@@ -1,14 +1,13 @@
 import * as core from '@actions/core'
 import * as actions_exec from '@actions/exec'
-import { wait } from './wait'
+import {wait} from './wait'
 
 async function run(): Promise<void> {
   try {
-
-    console.log("Hello 👋")
-    const r = await exec("docker", "version")
-    console.log(`Got exit code: ${r.exitCode}`)
-    console.log(`Stdout: ${r.stdout}`)
+    core.info('Hello 👋')
+    const r = await exec('docker', 'version')
+    core.info(`Got exit code: ${r.exitCode}`)
+    core.info(`Stdout: ${r.stdout}`)
 
     const ms: string = core.getInput('milliseconds')
     core.debug(`Waiting ${ms} milliseconds ...`) // debug is only output if you set the secret `ACTIONS_RUNNER_DEBUG` to true
@@ -24,14 +23,13 @@ async function run(): Promise<void> {
 }
 
 interface ExecResponse {
-  exitCode: number;
-  stdout: string;
-  stderr: string;
+  exitCode: number
+  stdout: string
+  stderr: string
 }
 async function exec(command: string, ...args: string[]): Promise<ExecResponse> {
-
-  let stdout: string = "";
-  let stderr: string = "";
+  let stdout = ''
+  let stderr = ''
 
   const options: actions_exec.ExecOptions = {
     ignoreReturnCode: true,
