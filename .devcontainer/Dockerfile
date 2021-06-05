@@ -53,7 +53,7 @@ RUN sudo groupadd docker && sudo usermod -aG docker $USERNAME && newgrp docker
 
 # act
 COPY scripts/act.sh /tmp/
-RUN /tmp/act.sh 0.2.20
+RUN /tmp/act.sh 0.2.21
 
 # __DEVCONTAINER_SNIPPET_INSERT__ (control where snippets get inserted using the devcontainer CLI)
 

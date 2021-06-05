@@ -19,6 +19,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
+        with:
+          path: devcontainer-build-run # https://github.com/nektos/act/commit/f29b1f2523f5162fa42554870269160a4fb51419
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v1
