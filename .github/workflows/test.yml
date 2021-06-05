@@ -21,7 +21,7 @@ jobs:
 
       - name: Determine checkout-path
         run: |
-          if [[ $GITHUB_ACTOR == "nektos/act" ]]; then checkout_path="devcontainer-build-run"; else checkout_path=""; fi
+          if [[ $GITHUB_ACTOR == "nektos/act" ]]; then checkout_path="devcontainer-build-run"; else checkout_path="."; fi
           echo "::set-output name=checkout-path::$checkout_path"
         id: checkout-path
 
@@ -35,7 +35,10 @@ jobs:
         uses: actions/checkout@v2
         if: ${{ github.actor != 'nektos/act' }}
 
-      # - run: ls /workspaces/devcontainer-build-run
+      - name: debugging...
+        run: |
+          echo $PWD
+          ls
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v1
