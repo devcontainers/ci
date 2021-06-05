@@ -8,7 +8,8 @@ async function run(): Promise<void> {
     const r = await exec('docker', 'version')
     core.info(`Got exit code: ${r.exitCode}`)
     core.info(`Stdout: ${r.stdout}`)
-
+    core.info('Done')
+    
     const ms: string = core.getInput('milliseconds')
     core.debug(`Waiting ${ms} milliseconds ...`) // debug is only output if you set the secret `ACTIONS_RUNNER_DEBUG` to true
 

@@ -46,6 +46,7 @@ function run() {
             const r = yield exec('docker', 'version');
             core.info(`Got exit code: ${r.exitCode}`);
             core.info(`Stdout: ${r.stdout}`);
+            core.info('Done');
             const ms = core.getInput('milliseconds');
             core.debug(`Waiting ${ms} milliseconds ...`); // debug is only output if you set the secret `ACTIONS_RUNNER_DEBUG` to true
             core.debug(new Date().toTimeString());
