@@ -66,9 +66,11 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.execWithOptions = exports.exec = void 0;
 const actions_exec = __importStar(__webpack_require__(514));
 function exec(command, ...args) {
-    return execWithOptions(command, {
-        silent: true
-    }, ...args);
+    return __awaiter(this, void 0, void 0, function* () {
+        return yield execWithOptions(command, {
+            silent: true
+        }, ...args);
+    });
 }
 exports.exec = exec;
 function execWithOptions(command, options, ...args) {
@@ -137,14 +139,16 @@ const core = __importStar(__webpack_require__(186));
 const exec_1 = __webpack_require__(757);
 const docker_1 = __webpack_require__(758);
 function run() {
-    const hasRunMain = core.getState('hasRunMain');
-    if (hasRunMain == "true") {
-        return runPost();
-    }
-    else {
-        core.saveState('hasRunMain', "true");
-        return runMain();
-    }
+    return __awaiter(this, void 0, void 0, function* () {
+        const hasRunMain = core.getState('hasRunMain');
+        if (hasRunMain === 'true') {
+            return yield runPost();
+        }
+        else {
+            core.saveState('hasRunMain', 'true');
+            return yield runMain();
+        }
+    });
 }
 function runMain() {
     return __awaiter(this, void 0, void 0, function* () {
@@ -155,17 +159,17 @@ function runMain() {
                 core.setFailed('docker buildx not available - set up with docker/setup-buildx-action');
                 return;
             }
-            yield exec_1.execWithOptions("bash", {
+            yield exec_1.execWithOptions('bash', {
                 silent: false
-            }, "-c", "echo $PWD");
-            yield exec_1.execWithOptions("bash", {
+            }, '-c', 'echo $PWD');
+            yield exec_1.execWithOptions('bash', {
                 silent: false
-            }, "-c", "ls");
-            const checkoutPath = core.getInput("checkoutPath");
+            }, '-c', 'ls');
+            const checkoutPath = core.getInput('checkoutPath');
             core.info(`checkout-path: ${checkoutPath}`);
-            const imageName = core.getInput("imageName", { required: true });
+            const imageName = core.getInput('imageName', { required: true });
             // TODO allow build args
-            let args = ['buildx', 'build'];
+            const args = ['buildx', 'build'];
             args.push('--tag');
             args.push(`${imageName}:latest`);
             args.push('--cache-from');
@@ -188,7 +192,7 @@ function runMain() {
 }
 function runPost() {
     return __awaiter(this, void 0, void 0, function* () {
-        core.info("TODO - push");
+        core.info('TODO - push');
     });
 }
 run();

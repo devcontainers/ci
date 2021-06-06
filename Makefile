@@ -6,6 +6,9 @@ help: ## show this help
 npm-install:
 	npm install
 
+lint:
+	npm run lint
+	
 build-package:
 	npm run build && npm run package
 

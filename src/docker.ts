@@ -1,4 +1,4 @@
-import { exec } from './exec'
+import {exec} from './exec'
 
 export async function isDockerBuildXInstalled(): Promise<boolean> {
   const r = await exec('docker', 'buildx', '--help')
