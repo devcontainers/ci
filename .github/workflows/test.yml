@@ -47,7 +47,7 @@ jobs:
           checkoutPath: ${{ steps.checkout-path.outputs.checkout-path }}
           imageName: ghcr.io/stuartleeks/test-devcontainer
 
-      - name: fail
-        run: |
-          echo "::error file=app.js,line=10,col=15::Something went wrong"
-          exit 1
+      # - name: fail
+      #   run: |
+      #     echo "::error file=app.js,line=10,col=15::Something went wrong"
+      #     exit 1
