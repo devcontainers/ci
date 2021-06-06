@@ -188,8 +188,7 @@ function runMain() {
 }
 function runPost() {
     return __awaiter(this, void 0, void 0, function* () {
-        core.info("TODO - push if success");
-        exec_1.execWithOptions("bash", { silent: false }, "-c", "printenv | sort");
+        core.info("TODO - push");
     });
 }
 run();
