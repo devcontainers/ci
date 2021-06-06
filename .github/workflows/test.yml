@@ -35,11 +35,6 @@ jobs:
         uses: actions/checkout@v2
         if: ${{ github.actor != 'nektos/act' }}
 
-      - name: debugging...
-        run: |
-          echo $PWD
-          ls
-
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v1
       
@@ -51,3 +46,8 @@ jobs:
         with:
           checkoutPath: ${{ steps.checkout-path.outputs.checkout-path }}
           imageName: ghcr.io/stuartleeks/test-devcontainer
+
+      - name: fail
+        run: |
+          echo "::error file=app.js,line=10,col=15::Something went wrong"
+          exit 1
