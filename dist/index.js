@@ -3,6 +3,103 @@ require('./sourcemap-register.js');module.exports =
 /******/ 	"use strict";
 /******/ 	var __webpack_modules__ = ({
 
+/***/ 758:
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.isDockerBuildXInstalled = void 0;
+const exec_1 = __webpack_require__(757);
+function isDockerBuildXInstalled() {
+    return __awaiter(this, void 0, void 0, function* () {
+        const r = yield exec_1.exec('docker', 'buildx', '--help');
+        return r.exitCode === 0;
+    });
+}
+exports.isDockerBuildXInstalled = isDockerBuildXInstalled;
+
+
+/***/ }),
+
+/***/ 757:
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    Object.defineProperty(o, k2, { enumerable: true, get: function() { return m[k]; } });
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.execWithOptions = exports.exec = void 0;
+const actions_exec = __importStar(__webpack_require__(514));
+function exec(command, ...args) {
+    return execWithOptions(command, {
+        silent: true
+    }, ...args);
+}
+exports.exec = exec;
+function execWithOptions(command, options, ...args) {
+    return __awaiter(this, void 0, void 0, function* () {
+        let stdout = '';
+        let stderr = '';
+        const actionOptions = {
+            ignoreReturnCode: true,
+            silent: options.silent,
+            listeners: {
+                stdout: (data) => {
+                    stdout += data.toString();
+                },
+                stderr: (data) => {
+                    stderr += data.toString();
+                }
+            }
+        };
+        const exitCode = yield actions_exec.exec(command, args, actionOptions);
+        return {
+            exitCode,
+            stdout,
+            stderr
+        };
+    });
+}
+exports.execWithOptions = execWithOptions;
+
+
+/***/ }),
+
 /***/ 109:
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
@@ -37,7 +134,8 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 const core = __importStar(__webpack_require__(186));
-const actions_exec = __importStar(__webpack_require__(514));
+const exec_1 = __webpack_require__(757);
+const docker_1 = __webpack_require__(758);
 function run() {
     const hasRunMain = core.getState('hasRunMain');
     if (hasRunMain == "true") {
@@ -52,15 +150,15 @@ function runMain() {
     return __awaiter(this, void 0, void 0, function* () {
         try {
             core.info('Hello 👋');
-            const buildXInstalled = yield isDockerBuildXInstalled();
+            const buildXInstalled = yield docker_1.isDockerBuildXInstalled();
             if (!buildXInstalled) {
                 core.setFailed('docker buildx not available - set up with docker/setup-buildx-action');
                 return;
             }
-            yield execWithOptions("bash", {
+            yield exec_1.execWithOptions("bash", {
                 silent: false
             }, "-c", "echo $PWD");
-            yield execWithOptions("bash", {
+            yield exec_1.execWithOptions("bash", {
                 silent: false
             }, "-c", "ls");
             const checkoutPath = core.getInput("checkoutPath");
@@ -75,13 +173,13 @@ function runMain() {
             args.push('--cache-to');
             args.push('type=inline');
             args.push(`${checkoutPath}/.devcontainer`); // TODO Add input
-            core.info("Building dev container...");
-            const buildResponse = yield execWithOptions('docker', { silent: false }, ...args);
-            if (buildResponse.exitCode != 0) {
-                core.setFailed(`build failed with ${buildResponse.exitCode}: ${buildResponse.stderr}`);
-                return;
-            }
-            core.info(buildResponse.stdout);
+            // core.info("Building dev container...")
+            // const buildResponse = await execWithOptions('docker', { silent: false }, ...args)
+            //   if (buildResponse.exitCode != 0) {
+            //     core.setFailed(`build failed with ${buildResponse.exitCode}: ${buildResponse.stderr}`)
+            //     return
+            //   }
+            //   core.info(buildResponse.stdout)
         }
         catch (error) {
             core.setFailed(error.message);
@@ -91,41 +189,7 @@ function runMain() {
 function runPost() {
     return __awaiter(this, void 0, void 0, function* () {
         core.info("TODO - push if success");
-    });
-}
-function isDockerBuildXInstalled() {
-    return __awaiter(this, void 0, void 0, function* () {
-        const r = yield exec('docker', 'buildx', '--help');
-        return r.exitCode === 0;
-    });
-}
-function exec(command, ...args) {
-    return execWithOptions(command, {
-        silent: true
-    }, ...args);
-}
-function execWithOptions(command, options, ...args) {
-    return __awaiter(this, void 0, void 0, function* () {
-        let stdout = '';
-        let stderr = '';
-        const actionOptions = {
-            ignoreReturnCode: true,
-            silent: options.silent,
-            listeners: {
-                stdout: (data) => {
-                    stdout += data.toString();
-                },
-                stderr: (data) => {
-                    stderr += data.toString();
-                }
-            }
-        };
-        const exitCode = yield actions_exec.exec(command, args, actionOptions);
-        return {
-            exitCode,
-            stdout,
-            stderr
-        };
+        exec_1.execWithOptions("bash", { silent: false }, "-c", "printenv | sort");
     });
 }
 run();

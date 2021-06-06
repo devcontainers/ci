@@ -1,6 +1,6 @@
 import * as core from '@actions/core'
-import * as actions_exec from '@actions/exec'
-import { wait } from './wait'
+import { execWithOptions, exec } from './exec'
+import {isDockerBuildXInstalled} from './docker'
 
 function run(): Promise<void> {
   const hasRunMain = core.getState('hasRunMain')
@@ -42,14 +42,14 @@ async function runMain(): Promise<void> {
     args.push('type=inline')
     args.push(`${checkoutPath}/.devcontainer`) // TODO Add input
 
-    core.info("Building dev container...")
-    const buildResponse = await execWithOptions('docker', { silent: false }, ...args)
+    // core.info("Building dev container...")
+    // const buildResponse = await execWithOptions('docker', { silent: false }, ...args)
 
-    if (buildResponse.exitCode != 0) {
-      core.setFailed(`build failed with ${buildResponse.exitCode}: ${buildResponse.stderr}`)
-      return
-    }
-    core.info(buildResponse.stdout)
+  //   if (buildResponse.exitCode != 0) {
+  //     core.setFailed(`build failed with ${buildResponse.exitCode}: ${buildResponse.stderr}`)
+  //     return
+  //   }
+  //   core.info(buildResponse.stdout)
   } catch (error) {
     core.setFailed(error.message)
   }
@@ -57,49 +57,7 @@ async function runMain(): Promise<void> {
 
 async function runPost(): Promise<void> {
   core.info("TODO - push if success")
-}
-
-async function isDockerBuildXInstalled(): Promise<boolean> {
-  const r = await exec('docker', 'buildx', '--help')
-  return r.exitCode === 0
-}
-
-interface ExecResponse {
-  exitCode: number
-  stdout: string
-  stderr: string
-}
-interface ExecOptions {
-  silent: boolean
-}
-function exec(command: string, ...args: string[]): Promise<ExecResponse> {
-  return execWithOptions(command, {
-    silent: true
-  }, ...args)
-}
-async function execWithOptions(command: string, options: ExecOptions, ...args: string[]): Promise<ExecResponse> {
-  let stdout = ''
-  let stderr = ''
-
-  const actionOptions: actions_exec.ExecOptions = {
-    ignoreReturnCode: true,
-    silent: options.silent,
-    listeners: {
-      stdout: (data: Buffer) => {
-        stdout += data.toString()
-      },
-      stderr: (data: Buffer) => {
-        stderr += data.toString()
-      }
-    }
-  }
-  const exitCode = await actions_exec.exec(command, args, actionOptions)
-
-  return {
-    exitCode,
-    stdout,
-    stderr
-  }
+  execWithOptions("bash", {silent:false}, "-c", "printenv | sort")
 }
 
 run()
