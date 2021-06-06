@@ -56,8 +56,7 @@ async function runMain(): Promise<void> {
 }
 
 async function runPost(): Promise<void> {
-  core.info("TODO - push if success")
-  execWithOptions("bash", {silent:false}, "-c", "printenv | sort")
+  core.info("TODO - push")
 }
 
 run()
