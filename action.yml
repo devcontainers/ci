@@ -2,7 +2,7 @@ name: 'devcontainer-build-run'
 description: 'Action to simplify using VS Code dev containers in GitHub workflows'
 author: 'stuartleeks'
 inputs:
-  image:
+  imageName:
     required: true
     description: Image name (including registry)
   checkoutPath:
