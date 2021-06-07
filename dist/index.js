@@ -177,13 +177,13 @@ function runMain() {
             args.push('--cache-to');
             args.push('type=inline');
             args.push(`${checkoutPath}/.devcontainer`); // TODO Add input
-            // core.info("Building dev container...")
-            // const buildResponse = await execWithOptions('docker', { silent: false }, ...args)
-            //   if (buildResponse.exitCode != 0) {
-            //     core.setFailed(`build failed with ${buildResponse.exitCode}: ${buildResponse.stderr}`)
-            //     return
-            //   }
-            //   core.info(buildResponse.stdout)
+            core.info("Building dev container...");
+            const buildResponse = yield exec_1.execWithOptions('docker', { silent: false }, ...args);
+            if (buildResponse.exitCode != 0) {
+                core.setFailed(`build failed with ${buildResponse.exitCode}: ${buildResponse.stderr}`);
+                return;
+            }
+            core.info(buildResponse.stdout);
         }
         catch (error) {
             core.setFailed(error.message);

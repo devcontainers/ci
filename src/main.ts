@@ -54,14 +54,14 @@ async function runMain(): Promise<void> {
     args.push('type=inline')
     args.push(`${checkoutPath}/.devcontainer`) // TODO Add input
 
-    // core.info("Building dev container...")
-    // const buildResponse = await execWithOptions('docker', { silent: false }, ...args)
+    core.info("Building dev container...")
+    const buildResponse = await execWithOptions('docker', { silent: false }, ...args)
 
-    //   if (buildResponse.exitCode != 0) {
-    //     core.setFailed(`build failed with ${buildResponse.exitCode}: ${buildResponse.stderr}`)
-    //     return
-    //   }
-    //   core.info(buildResponse.stdout)
+      if (buildResponse.exitCode != 0) {
+        core.setFailed(`build failed with ${buildResponse.exitCode}: ${buildResponse.stderr}`)
+        return
+      }
+      core.info(buildResponse.stdout)
   } catch (error) {
     core.setFailed(error.message)
   }
