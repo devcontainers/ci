@@ -5,6 +5,9 @@ inputs:
   imageName:
     required: true
     description: Image name (including registry)
+  runCmd:
+    required: true
+    description: Specify the command to run after building the dev container image
   checkoutPath:
     required: false
     description: Specify path to checked out folder if not using default (or for testing with nektos/act)

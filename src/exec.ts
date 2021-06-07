@@ -1,50 +1,50 @@
 import * as actions_exec from '@actions/exec'
 
 export interface ExecResponse {
-  exitCode: number
-  stdout: string
-  stderr: string
+	exitCode: number
+	stdout: string
+	stderr: string
 }
 interface ExecOptions {
-  silent: boolean
+	silent: boolean
 }
 export async function exec(
-  command: string,
-  ...args: string[]
+	command: string,
+	...args: string[]
 ): Promise<ExecResponse> {
-  return await execWithOptions(
-    command,
-    {
-      silent: true
-    },
-    ...args
-  )
+	return await execWithOptions(
+		command,
+		{
+			silent: true
+		},
+		...args
+	)
 }
 export async function execWithOptions(
-  command: string,
-  options: ExecOptions,
-  ...args: string[]
+	command: string,
+	options: ExecOptions,
+	...args: string[]
 ): Promise<ExecResponse> {
-  let stdout = ''
-  let stderr = ''
+	let stdout = ''
+	let stderr = ''
 
-  const actionOptions: actions_exec.ExecOptions = {
-    ignoreReturnCode: true,
-    silent: options.silent,
-    listeners: {
-      stdout: (data: Buffer) => {
-        stdout += data.toString()
-      },
-      stderr: (data: Buffer) => {
-        stderr += data.toString()
-      }
-    }
-  }
-  const exitCode = await actions_exec.exec(command, args, actionOptions)
+	const actionOptions: actions_exec.ExecOptions = {
+		ignoreReturnCode: true,
+		silent: options.silent,
+		listeners: {
+			stdout: (data: Buffer) => {
+				stdout += data.toString()
+			},
+			stderr: (data: Buffer) => {
+				stderr += data.toString()
+			}
+		}
+	}
+	const exitCode = await actions_exec.exec(command, args, actionOptions)
 
-  return {
-    exitCode,
-    stdout,
-    stderr
-  }
+	return {
+		exitCode,
+		stdout,
+		stderr
+	}
 }

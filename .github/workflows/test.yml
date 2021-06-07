@@ -53,6 +53,7 @@ jobs:
         with:
           checkoutPath: ${{ steps.checkout-path.outputs.checkout-path }}
           imageName: ghcr.io/stuartleeks/test-devcontainer
+          runCmd: sudo npm install && make build-package
 
       # - name: fail
       #   run: |
