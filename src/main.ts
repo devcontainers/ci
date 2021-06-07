@@ -19,7 +19,7 @@ async function runMain(): Promise<void> {
 		const buildXInstalled = await isDockerBuildXInstalled()
 		if (!buildXInstalled) {
 			core.setFailed(
-				'docker buildx not available - set up with docker/setup-buildx-action'
+				'docker buildx not available: add a step to set up with docker/setup-buildx-action'
 			)
 			return
 		}
@@ -43,9 +43,9 @@ async function runMain(): Promise<void> {
 async function runPost(): Promise<void> {
 	const headRef = process.env.GITHUB_HEAD_REF
 	if (headRef) {
-		core.info(`GITHUB_HEAD_REF set to ${headRef}`)
-	} else {
-		core.info(`GITHUB_HEAD_REF not set`)
+		// headRef only set on PR builds
+		core.info('Image push skipped for PR builds')
+		return
 	}
 	const imageName: string = core.getInput('imageName', {required: true})
 	await pushImage(imageName) // TODO - only push on main branch
@@ -67,7 +67,7 @@ async function buildImage(
 
 	// TODO HACK - use build-args from devcontainer.json
 
-	args.push(`${checkoutPath}/.devcontainer`) // TODO Add input
+	args.push(`${checkoutPath}/.devcontainer`) // TODO Add input/read from devcontainer.json
 
 	core.startGroup('Building dev container...')
 	try {
@@ -95,10 +95,9 @@ async function runContainer(
 	checkoutPath: string,
 	command: string
 ): Promise<boolean> {
-	// TODO - get run args from devcontainer.json? Or allow manually specifying them?
-
 	const checkoutPathAbsolute = getAbsolutePath(checkoutPath, process.cwd())
 
+	// TODO - get run args from devcontainer.json? Or allow manually specifying them?
 	const args = ['run']
 	args.push('--mount')
 	args.push(
