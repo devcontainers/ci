@@ -1,7 +1,9 @@
 import * as core from '@actions/core'
+import * as path from 'path'
+
 import {execWithOptions} from './exec'
 import {isDockerBuildXInstalled} from './docker'
-import * as path from 'path'
+import * as config from './config'
 
 async function run(): Promise<void> {
 	const hasRunMain = core.getState('hasRunMain')
@@ -67,7 +69,7 @@ async function buildImage(
 
 	// TODO HACK - use build-args from devcontainer.json
 
-	args.push(`${checkoutPath}/.devcontainer`) // TODO Add input/read from devcontainer.json
+	args.push(`${checkoutPath}/.devcontainer`) // TODO Add input for devcontainer path
 
 	core.startGroup('Building dev container...')
 	try {
@@ -97,20 +99,29 @@ async function runContainer(
 ): Promise<boolean> {
 	const checkoutPathAbsolute = getAbsolutePath(checkoutPath, process.cwd())
 
+	// TODO - add input for devcontainer path
+	const devcontainerJsonPath = path.join(
+		checkoutPathAbsolute,
+		'.devcontainer/devcontainer.json'
+	)
+	const devcontainerConfig = await config.loadFromFile(devcontainerJsonPath)
+
+	const workspaceFolder = config.getWorkspaceFolder(
+		devcontainerConfig,
+		checkoutPathAbsolute
+	)
+	const remoteUser = config.getRemoteUser(devcontainerConfig)
+
 	// TODO - get run args from devcontainer.json? Or allow manually specifying them?
 	const args = ['run']
-	args.push('--mount')
 	args.push(
-		`type=bind,src=${checkoutPathAbsolute},dst=/workspaces/devcontainer-build-run`
-	) // TODO HACK hardcoded workspace!
-	args.push('--workdir')
-	args.push('/workspaces/devcontainer-build-run') // TODO HACK hardcoded workspace
-	args.push('--user')
-	args.push('vscode') // TODO HACK hardcoded username
+		'--mount',
+		`type=bind,src=${checkoutPathAbsolute},dst=${workspaceFolder}`
+	)
+	args.push('--workdir', workspaceFolder)
+	args.push('--user', remoteUser) 
 	args.push(`${imageName}:latest`)
-	args.push('bash')
-	args.push('-c')
-	args.push(`sudo chown -R $(whoami) . && ${command}`) // TODO HACK sort out permissions/user alignment
+	args.push('bash', '-c', `sudo chown -R $(whoami) . && ${command}`) // TODO sort out permissions/user alignment
 
 	core.startGroup('Running dev container...')
 	try {
