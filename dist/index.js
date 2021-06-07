@@ -157,7 +157,7 @@ function runMain() {
             core.info('Hello 👋');
             const buildXInstalled = yield docker_1.isDockerBuildXInstalled();
             if (!buildXInstalled) {
-                core.setFailed('docker buildx not available - set up with docker/setup-buildx-action');
+                core.setFailed('docker buildx not available: add a step to set up with docker/setup-buildx-action');
                 return;
             }
             const checkoutPath = core.getInput('checkoutPath');
@@ -179,10 +179,9 @@ function runPost() {
     return __awaiter(this, void 0, void 0, function* () {
         const headRef = process.env.GITHUB_HEAD_REF;
         if (headRef) {
-            core.info(`GITHUB_HEAD_REF set to ${headRef}`);
-        }
-        else {
-            core.info(`GITHUB_HEAD_REF not set`);
+            // headRef only set on PR builds
+            core.info('Image push skipped for PR builds');
+            return;
         }
         const imageName = core.getInput('imageName', { required: true });
         yield pushImage(imageName); // TODO - only push on main branch
@@ -200,7 +199,7 @@ function buildImage(imageName, checkoutPath) {
         args.push('type=inline');
         args.push('--output=type=docker');
         // TODO HACK - use build-args from devcontainer.json
-        args.push(`${checkoutPath}/.devcontainer`); // TODO Add input
+        args.push(`${checkoutPath}/.devcontainer`); // TODO Add input/read from devcontainer.json
         core.startGroup('Building dev container...');
         try {
             const buildResponse = yield exec_1.execWithOptions('docker', { silent: false }, ...args);
@@ -218,8 +217,8 @@ function buildImage(imageName, checkoutPath) {
 }
 function runContainer(imageName, checkoutPath, command) {
     return __awaiter(this, void 0, void 0, function* () {
-        // TODO - get run args from devcontainer.json? Or allow manually specifying them?
         const checkoutPathAbsolute = getAbsolutePath(checkoutPath, process.cwd());
+        // TODO - get run args from devcontainer.json? Or allow manually specifying them?
         const args = ['run'];
         args.push('--mount');
         args.push(`type=bind,src=${checkoutPathAbsolute},dst=/workspaces/devcontainer-build-run`); // TODO HACK hardcoded workspace!
