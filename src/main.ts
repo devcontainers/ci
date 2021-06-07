@@ -23,23 +23,6 @@ async function runMain(): Promise<void> {
       return
     }
 
-    await execWithOptions(
-      'bash',
-      {
-        silent: false
-      },
-      '-c',
-      'echo $PWD'
-    )
-    await execWithOptions(
-      'bash',
-      {
-        silent: false
-      },
-      '-c',
-      'ls'
-    )
-
     const checkoutPath: string = core.getInput('checkoutPath')
     core.info(`checkout-path: ${checkoutPath}`)
     const imageName: string = core.getInput('imageName', {required: true})
@@ -54,14 +37,20 @@ async function runMain(): Promise<void> {
     args.push('type=inline')
     args.push(`${checkoutPath}/.devcontainer`) // TODO Add input
 
-    core.info("Building dev container...")
-    const buildResponse = await execWithOptions('docker', { silent: false }, ...args)
-
-      if (buildResponse.exitCode != 0) {
+    core.startGroup("Building dev container...");
+    try {
+      const buildResponse = await execWithOptions('docker', { silent: false }, ...args)
+      
+      if (buildResponse.exitCode !== 0) {
         core.setFailed(`build failed with ${buildResponse.exitCode}: ${buildResponse.stderr}`)
         return
       }
       core.info(buildResponse.stdout)
+    }
+    finally{
+      core.endGroup()
+    }
+
   } catch (error) {
     core.setFailed(error.message)
   }

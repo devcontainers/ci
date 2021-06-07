@@ -159,12 +159,6 @@ function runMain() {
                 core.setFailed('docker buildx not available - set up with docker/setup-buildx-action');
                 return;
             }
-            yield exec_1.execWithOptions('bash', {
-                silent: false
-            }, '-c', 'echo $PWD');
-            yield exec_1.execWithOptions('bash', {
-                silent: false
-            }, '-c', 'ls');
             const checkoutPath = core.getInput('checkoutPath');
             core.info(`checkout-path: ${checkoutPath}`);
             const imageName = core.getInput('imageName', { required: true });
@@ -177,13 +171,18 @@ function runMain() {
             args.push('--cache-to');
             args.push('type=inline');
             args.push(`${checkoutPath}/.devcontainer`); // TODO Add input
-            core.info("Building dev container...");
-            const buildResponse = yield exec_1.execWithOptions('docker', { silent: false }, ...args);
-            if (buildResponse.exitCode != 0) {
-                core.setFailed(`build failed with ${buildResponse.exitCode}: ${buildResponse.stderr}`);
-                return;
+            core.startGroup("Building dev container...");
+            try {
+                const buildResponse = yield exec_1.execWithOptions('docker', { silent: false }, ...args);
+                if (buildResponse.exitCode !== 0) {
+                    core.setFailed(`build failed with ${buildResponse.exitCode}: ${buildResponse.stderr}`);
+                    return;
+                }
+                core.info(buildResponse.stdout);
             }
-            core.info(buildResponse.stdout);
+            finally {
+                core.endGroup();
+            }
         }
         catch (error) {
             core.setFailed(error.message);
