@@ -36,7 +36,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.getRemoteUser = exports.getWorkspaceFolder = exports.loadFromFile = void 0;
+exports.getRemoteUser = exports.getWorkspaceFolder = exports.loadFromString = exports.loadFromFile = void 0;
 const path = __importStar(__webpack_require__(622));
 const fs = __importStar(__webpack_require__(747));
 const jsoncParser = __importStar(__webpack_require__(245));
@@ -44,11 +44,15 @@ const { readFile } = fs.promises;
 function loadFromFile(filepath) {
     return __awaiter(this, void 0, void 0, function* () {
         const jsonContent = yield readFile(filepath);
-        const config = jsoncParser.parse(jsonContent.toString());
-        return config;
+        return loadFromString(jsonContent.toString());
     });
 }
 exports.loadFromFile = loadFromFile;
+function loadFromString(content) {
+    const config = jsoncParser.parse(content);
+    return config;
+}
+exports.loadFromString = loadFromString;
 function getWorkspaceFolder(config, repoPath) {
     // https://code.visualstudio.com/docs/remote/containers-advanced#_changing-the-default-source-code-mount
     if (config.workspaceFolder) {
@@ -118,9 +122,11 @@ function isDockerBuildXInstalled() {
 }
 exports.isDockerBuildXInstalled = isDockerBuildXInstalled;
 function buildImage(imageName, checkoutPath, subFolder) {
+    var _a;
     return __awaiter(this, void 0, void 0, function* () {
         const folder = path_1.default.join(checkoutPath, subFolder);
-        // TODO allow build args
+        const devcontainerJsonPath = path_1.default.join(folder, '.devcontainer/devcontainer.json');
+        const devcontainerConfig = yield config.loadFromFile(devcontainerJsonPath);
         const args = ['buildx', 'build'];
         args.push('--tag');
         args.push(`${imageName}:latest`);
@@ -129,9 +135,13 @@ function buildImage(imageName, checkoutPath, subFolder) {
         args.push('--cache-to');
         args.push('type=inline');
         args.push('--output=type=docker');
-        // TODO HACK - use build-args from devcontainer.json
+        const buildArgs = (_a = devcontainerConfig.build) === null || _a === void 0 ? void 0 : _a.args;
+        for (const argName in buildArgs) {
+            const argValue = buildArgs[argName];
+            args.push('--build-arg', `${argName}=${argValue}`);
+        }
         args.push(`${folder}/.devcontainer`);
-        core.startGroup('Building dev container...');
+        core.startGroup('🏗 Building dev container...');
         try {
             const buildResponse = yield exec_1.execWithOptions('docker', { silent: false }, ...args);
             if (buildResponse.exitCode !== 0) {
@@ -162,7 +172,7 @@ function runContainer(imageName, checkoutPath, subFolder, command) {
         args.push('--user', remoteUser);
         args.push(`${imageName}:latest`);
         args.push('bash', '-c', `sudo chown -R $(whoami) . && ${command}`); // TODO sort out permissions/user alignment
-        core.startGroup('Running dev container...');
+        core.startGroup('🏃‍♀️ Running dev container...');
         try {
             const buildResponse = yield exec_1.execWithOptions('docker', { silent: false }, ...args);
             if (buildResponse.exitCode !== 0) {
@@ -348,7 +358,6 @@ function run() {
 function runMain() {
     return __awaiter(this, void 0, void 0, function* () {
         try {
-            core.info('Hello 👋');
             const buildXInstalled = yield docker_1.isDockerBuildXInstalled();
             if (!buildXInstalled) {
                 core.setFailed('docker buildx not available: add a step to set up with docker/setup-buildx-action');

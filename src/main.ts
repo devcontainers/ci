@@ -18,8 +18,6 @@ async function run(): Promise<void> {
 }
 async function runMain(): Promise<void> {
 	try {
-		core.info('Hello 👋')
-
 		const buildXInstalled = await isDockerBuildXInstalled()
 		if (!buildXInstalled) {
 			core.setFailed(

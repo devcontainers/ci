@@ -16,7 +16,12 @@ export async function buildImage(
 
 	const folder = path.join(checkoutPath, subFolder)
 
-	// TODO allow build args
+	const devcontainerJsonPath = path.join(
+		folder,
+		'.devcontainer/devcontainer.json'
+	)
+	const devcontainerConfig = await config.loadFromFile(devcontainerJsonPath)
+
 	const args = ['buildx', 'build']
 	args.push('--tag')
 	args.push(`${imageName}:latest`)
@@ -26,11 +31,15 @@ export async function buildImage(
 	args.push('type=inline')
 	args.push('--output=type=docker')
 
-	// TODO HACK - use build-args from devcontainer.json
+	const buildArgs = devcontainerConfig.build?.args
+	for (const argName in buildArgs) {
+		const argValue = buildArgs[argName]
+		args.push('--build-arg', `${argName}=${argValue}`);
+	}
 
 	args.push(`${folder}/.devcontainer`)
 
-	core.startGroup('Building dev container...')
+	core.startGroup('🏗 Building dev container...')
 	try {
 		const buildResponse = await execWithOptions(
 			'docker',
@@ -83,7 +92,7 @@ export async function runContainer(
 	args.push(`${imageName}:latest`)
 	args.push('bash', '-c', `sudo chown -R $(whoami) . && ${command}`) // TODO sort out permissions/user alignment
 
-	core.startGroup('Running dev container...')
+	core.startGroup('🏃‍♀️ Running dev container...')
 	try {
 		const buildResponse = await execWithOptions(
 			'docker',
