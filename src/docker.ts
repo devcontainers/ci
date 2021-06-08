@@ -89,6 +89,9 @@ export async function runContainer(
 	)
 	args.push('--workdir', workspaceFolder)
 	args.push('--user', remoteUser)
+	if (devcontainerConfig.runArgs) {
+		args.push(...devcontainerConfig.runArgs)
+	}
 	args.push(`${imageName}:latest`)
 	args.push('bash', '-c', `sudo chown -R $(whoami) . && ${command}`) // TODO sort out permissions/user alignment
 
