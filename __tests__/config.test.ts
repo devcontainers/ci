@@ -46,7 +46,11 @@ describe('load', () => {
 			"ARG1": "value1",
 			"ARG2": "value2",
 		}
-	}
+	},
+	"runArgs" : [
+		"test1",
+		"test2"
+	]
 }`
 	const devcontainerConfig = loadFromString(json)
 
@@ -67,5 +71,8 @@ describe('load', () => {
 		}
 		expect(devcontainerConfig.build.args['ARG1']).toBe('value1')
 		expect(devcontainerConfig.build.args['ARG2']).toBe('value2')
+	})
+	test('runArgs to be correct', () => {
+		expect(devcontainerConfig.runArgs).toStrictEqual(['test1', 'test2'])
 	})
 })

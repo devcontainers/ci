@@ -8,8 +8,9 @@ export interface DevContainerConfig { // see https://code.visualstudio.com/docs/
 	workspaceFolder?: string
 	remoteUser?: string
 	build?: {
-		args?: Record<string, string>;
+		args?: Record<string, string>
 	};
+	runArgs?: Array<string>
 }
 
 export async function loadFromFile(
@@ -19,7 +20,7 @@ export async function loadFromFile(
 	return loadFromString(jsonContent.toString())
 }
 
-export function loadFromString(content: string): DevContainerConfig{
+export function loadFromString(content: string): DevContainerConfig {
 	const config = jsoncParser.parse(content) as DevContainerConfig
 	return config
 }

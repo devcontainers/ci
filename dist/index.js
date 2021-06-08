@@ -170,6 +170,9 @@ function runContainer(imageName, checkoutPath, subFolder, command) {
         args.push('--mount', `type=bind,src=${checkoutPathAbsolute},dst=${workspaceFolder}`);
         args.push('--workdir', workspaceFolder);
         args.push('--user', remoteUser);
+        if (devcontainerConfig.runArgs) {
+            args.push(...devcontainerConfig.runArgs);
+        }
         args.push(`${imageName}:latest`);
         args.push('bash', '-c', `sudo chown -R $(whoami) . && ${command}`); // TODO sort out permissions/user alignment
         core.startGroup('🏃‍♀️ Running dev container...');
