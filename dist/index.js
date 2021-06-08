@@ -174,9 +174,8 @@ function runContainer(imageName, checkoutPath, subFolder, command, envs) {
             args.push(...devcontainerConfig.runArgs);
         }
         if (envs) {
-            for (const envName in envs) {
-                const envValue = envs[envName];
-                args.push('--env', `${envName}=${envValue}`);
+            for (const env of envs) {
+                args.push('--env', env);
             }
         }
         args.push(`${imageName}:latest`);
@@ -378,10 +377,11 @@ function runMain() {
             const imageName = core.getInput('imageName', { required: true });
             const subFolder = core.getInput('subFolder');
             const runCommand = core.getInput('runCmd', { required: true });
+            const envs = yield getInputList('env');
             if (!(yield docker_1.buildImage(imageName, checkoutPath, subFolder))) {
                 return;
             }
-            if (!(yield docker_1.runContainer(imageName, checkoutPath, subFolder, runCommand))) {
+            if (!(yield docker_1.runContainer(imageName, checkoutPath, subFolder, runCommand, envs))) {
                 return;
             }
         }
@@ -405,9 +405,9 @@ function runPost() {
 run();
 function getInputList(name) {
     return __awaiter(this, void 0, void 0, function* () {
-        let res = [];
+        const res = [];
         const input = core.getInput(name);
-        if (input == '') {
+        if (input === '') {
             return res;
         }
         const parsedInput = (yield sync_1.default(input, {
@@ -416,7 +416,7 @@ function getInputList(name) {
             relaxColumnCount: true,
             skipLinesWithEmptyValues: true
         }));
-        for (let items of parsedInput) {
+        for (const items of parsedInput) {
             res.push(...items);
         }
         return res.map(item => item.trim());

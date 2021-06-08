@@ -4,12 +4,13 @@ import * as jsoncParser from 'jsonc-parser'
 
 const {readFile} = fs.promises
 
-export interface DevContainerConfig { // see https://code.visualstudio.com/docs/remote/devcontainerjson-reference
+export interface DevContainerConfig {
+	// see https://code.visualstudio.com/docs/remote/devcontainerjson-reference
 	workspaceFolder?: string
 	remoteUser?: string
 	build?: {
 		args?: Record<string, string>
-	};
+	}
 	runArgs?: string[]
 }
 
