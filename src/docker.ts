@@ -13,7 +13,6 @@ export async function buildImage(
 	checkoutPath: string,
 	subFolder: string
 ): Promise<boolean> {
-
 	const folder = path.join(checkoutPath, subFolder)
 
 	const devcontainerJsonPath = path.join(
@@ -34,7 +33,7 @@ export async function buildImage(
 	const buildArgs = devcontainerConfig.build?.args
 	for (const argName in buildArgs) {
 		const argValue = buildArgs[argName]
-		args.push('--build-arg', `${argName}=${argValue}`);
+		args.push('--build-arg', `${argName}=${argValue}`)
 	}
 
 	args.push(`${folder}/.devcontainer`)
@@ -64,7 +63,8 @@ export async function runContainer(
 	imageName: string,
 	checkoutPath: string,
 	subFolder: string,
-	command: string
+	command: string,
+	envs?: string[]
 ): Promise<boolean> {
 	const checkoutPathAbsolute = getAbsolutePath(checkoutPath, process.cwd())
 	const folder = path.join(checkoutPathAbsolute, subFolder)
@@ -75,10 +75,7 @@ export async function runContainer(
 	)
 	const devcontainerConfig = await config.loadFromFile(devcontainerJsonPath)
 
-	const workspaceFolder = config.getWorkspaceFolder(
-		devcontainerConfig,
-		folder
-	)
+	const workspaceFolder = config.getWorkspaceFolder(devcontainerConfig, folder)
 	const remoteUser = config.getRemoteUser(devcontainerConfig)
 
 	// TODO - get run args from devcontainer.json? Or allow manually specifying them?
@@ -91,6 +88,11 @@ export async function runContainer(
 	args.push('--user', remoteUser)
 	if (devcontainerConfig.runArgs) {
 		args.push(...devcontainerConfig.runArgs)
+	}
+	if (envs) {
+		for (const env of envs) {
+			args.push('--env', env)
+		}
 	}
 	args.push(`${imageName}:latest`)
 	args.push('bash', '-c', `sudo chown -R $(whoami) . && ${command}`) // TODO sort out permissions/user alignment

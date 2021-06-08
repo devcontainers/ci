@@ -1,4 +1,5 @@
 import * as core from '@actions/core'
+import csvparse from 'csv-parse/lib/sync'
 
 import {
 	isDockerBuildXInstalled,
@@ -28,14 +29,23 @@ async function runMain(): Promise<void> {
 
 		const checkoutPath: string = core.getInput('checkoutPath')
 		const imageName: string = core.getInput('imageName', {required: true})
-		const subFolder: string = core.getInput('subFolder',)
+		const subFolder: string = core.getInput('subFolder')
 		const runCommand: string = core.getInput('runCmd', {required: true})
+		const envs: string[] = await getInputList('env')
 
 		if (!(await buildImage(imageName, checkoutPath, subFolder))) {
 			return
 		}
 
-		if (!(await runContainer(imageName, checkoutPath, subFolder, runCommand))) {
+		if (
+			!(await runContainer(
+				imageName,
+				checkoutPath,
+				subFolder,
+				runCommand,
+				envs
+			))
+		) {
 			return
 		}
 	} catch (error) {
@@ -55,3 +65,25 @@ async function runPost(): Promise<void> {
 }
 
 run()
+
+async function getInputList(name: string): Promise<string[]> {
+	const res: string[] = []
+
+	const input = core.getInput(name)
+	if (input === '') {
+		return res
+	}
+
+	const parsedInput = (await csvparse(input, {
+		columns: false,
+		relax: true,
+		relaxColumnCount: true,
+		skipLinesWithEmptyValues: true
+	})) as string[][]
+
+	for (const items of parsedInput) {
+		res.push(...items)
+	}
+
+	return res.map(item => item.trim())
+}
