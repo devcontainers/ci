@@ -10,7 +10,7 @@ export interface DevContainerConfig { // see https://code.visualstudio.com/docs/
 	build?: {
 		args?: Record<string, string>
 	};
-	runArgs?: Array<string>
+	runArgs?: string[]
 }
 
 export async function loadFromFile(
