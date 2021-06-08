@@ -1,4 +1,6 @@
 import * as core from '@actions/core'
+import {Parser} from 'csv-parse'
+import csvparse from 'csv-parse/lib/sync'
 
 import {
 	isDockerBuildXInstalled,
@@ -55,3 +57,26 @@ async function runPost(): Promise<void> {
 }
 
 run()
+
+
+async function getInputList(name: string): Promise<string[]> {
+	let res: string[] = [];
+
+	const input = core.getInput(name);
+	if (input == '') {
+		return res;
+	}
+
+	const parsedInput = (await csvparse(input, {
+		columns: false,
+		relax: true,
+		relaxColumnCount: true,
+		skipLinesWithEmptyValues: true
+	})) as string[][]
+
+	for (let items of parsedInput) {
+		res.push(...items);
+	}
+
+	return res.map(item => item.trim());
+}

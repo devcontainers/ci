@@ -64,7 +64,8 @@ export async function runContainer(
 	imageName: string,
 	checkoutPath: string,
 	subFolder: string,
-	command: string
+	command: string,
+	envs?: Record<string,string>
 ): Promise<boolean> {
 	const checkoutPathAbsolute = getAbsolutePath(checkoutPath, process.cwd())
 	const folder = path.join(checkoutPathAbsolute, subFolder)
@@ -91,6 +92,12 @@ export async function runContainer(
 	args.push('--user', remoteUser)
 	if (devcontainerConfig.runArgs) {
 		args.push(...devcontainerConfig.runArgs)
+	}
+	if (envs){
+		for (const envName in envs) {
+			const envValue = envs[envName]
+			args.push('--env', `${envName}=${envValue}`);
+		}
 	}
 	args.push(`${imageName}:latest`)
 	args.push('bash', '-c', `sudo chown -R $(whoami) . && ${command}`) // TODO sort out permissions/user alignment

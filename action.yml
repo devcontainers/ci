@@ -16,6 +16,9 @@ inputs:
     required: false
     description: Specify path to checked out folder if not using default (or for testing with nektos/act)
     default: .
+  env:
+    required: false
+    description: Specify environment variables to pass to the docker run command
 runs:
   using: 'node12'
   main: 'dist/index.js'
