@@ -10,9 +10,18 @@ export async function isDockerBuildXInstalled(): Promise<boolean> {
 }
 export async function buildImage(
 	imageName: string,
-	checkoutPath: string
+	checkoutPath: string,
+	subFolder: string
 ): Promise<boolean> {
-	// TODO allow build args
+
+	const folder = path.join(checkoutPath, subFolder)
+
+	const devcontainerJsonPath = path.join(
+		folder,
+		'.devcontainer/devcontainer.json'
+	)
+	const devcontainerConfig = await config.loadFromFile(devcontainerJsonPath)
+
 	const args = ['buildx', 'build']
 	args.push('--tag')
 	args.push(`${imageName}:latest`)
@@ -22,11 +31,15 @@ export async function buildImage(
 	args.push('type=inline')
 	args.push('--output=type=docker')
 
-	// TODO HACK - use build-args from devcontainer.json
+	const buildArgs = devcontainerConfig.build?.args
+	for (const argName in buildArgs) {
+		const argValue = buildArgs[argName]
+		args.push('--build-arg', `${argName}=${argValue}`);
+	}
 
-	args.push(`${checkoutPath}/.devcontainer`) // TODO Add input for devcontainer path
+	args.push(`${folder}/.devcontainer`)
 
-	core.startGroup('Building dev container...')
+	core.startGroup('🏗 Building dev container...')
 	try {
 		const buildResponse = await execWithOptions(
 			'docker',
@@ -50,20 +63,21 @@ export async function buildImage(
 export async function runContainer(
 	imageName: string,
 	checkoutPath: string,
+	subFolder: string,
 	command: string
 ): Promise<boolean> {
 	const checkoutPathAbsolute = getAbsolutePath(checkoutPath, process.cwd())
+	const folder = path.join(checkoutPathAbsolute, subFolder)
 
-	// TODO - add input for devcontainer path
 	const devcontainerJsonPath = path.join(
-		checkoutPathAbsolute,
+		folder,
 		'.devcontainer/devcontainer.json'
 	)
 	const devcontainerConfig = await config.loadFromFile(devcontainerJsonPath)
 
 	const workspaceFolder = config.getWorkspaceFolder(
 		devcontainerConfig,
-		checkoutPathAbsolute
+		folder
 	)
 	const remoteUser = config.getRemoteUser(devcontainerConfig)
 
@@ -78,7 +92,7 @@ export async function runContainer(
 	args.push(`${imageName}:latest`)
 	args.push('bash', '-c', `sudo chown -R $(whoami) . && ${command}`) // TODO sort out permissions/user alignment
 
-	core.startGroup('Running dev container...')
+	core.startGroup('🏃‍♀️ Running dev container...')
 	try {
 		const buildResponse = await execWithOptions(
 			'docker',
@@ -92,7 +106,6 @@ export async function runContainer(
 			)
 			return false
 		}
-		core.info(buildResponse.stdout)
 		return true
 	} finally {
 		core.endGroup()
@@ -117,7 +130,6 @@ export async function pushImage(imageName: string): Promise<boolean> {
 			)
 			return false
 		}
-		core.info(buildResponse.stdout)
 		return true
 	} finally {
 		core.endGroup()

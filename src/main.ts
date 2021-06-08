@@ -18,8 +18,6 @@ async function run(): Promise<void> {
 }
 async function runMain(): Promise<void> {
 	try {
-		core.info('Hello 👋')
-
 		const buildXInstalled = await isDockerBuildXInstalled()
 		if (!buildXInstalled) {
 			core.setFailed(
@@ -30,13 +28,14 @@ async function runMain(): Promise<void> {
 
 		const checkoutPath: string = core.getInput('checkoutPath')
 		const imageName: string = core.getInput('imageName', {required: true})
+		const subFolder: string = core.getInput('subFolder',)
 		const runCommand: string = core.getInput('runCmd', {required: true})
 
-		if (!(await buildImage(imageName, checkoutPath))) {
+		if (!(await buildImage(imageName, checkoutPath, subFolder))) {
 			return
 		}
 
-		if (!(await runContainer(imageName, checkoutPath, runCommand))) {
+		if (!(await runContainer(imageName, checkoutPath, subFolder, runCommand))) {
 			return
 		}
 	} catch (error) {

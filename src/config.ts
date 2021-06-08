@@ -4,16 +4,23 @@ import * as jsoncParser from 'jsonc-parser'
 
 const {readFile} = fs.promises
 
-export interface DevContainerConfig {
+export interface DevContainerConfig { // see https://code.visualstudio.com/docs/remote/devcontainerjson-reference
 	workspaceFolder?: string
 	remoteUser?: string
+	build?: {
+		args?: Record<string, string>;
+	};
 }
 
 export async function loadFromFile(
 	filepath: string
 ): Promise<DevContainerConfig> {
 	const jsonContent = await readFile(filepath)
-	const config = jsoncParser.parse(jsonContent.toString()) as DevContainerConfig
+	return loadFromString(jsonContent.toString())
+}
+
+export function loadFromString(content: string): DevContainerConfig{
+	const config = jsoncParser.parse(content) as DevContainerConfig
 	return config
 }
 

@@ -1,7 +1,8 @@
 import {
 	DevContainerConfig,
 	getRemoteUser,
-	getWorkspaceFolder
+	getWorkspaceFolder,
+	loadFromString
 } from '../src/config'
 
 describe('getWorkspaceFolder', () => {
@@ -33,5 +34,38 @@ describe('getRemoteUser', () => {
 		const devcontainerConfig: DevContainerConfig = {}
 		const result = getRemoteUser(devcontainerConfig)
 		expect(result).toBe('root')
+	})
+})
+
+describe('load', () => {
+	const json = `{
+	"workspaceFolder": "/workspace/path",
+	"remoteUser": "myUser",
+	"build" : {
+		"args" : {
+			"ARG1": "value1",
+			"ARG2": "value2",
+		}
+	}
+}`
+	const devcontainerConfig = loadFromString(json)
+
+	test('workspaceFolder is correct', () => {
+		expect(devcontainerConfig.workspaceFolder).toBe('/workspace/path')
+	})
+	test('remoteUser is correct', () => {
+		expect(devcontainerConfig.remoteUser).toBe('myUser')
+	})
+	test('build.args to be correct', () => {
+		if (!devcontainerConfig.build){
+			expect(devcontainerConfig.build).toBeDefined()
+			return
+		}
+		if (!devcontainerConfig.build.args){
+			expect(devcontainerConfig.build.args).toBeDefined()
+			return
+		}
+		expect(devcontainerConfig.build.args['ARG1']).toBe('value1')
+		expect(devcontainerConfig.build.args['ARG2']).toBe('value2')
 	})
 })
