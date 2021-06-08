@@ -8,7 +8,11 @@ export interface DevContainerConfig {
 	// see https://code.visualstudio.com/docs/remote/devcontainerjson-reference
 	workspaceFolder?: string
 	remoteUser?: string
+	dockerFile?: string
+	context?: string
 	build?: {
+		dockerfile?: string
+		context?: string
 		args?: Record<string, string>
 	}
 	runArgs?: string[]
@@ -40,4 +44,12 @@ export function getWorkspaceFolder(
 export function getRemoteUser(config: DevContainerConfig): string {
 	// https://code.visualstudio.com/docs/remote/containers-advanced#_specifying-a-user-for-vs-code
 	return config.remoteUser ?? 'root'
+}
+
+export function getDockerfile(config: DevContainerConfig): string | undefined {
+	return config.build?.dockerfile ?? config.dockerFile
+}
+
+export function getContext(config: DevContainerConfig): string | undefined {
+	return config.build?.context ?? config.context
 }
