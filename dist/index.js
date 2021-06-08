@@ -72,6 +72,25 @@ exports.getRemoteUser = getRemoteUser;
 
 "use strict";
 
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    Object.defineProperty(o, k2, { enumerable: true, get: function() { return m[k]; } });
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -81,9 +100,16 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.isDockerBuildXInstalled = void 0;
+exports.pushImage = exports.runContainer = exports.buildImage = exports.isDockerBuildXInstalled = void 0;
+const path_1 = __importDefault(__webpack_require__(622));
+const core = __importStar(__webpack_require__(186));
+const config = __importStar(__webpack_require__(88));
 const exec_1 = __webpack_require__(757);
+const file_1 = __webpack_require__(14);
 function isDockerBuildXInstalled() {
     return __awaiter(this, void 0, void 0, function* () {
         const r = yield exec_1.exec('docker', 'buildx', '--help');
@@ -91,6 +117,86 @@ function isDockerBuildXInstalled() {
     });
 }
 exports.isDockerBuildXInstalled = isDockerBuildXInstalled;
+function buildImage(imageName, checkoutPath) {
+    return __awaiter(this, void 0, void 0, function* () {
+        // TODO allow build args
+        const args = ['buildx', 'build'];
+        args.push('--tag');
+        args.push(`${imageName}:latest`);
+        args.push('--cache-from');
+        args.push(`type=registry,ref=${imageName}:latest`);
+        args.push('--cache-to');
+        args.push('type=inline');
+        args.push('--output=type=docker');
+        // TODO HACK - use build-args from devcontainer.json
+        args.push(`${checkoutPath}/.devcontainer`); // TODO Add input for devcontainer path
+        core.startGroup('Building dev container...');
+        try {
+            const buildResponse = yield exec_1.execWithOptions('docker', { silent: false }, ...args);
+            if (buildResponse.exitCode !== 0) {
+                core.setFailed(`build failed with ${buildResponse.exitCode}: ${buildResponse.stderr}`);
+                return false;
+            }
+            core.info(buildResponse.stdout);
+            return true;
+        }
+        finally {
+            core.endGroup();
+        }
+    });
+}
+exports.buildImage = buildImage;
+function runContainer(imageName, checkoutPath, command) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const checkoutPathAbsolute = file_1.getAbsolutePath(checkoutPath, process.cwd());
+        // TODO - add input for devcontainer path
+        const devcontainerJsonPath = path_1.default.join(checkoutPathAbsolute, '.devcontainer/devcontainer.json');
+        const devcontainerConfig = yield config.loadFromFile(devcontainerJsonPath);
+        const workspaceFolder = config.getWorkspaceFolder(devcontainerConfig, checkoutPathAbsolute);
+        const remoteUser = config.getRemoteUser(devcontainerConfig);
+        // TODO - get run args from devcontainer.json? Or allow manually specifying them?
+        const args = ['run'];
+        args.push('--mount', `type=bind,src=${checkoutPathAbsolute},dst=${workspaceFolder}`);
+        args.push('--workdir', workspaceFolder);
+        args.push('--user', remoteUser);
+        args.push(`${imageName}:latest`);
+        args.push('bash', '-c', `sudo chown -R $(whoami) . && ${command}`); // TODO sort out permissions/user alignment
+        core.startGroup('Running dev container...');
+        try {
+            const buildResponse = yield exec_1.execWithOptions('docker', { silent: false }, ...args);
+            if (buildResponse.exitCode !== 0) {
+                core.setFailed(`run failed with ${buildResponse.exitCode}: ${buildResponse.stderr}`);
+                return false;
+            }
+            core.info(buildResponse.stdout);
+            return true;
+        }
+        finally {
+            core.endGroup();
+        }
+    });
+}
+exports.runContainer = runContainer;
+function pushImage(imageName) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const args = ['push'];
+        args.push(`${imageName}:latest`);
+        core.startGroup('Pushing image...');
+        try {
+            const buildResponse = yield exec_1.execWithOptions('docker', { silent: false }, ...args);
+            if (buildResponse.exitCode !== 0) {
+                core.setFailed(`push failed with ${buildResponse.exitCode}: ${buildResponse.stderr}`);
+                return false;
+            }
+            core.info(buildResponse.stdout);
+            return true;
+        }
+        finally {
+            core.endGroup();
+        }
+    });
+}
+exports.pushImage = pushImage;
 
 
 /***/ }),
@@ -168,6 +274,28 @@ exports.execWithOptions = execWithOptions;
 
 /***/ }),
 
+/***/ 14:
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+"use strict";
+
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.getAbsolutePath = void 0;
+const path_1 = __importDefault(__webpack_require__(622));
+function getAbsolutePath(inputPath, referencePath) {
+    if (path_1.default.isAbsolute(inputPath)) {
+        return inputPath;
+    }
+    return path_1.default.join(referencePath, inputPath);
+}
+exports.getAbsolutePath = getAbsolutePath;
+
+
+/***/ }),
+
 /***/ 109:
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
@@ -203,10 +331,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 const core = __importStar(__webpack_require__(186));
-const path = __importStar(__webpack_require__(622));
-const exec_1 = __webpack_require__(757);
 const docker_1 = __webpack_require__(758);
-const config = __importStar(__webpack_require__(88));
 function run() {
     return __awaiter(this, void 0, void 0, function* () {
         const hasRunMain = core.getState('hasRunMain');
@@ -231,10 +356,10 @@ function runMain() {
             const checkoutPath = core.getInput('checkoutPath');
             const imageName = core.getInput('imageName', { required: true });
             const runCommand = core.getInput('runCmd', { required: true });
-            if (!(yield buildImage(imageName, checkoutPath))) {
+            if (!(yield docker_1.buildImage(imageName, checkoutPath))) {
                 return;
             }
-            if (!(yield runContainer(imageName, checkoutPath, runCommand))) {
+            if (!(yield docker_1.runContainer(imageName, checkoutPath, runCommand))) {
                 return;
             }
         }
@@ -252,91 +377,8 @@ function runPost() {
             return;
         }
         const imageName = core.getInput('imageName', { required: true });
-        yield pushImage(imageName); // TODO - only push on main branch
+        yield docker_1.pushImage(imageName); // TODO - only push on main branch
     });
-}
-function buildImage(imageName, checkoutPath) {
-    return __awaiter(this, void 0, void 0, function* () {
-        // TODO allow build args
-        const args = ['buildx', 'build'];
-        args.push('--tag');
-        args.push(`${imageName}:latest`);
-        args.push('--cache-from');
-        args.push(`type=registry,ref=${imageName}:latest`);
-        args.push('--cache-to');
-        args.push('type=inline');
-        args.push('--output=type=docker');
-        // TODO HACK - use build-args from devcontainer.json
-        args.push(`${checkoutPath}/.devcontainer`); // TODO Add input for devcontainer path
-        core.startGroup('Building dev container...');
-        try {
-            const buildResponse = yield exec_1.execWithOptions('docker', { silent: false }, ...args);
-            if (buildResponse.exitCode !== 0) {
-                core.setFailed(`build failed with ${buildResponse.exitCode}: ${buildResponse.stderr}`);
-                return false;
-            }
-            core.info(buildResponse.stdout);
-            return true;
-        }
-        finally {
-            core.endGroup();
-        }
-    });
-}
-function runContainer(imageName, checkoutPath, command) {
-    return __awaiter(this, void 0, void 0, function* () {
-        const checkoutPathAbsolute = getAbsolutePath(checkoutPath, process.cwd());
-        // TODO - add input for devcontainer path
-        const devcontainerJsonPath = path.join(checkoutPathAbsolute, '.devcontainer/devcontainer.json');
-        const devcontainerConfig = yield config.loadFromFile(devcontainerJsonPath);
-        const workspaceFolder = config.getWorkspaceFolder(devcontainerConfig, checkoutPathAbsolute);
-        const remoteUser = config.getRemoteUser(devcontainerConfig);
-        // TODO - get run args from devcontainer.json? Or allow manually specifying them?
-        const args = ['run'];
-        args.push('--mount', `type=bind,src=${checkoutPathAbsolute},dst=${workspaceFolder}`);
-        args.push('--workdir', workspaceFolder);
-        args.push('--user', remoteUser);
-        args.push(`${imageName}:latest`);
-        args.push('bash', '-c', `sudo chown -R $(whoami) . && ${command}`); // TODO sort out permissions/user alignment
-        core.startGroup('Running dev container...');
-        try {
-            const buildResponse = yield exec_1.execWithOptions('docker', { silent: false }, ...args);
-            if (buildResponse.exitCode !== 0) {
-                core.setFailed(`run failed with ${buildResponse.exitCode}: ${buildResponse.stderr}`);
-                return false;
-            }
-            core.info(buildResponse.stdout);
-            return true;
-        }
-        finally {
-            core.endGroup();
-        }
-    });
-}
-function pushImage(imageName) {
-    return __awaiter(this, void 0, void 0, function* () {
-        const args = ['push'];
-        args.push(`${imageName}:latest`);
-        core.startGroup('Pushing image...');
-        try {
-            const buildResponse = yield exec_1.execWithOptions('docker', { silent: false }, ...args);
-            if (buildResponse.exitCode !== 0) {
-                core.setFailed(`push failed with ${buildResponse.exitCode}: ${buildResponse.stderr}`);
-                return false;
-            }
-            core.info(buildResponse.stdout);
-            return true;
-        }
-        finally {
-            core.endGroup();
-        }
-    });
-}
-function getAbsolutePath(inputPath, referencePath) {
-    if (path.isAbsolute(inputPath)) {
-        return inputPath;
-    }
-    return path.join(referencePath, inputPath);
 }
 run();
 
