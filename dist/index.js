@@ -179,7 +179,6 @@ function runContainer(imageName, checkoutPath, subFolder, command) {
                 core.setFailed(`run failed with ${buildResponse.exitCode}: ${buildResponse.stderr}`);
                 return false;
             }
-            core.info(buildResponse.stdout);
             return true;
         }
         finally {
@@ -199,7 +198,6 @@ function pushImage(imageName) {
                 core.setFailed(`push failed with ${buildResponse.exitCode}: ${buildResponse.stderr}`);
                 return false;
             }
-            core.info(buildResponse.stdout);
             return true;
         }
         finally {

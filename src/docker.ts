@@ -106,7 +106,6 @@ export async function runContainer(
 			)
 			return false
 		}
-		core.info(buildResponse.stdout)
 		return true
 	} finally {
 		core.endGroup()
@@ -131,7 +130,6 @@ export async function pushImage(imageName: string): Promise<boolean> {
 			)
 			return false
 		}
-		core.info(buildResponse.stdout)
 		return true
 	} finally {
 		core.endGroup()
