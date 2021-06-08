@@ -36,7 +36,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.getRemoteUser = exports.getWorkspaceFolder = exports.loadFromString = exports.loadFromFile = void 0;
+exports.getContext = exports.getDockerfile = exports.getRemoteUser = exports.getWorkspaceFolder = exports.loadFromString = exports.loadFromFile = void 0;
 const path = __importStar(__webpack_require__(622));
 const fs = __importStar(__webpack_require__(747));
 const jsoncParser = __importStar(__webpack_require__(245));
@@ -67,6 +67,16 @@ function getRemoteUser(config) {
     return (_a = config.remoteUser) !== null && _a !== void 0 ? _a : 'root';
 }
 exports.getRemoteUser = getRemoteUser;
+function getDockerfile(config) {
+    var _a, _b;
+    return (_b = (_a = config.build) === null || _a === void 0 ? void 0 : _a.dockerfile) !== null && _b !== void 0 ? _b : config.dockerFile;
+}
+exports.getDockerfile = getDockerfile;
+function getContext(config) {
+    var _a, _b;
+    return (_b = (_a = config.build) === null || _a === void 0 ? void 0 : _a.context) !== null && _b !== void 0 ? _b : config.context;
+}
+exports.getContext = getContext;
 
 
 /***/ }),
@@ -122,11 +132,18 @@ function isDockerBuildXInstalled() {
 }
 exports.isDockerBuildXInstalled = isDockerBuildXInstalled;
 function buildImage(imageName, checkoutPath, subFolder) {
-    var _a;
+    var _a, _b;
     return __awaiter(this, void 0, void 0, function* () {
         const folder = path_1.default.join(checkoutPath, subFolder);
         const devcontainerJsonPath = path_1.default.join(folder, '.devcontainer/devcontainer.json');
         const devcontainerConfig = yield config.loadFromFile(devcontainerJsonPath);
+        const configDockerfile = config.getDockerfile(devcontainerConfig);
+        if (!configDockerfile) {
+            throw new Error('dockerfile not set in devcontainer.json - devcontainer-build-run currently only supports Dockerfile-based dev containers');
+        }
+        const dockerfilePath = path_1.default.join(folder, '.devcontainer', configDockerfile);
+        const configContext = (_a = config.getContext(devcontainerConfig)) !== null && _a !== void 0 ? _a : '';
+        const contextPath = path_1.default.join(folder, '.devcontainer', configContext);
         const args = ['buildx', 'build'];
         args.push('--tag');
         args.push(`${imageName}:latest`);
@@ -135,12 +152,13 @@ function buildImage(imageName, checkoutPath, subFolder) {
         args.push('--cache-to');
         args.push('type=inline');
         args.push('--output=type=docker');
-        const buildArgs = (_a = devcontainerConfig.build) === null || _a === void 0 ? void 0 : _a.args;
+        const buildArgs = (_b = devcontainerConfig.build) === null || _b === void 0 ? void 0 : _b.args;
         for (const argName in buildArgs) {
             const argValue = buildArgs[argName];
             args.push('--build-arg', `${argName}=${argValue}`);
         }
-        args.push(`${folder}/.devcontainer`);
+        args.push('-f', dockerfilePath);
+        args.push(contextPath);
         core.startGroup('🏗 Building dev container...');
         try {
             const buildResponse = yield exec_1.execWithOptions('docker', { silent: false }, ...args);
@@ -165,7 +183,6 @@ function runContainer(imageName, checkoutPath, subFolder, command, envs) {
         const devcontainerConfig = yield config.loadFromFile(devcontainerJsonPath);
         const workspaceFolder = config.getWorkspaceFolder(devcontainerConfig, folder);
         const remoteUser = config.getRemoteUser(devcontainerConfig);
-        // TODO - get run args from devcontainer.json? Or allow manually specifying them?
         const args = ['run'];
         args.push('--mount', `type=bind,src=${checkoutPathAbsolute},dst=${workspaceFolder}`);
         args.push('--workdir', workspaceFolder);

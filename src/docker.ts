@@ -21,6 +21,17 @@ export async function buildImage(
 	)
 	const devcontainerConfig = await config.loadFromFile(devcontainerJsonPath)
 
+	const configDockerfile = config.getDockerfile(devcontainerConfig)
+	if (!configDockerfile) {
+		throw new Error(
+			'dockerfile not set in devcontainer.json - devcontainer-build-run currently only supports Dockerfile-based dev containers'
+		)
+	}
+	const dockerfilePath = path.join(folder, '.devcontainer', configDockerfile)
+
+	const configContext = config.getContext(devcontainerConfig) ?? ''
+	const contextPath = path.join(folder, '.devcontainer', configContext)
+
 	const args = ['buildx', 'build']
 	args.push('--tag')
 	args.push(`${imageName}:latest`)
@@ -36,7 +47,8 @@ export async function buildImage(
 		args.push('--build-arg', `${argName}=${argValue}`)
 	}
 
-	args.push(`${folder}/.devcontainer`)
+	args.push('-f', dockerfilePath)
+	args.push(contextPath)
 
 	core.startGroup('🏗 Building dev container...')
 	try {
@@ -78,7 +90,6 @@ export async function runContainer(
 	const workspaceFolder = config.getWorkspaceFolder(devcontainerConfig, folder)
 	const remoteUser = config.getRemoteUser(devcontainerConfig)
 
-	// TODO - get run args from devcontainer.json? Or allow manually specifying them?
 	const args = ['run']
 	args.push(
 		'--mount',
