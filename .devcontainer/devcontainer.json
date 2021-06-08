@@ -4,20 +4,19 @@
 	"name": "devcontainer-build-run",
 	"dockerFile": "Dockerfile",
 	"build": {
-		"cacheFrom": "ghcr.io/stuartleeks/test-devcontainer:latest"
+		"cacheFrom": "ghcr.io/stuartleeks/devcontainer-build-run-devcontainer:latest"
 	},
 
 	"mounts": [
 		// Keep command history 
 		"source=devcontainer-build-run-bashhistory,target=/home/vscode/commandhistory",
 		// Mount host docker socket
-		"type=bind,source=/var/run/docker.sock,target=/var/run/docker.sock"
-	
-	,
+		"type=bind,source=/var/run/docker.sock,target=/var/run/docker.sock",
 		// Mounts the .config/gh host folder into the dev container to pick up host gh CLI login details
 		// NOTE that mounting directly to ~/.config/gh makes ~/.config only root-writable
 		// Instead monut to another location and symlink in Dockerfile
-		"type=bind,source=${env:HOME}${env:USERPROFILE}/.config/gh,target=/config/gh",],
+		"type=bind,source=${env:HOME}${env:USERPROFILE}/.config/gh,target=/config/gh",
+	],
 
 	// Set *default* container specific settings.json values on container create.
 	"settings": { 
