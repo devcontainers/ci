@@ -10,8 +10,12 @@ export async function isDockerBuildXInstalled(): Promise<boolean> {
 }
 export async function buildImage(
 	imageName: string,
-	checkoutPath: string
+	checkoutPath: string,
+	subFolder: string
 ): Promise<boolean> {
+
+	const folder = path.join(checkoutPath, subFolder)
+
 	// TODO allow build args
 	const args = ['buildx', 'build']
 	args.push('--tag')
@@ -24,7 +28,7 @@ export async function buildImage(
 
 	// TODO HACK - use build-args from devcontainer.json
 
-	args.push(`${checkoutPath}/.devcontainer`) // TODO Add input for devcontainer path
+	args.push(`${folder}/.devcontainer`)
 
 	core.startGroup('Building dev container...')
 	try {
@@ -50,20 +54,21 @@ export async function buildImage(
 export async function runContainer(
 	imageName: string,
 	checkoutPath: string,
+	subFolder: string,
 	command: string
 ): Promise<boolean> {
 	const checkoutPathAbsolute = getAbsolutePath(checkoutPath, process.cwd())
+	const folder = path.join(checkoutPathAbsolute, subFolder)
 
-	// TODO - add input for devcontainer path
 	const devcontainerJsonPath = path.join(
-		checkoutPathAbsolute,
+		folder,
 		'.devcontainer/devcontainer.json'
 	)
 	const devcontainerConfig = await config.loadFromFile(devcontainerJsonPath)
 
 	const workspaceFolder = config.getWorkspaceFolder(
 		devcontainerConfig,
-		checkoutPathAbsolute
+		folder
 	)
 	const remoteUser = config.getRemoteUser(devcontainerConfig)
 

@@ -117,8 +117,9 @@ function isDockerBuildXInstalled() {
     });
 }
 exports.isDockerBuildXInstalled = isDockerBuildXInstalled;
-function buildImage(imageName, checkoutPath) {
+function buildImage(imageName, checkoutPath, subFolder) {
     return __awaiter(this, void 0, void 0, function* () {
+        const folder = path_1.default.join(checkoutPath, subFolder);
         // TODO allow build args
         const args = ['buildx', 'build'];
         args.push('--tag');
@@ -129,7 +130,7 @@ function buildImage(imageName, checkoutPath) {
         args.push('type=inline');
         args.push('--output=type=docker');
         // TODO HACK - use build-args from devcontainer.json
-        args.push(`${checkoutPath}/.devcontainer`); // TODO Add input for devcontainer path
+        args.push(`${folder}/.devcontainer`);
         core.startGroup('Building dev container...');
         try {
             const buildResponse = yield exec_1.execWithOptions('docker', { silent: false }, ...args);
@@ -146,13 +147,13 @@ function buildImage(imageName, checkoutPath) {
     });
 }
 exports.buildImage = buildImage;
-function runContainer(imageName, checkoutPath, command) {
+function runContainer(imageName, checkoutPath, subFolder, command) {
     return __awaiter(this, void 0, void 0, function* () {
         const checkoutPathAbsolute = file_1.getAbsolutePath(checkoutPath, process.cwd());
-        // TODO - add input for devcontainer path
-        const devcontainerJsonPath = path_1.default.join(checkoutPathAbsolute, '.devcontainer/devcontainer.json');
+        const folder = path_1.default.join(checkoutPathAbsolute, subFolder);
+        const devcontainerJsonPath = path_1.default.join(folder, '.devcontainer/devcontainer.json');
         const devcontainerConfig = yield config.loadFromFile(devcontainerJsonPath);
-        const workspaceFolder = config.getWorkspaceFolder(devcontainerConfig, checkoutPathAbsolute);
+        const workspaceFolder = config.getWorkspaceFolder(devcontainerConfig, folder);
         const remoteUser = config.getRemoteUser(devcontainerConfig);
         // TODO - get run args from devcontainer.json? Or allow manually specifying them?
         const args = ['run'];
@@ -355,11 +356,12 @@ function runMain() {
             }
             const checkoutPath = core.getInput('checkoutPath');
             const imageName = core.getInput('imageName', { required: true });
+            const subFolder = core.getInput('subFolder');
             const runCommand = core.getInput('runCmd', { required: true });
-            if (!(yield docker_1.buildImage(imageName, checkoutPath))) {
+            if (!(yield docker_1.buildImage(imageName, checkoutPath, subFolder))) {
                 return;
             }
-            if (!(yield docker_1.runContainer(imageName, checkoutPath, runCommand))) {
+            if (!(yield docker_1.runContainer(imageName, checkoutPath, subFolder, runCommand))) {
                 return;
             }
         }
@@ -377,7 +379,7 @@ function runPost() {
             return;
         }
         const imageName = core.getInput('imageName', { required: true });
-        yield docker_1.pushImage(imageName); // TODO - only push on main branch
+        yield docker_1.pushImage(imageName);
     });
 }
 run();
