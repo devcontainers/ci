@@ -24,7 +24,7 @@ on: # rebuild any PRs and main branch changes
       - main
 
 jobs:
-  build: # make sure build/ci work properly
+  build:
     runs-on: ubuntu-latest
     steps:
 
@@ -39,7 +39,7 @@ jobs:
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
-          password: ${{ secrets.GITHUB_TOKEN }}        
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and run dev container task
         uses: stuartleeks/devcontainer-build-run@v0.1-alpha
