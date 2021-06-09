@@ -124,6 +124,7 @@ const core = __importStar(__webpack_require__(186));
 const config = __importStar(__webpack_require__(88));
 const exec_1 = __webpack_require__(757);
 const file_1 = __webpack_require__(14);
+const envvars_1 = __webpack_require__(293);
 function isDockerBuildXInstalled() {
     return __awaiter(this, void 0, void 0, function* () {
         const r = yield exec_1.exec('docker', 'buildx', '--help');
@@ -154,7 +155,7 @@ function buildImage(imageName, checkoutPath, subFolder) {
         args.push('--output=type=docker');
         const buildArgs = (_b = devcontainerConfig.build) === null || _b === void 0 ? void 0 : _b.args;
         for (const argName in buildArgs) {
-            const argValue = buildArgs[argName];
+            const argValue = envvars_1.substituteValues(buildArgs[argName]);
             args.push('--build-arg', `${argName}=${argValue}`);
         }
         args.push('-f', dockerfilePath);
@@ -188,7 +189,8 @@ function runContainer(imageName, checkoutPath, subFolder, command, envs) {
         args.push('--workdir', workspaceFolder);
         args.push('--user', remoteUser);
         if (devcontainerConfig.runArgs) {
-            args.push(...devcontainerConfig.runArgs);
+            const subtitutedRunArgs = devcontainerConfig.runArgs.map(a => envvars_1.substituteValues(a));
+            args.push(...subtitutedRunArgs);
         }
         if (envs) {
             for (const env of envs) {
@@ -231,6 +233,42 @@ function pushImage(imageName) {
     });
 }
 exports.pushImage = pushImage;
+
+
+/***/ }),
+
+/***/ 293:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.substituteValues = void 0;
+function substituteValues(input) {
+    // Find all `${...}` entries and substitute
+    // Note the non-greedy `.+?` match to avoid matching the start of
+    // one placeholder up to the end of another when multiple placeholders are present
+    return input.replace(/\$\{(.+?)\}/g, getSubstitutionValue);
+}
+exports.substituteValues = substituteValues;
+function getSubstitutionValue(regexMatch, placeholder) {
+    // Substitution values are in TYPE:KEY form
+    // e.g. env:MY_ENV
+    var _a;
+    const parts = placeholder.split(':');
+    if (parts.length === 2) {
+        const type = parts[0];
+        const key = parts[1];
+        switch (type) {
+            case 'env':
+            case 'localenv':
+                return (_a = process.env[key]) !== null && _a !== void 0 ? _a : '';
+        }
+    }
+    // if we can't process the format then return the original string
+    // as having it present in any output will likely make issues more obvious
+    return regexMatch;
+}
 
 
 /***/ }),

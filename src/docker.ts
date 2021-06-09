@@ -3,6 +3,7 @@ import * as core from '@actions/core'
 import * as config from './config'
 import {exec, execWithOptions} from './exec'
 import {getAbsolutePath} from './file'
+import {substituteValues} from './envvars'
 
 export async function isDockerBuildXInstalled(): Promise<boolean> {
 	const r = await exec('docker', 'buildx', '--help')
@@ -43,7 +44,7 @@ export async function buildImage(
 
 	const buildArgs = devcontainerConfig.build?.args
 	for (const argName in buildArgs) {
-		const argValue = buildArgs[argName]
+		const argValue = substituteValues(buildArgs[argName])
 		args.push('--build-arg', `${argName}=${argValue}`)
 	}
 
@@ -98,7 +99,10 @@ export async function runContainer(
 	args.push('--workdir', workspaceFolder)
 	args.push('--user', remoteUser)
 	if (devcontainerConfig.runArgs) {
-		args.push(...devcontainerConfig.runArgs)
+		const subtitutedRunArgs = devcontainerConfig.runArgs.map(a =>
+			substituteValues(a)
+		)
+		args.push(...subtitutedRunArgs)
 	}
 	if (envs) {
 		for (const env of envs) {
