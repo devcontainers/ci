@@ -246,7 +246,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.substituteValues = void 0;
 function substituteValues(input) {
     // Find all `${...}` entries and substitute
-    // Note the non-greedy `.+?` match to avoid matching the start of 
+    // Note the non-greedy `.+?` match to avoid matching the start of
     // one placeholder up to the end of another when multiple placeholders are present
     return input.replace(/\$\{(.+?)\}/g, getSubstitutionValue);
 }
@@ -256,7 +256,7 @@ function getSubstitutionValue(regexMatch, placeholder) {
     // e.g. env:MY_ENV
     var _a;
     const parts = placeholder.split(':');
-    if (parts.length == 2) {
+    if (parts.length === 2) {
         const type = parts[0];
         const key = parts[1];
         switch (type) {

@@ -1,16 +1,16 @@
 export function substituteValues(input: string): string {
 	// Find all `${...}` entries and substitute
-	// Note the non-greedy `.+?` match to avoid matching the start of 
+	// Note the non-greedy `.+?` match to avoid matching the start of
 	// one placeholder up to the end of another when multiple placeholders are present
-	return input.replace(/\$\{(.+?)\}/g, getSubstitutionValue) 
+	return input.replace(/\$\{(.+?)\}/g, getSubstitutionValue)
 }
 
-function getSubstitutionValue(regexMatch: string, placeholder:string) : string {
+function getSubstitutionValue(regexMatch: string, placeholder: string): string {
 	// Substitution values are in TYPE:KEY form
 	// e.g. env:MY_ENV
-	
+
 	const parts = placeholder.split(':')
-	if (parts.length == 2) {
+	if (parts.length === 2) {
 		const type = parts[0]
 		const key = parts[1]
 		switch (type) {

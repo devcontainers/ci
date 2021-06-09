@@ -44,7 +44,7 @@ export async function buildImage(
 
 	const buildArgs = devcontainerConfig.build?.args
 	for (const argName in buildArgs) {
-		const argValue =substituteValues(buildArgs[argName])
+		const argValue = substituteValues(buildArgs[argName])
 		args.push('--build-arg', `${argName}=${argValue}`)
 	}
 
@@ -99,7 +99,9 @@ export async function runContainer(
 	args.push('--workdir', workspaceFolder)
 	args.push('--user', remoteUser)
 	if (devcontainerConfig.runArgs) {
-		const subtitutedRunArgs = devcontainerConfig.runArgs.map(a=>substituteValues(a))
+		const subtitutedRunArgs = devcontainerConfig.runArgs.map(a =>
+			substituteValues(a)
+		)
 		args.push(...subtitutedRunArgs)
 	}
 	if (envs) {

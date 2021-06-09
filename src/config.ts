@@ -16,6 +16,7 @@ export interface DevContainerConfig {
 		args?: Record<string, string>
 	}
 	runArgs?: string[]
+	mounts?: string[]
 }
 
 export async function loadFromFile(
