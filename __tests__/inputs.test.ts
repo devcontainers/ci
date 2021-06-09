@@ -1,4 +1,3 @@
-import parse from 'csv-parse'
 import {
 	parseInputAsList,
 	parseInputAsRecord
