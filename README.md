@@ -45,7 +45,7 @@ jobs:
         uses: stuartleeks/devcontainer-build-run@v0.1-alpha
         with:
           # Change this to point to your image name
-          imageName: ghcr.io/stuartleeks/devcontainer-build-run-examples-build-args
+          imageName: ghcr.io/example/example-devcontainer
           # Change this to be your CI task/script
           runCmd: make ci-build
 
@@ -57,3 +57,62 @@ In the example above, the devcontainer-build-run will perform the following step
 2. Run the dev container with the `make ci-build` command specified in the `runCmd` input
 3. If the run succeeds (and we're not building from a PR branch) then push the image to the container registry. This enables future image builds in step 1 to use the image layers as a cache to improve performance
 
+## Inputs
+
+| Name         | Required | Description                                                                                                                                                             |
+| ------------ | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| imageName    | true     | Image name to use when building the dev container image (including registry)                                                                                            |
+| subFolder    | false    | Use this to specify the repo-relative path to the folder containing the dev container (i.e. the folder that contains the `.devcontainer` folder). Defaults to repo root |
+| runCmd       | true     | The command to run after building the dev container image                                                                                                               |
+| env          | false    | Specify environment variables to pass to the dev container when run                                                                                                     |
+| checkoutPath | false    | Only used for development/testing                                                                                                                                       |
+
+## Specifying a sub-folder
+
+Suppose your repo has the following structure:
+
+```
+<repo-root>
+|-folderA
+|-folderB
+| |-.devcontainer
+| | |-devcontainer.json
+| | |-Dockerfile
+| |-main.go
+|-folderC
+...
+```
+
+To build and run the dev container from `folderB` you can specify the `subFolder` input as shown below.
+
+```yaml
+      - name: Build and run dev container task
+        uses: stuartleeks/devcontainer-build-run@v0.1-alpha
+        with:
+          subFolder: folderB
+          imageName: ghcr.io/example/example-devcontainer
+          runCmd: make ci-build
+```
+
+## Environment Variables
+
+If you want to pass additional environment variables to the dev container when it is run, you can use the `env` input as shown below.
+
+
+```yaml
+      - name: Build and run dev container task
+        uses: stuartleeks/devcontainer-build-run@v0.1-alpha
+        env:
+          WORLD: World
+        with:
+          subFolder: folderB
+          imageName: ghcr.io/example/example-devcontainer
+          runCmd: echo "$HELLO - $WORLD"
+          env: |
+            HELLO=Hello
+            WORLD
+```
+
+In this example, the `HELLO` environment variable is specified with the value `Hello` in the `env` input on the devcontainer-build-run step. The `WORLD` environment variable is specified without a value so will pick up the value that is assigned in the standard action's `env` configuration (it could also be picked up from the job environment variables - see the [GitHub Action Environment Variables docs](https://docs.github.com/en/actions/reference/environment-variables) for more information).
+
+The result from running the container is to output "Hello - World".
