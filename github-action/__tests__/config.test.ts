@@ -61,11 +61,11 @@ describe('load', () => {
 		expect(devcontainerConfig.remoteUser).toBe('myUser')
 	})
 	test('build.args to be correct', () => {
-		if (!devcontainerConfig.build){
+		if (!devcontainerConfig.build) {
 			expect(devcontainerConfig.build).toBeDefined()
 			return
 		}
-		if (!devcontainerConfig.build.args){
+		if (!devcontainerConfig.build.args) {
 			expect(devcontainerConfig.build.args).toBeDefined()
 			return
 		}

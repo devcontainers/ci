@@ -1,0 +1,56 @@
+{
+    "id": "bbb21824-a9e3-4b9e-a58f-af3d18dd3688",
+    "name": "DevContainerBuildRun",
+    "friendlyName": "Dev Container Build & Run Extension",
+    "description": "Package an Azure DevOps extension into a VSIX file",
+    "author": "Microsoft Corporation",
+    "helpMarkDown": "",
+    "category": "Build",
+    "version": {
+      "Major": 0,
+      "Minor": 1,
+      "Patch": 0
+    },
+    "visibility": [
+      "Build",
+      "Release"
+    ],
+    "demands": [
+      "npm"
+    ],
+    "minimumAgentVersion": "1.83.0",
+    "instanceNameFormat": "Build and Run Dev Container: $(rootFolder)",
+    "inputs": [
+      {
+        "name": "imageName",
+        "type": "string",
+        "label": "Image name (including registry)",
+        "required": true
+      },
+      {
+        "name": "runCmd",
+        "type": "multiLine",
+        "label": "Specify the command to run after building the dev container image",
+        "required": true
+      },
+      {
+        "name": "subFolder",
+        "type": "string",
+        "label": "Specify a child folder (containing a .devcontainer) instead of using the repository root",
+        "required": true
+      },
+      {
+        "name": "env",
+        "type": "multiLine",
+        "label": "Specify environment variables to pass to the docker run command",
+        "required": true
+      }
+    ],
+    "outputVariables": [],
+    "execution": {
+      "Node10": {
+        "target": "dist/index.js",
+        "argumentFormat": ""
+      }
+    }
+  }

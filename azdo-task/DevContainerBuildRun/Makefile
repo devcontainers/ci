@@ -9,6 +9,9 @@ npm-install:
 lint:
 	npm run lint
 	
+lint-fix:
+	npm run lint-fix
+	
 build-package:
 	npm run build && npm run package
 
@@ -20,3 +23,6 @@ act: build-package
 
 act-verbose: build-package
 	act -v
+
+ci-package:
+	npm run all

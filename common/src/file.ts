@@ -7,6 +7,5 @@ export function getAbsolutePath(
 	if (path.isAbsolute(inputPath)) {
 		return inputPath
 	}
-
 	return path.join(referencePath, inputPath)
 }

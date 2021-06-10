@@ -7,15 +7,7 @@ on: # rebuild any PRs and main branch changes
       - 'releases/*'
 
 jobs:
-  build: # make sure build/ci work properly
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - run: |
-          npm install
-      - run: |
-          npm run all
-  test: # make sure the action works on a clean machine without building
+  build: # run build using the github action!
     runs-on: ubuntu-latest
     steps:
 
@@ -50,10 +42,23 @@ jobs:
 
       - name: dev container!
         uses: ./
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_CROSS_REPO_TOKEN }}
+          BUILD_NUMBER: ${{ github.run_id }}
+          IS_PR: ${{ github.head_ref }}
+          BRANCH: ${{ github.ref }}
         with:
           checkoutPath: ${{ steps.checkout-path.outputs.checkout-path }}
           imageName: ghcr.io/stuartleeks/devcontainer-build-run-devcontainer
-          runCmd: sudo npm install && make build-package
+          runCmd: |
+            ./scripts/ci.sh
+          env: |
+            BUILD_NUMBER
+
+      - uses: actions/upload-artifact@v2
+        with:
+          name: azdo-task
+          path: azdo-task/*.vsix
 
       # - name: fail
       #   run: |

@@ -1,22 +1,23 @@
 {
-  "name": "typescript-action",
+  "name": "devcontainer-build-run",
   "version": "0.0.0",
   "private": true,
-  "description": "TypeScript template action",
+  "description": "GitHub action for building and running VS Code dev containers",
   "main": "lib/main.js",
   "scripts": {
-    "build": "tsc",
+    "tsc-version": "tsc --version",
+    "build": "tsc --build",
     "format": "prettier --write **/*.ts",
     "format-check": "prettier --check **/*.ts",
     "lint": "eslint src/**/*.ts",
     "lint-fix": "eslint --fix src/**/*.ts",
     "package": "ncc build --source-map --license licenses.txt",
     "test": "jest",
-    "all": "npm run build && npm run format && npm run lint && npm run package && npm test"
+    "all": "npm run tsc-version && npm run build && npm run format && npm run lint && npm run package && npm test"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/actions/typescript-action.git"
+    "url": "git+https://github.com/stuartleeks/devcontainer-build-run.git"
   },
   "keywords": [
     "actions",
@@ -28,6 +29,7 @@
   "dependencies": {
     "@actions/core": "^1.4.0",
     "@actions/exec": "^1.1.0",
+    "devcontainer-build-run-common": "file:../common",
     "jsonc-parser": "^3.0.0"
   },
   "devDependencies": {

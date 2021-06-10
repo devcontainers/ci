@@ -62,6 +62,10 @@ RUN /tmp/gh.sh
 # symlink gh config folder
 RUN echo 'if [[ ! -d /home/vscode/.config/gh ]]; then mkdir -p /home/vscode/.config;ln -s /config/gh /home/vscode/.config/gh; fi ' >> ~/.bashrc
 
+
+RUN sudo npm install -g tfx-cli
+
+
 # __DEVCONTAINER_SNIPPET_INSERT__ (control where snippets get inserted using the devcontainer CLI)
 
 # Switch back to dialog for any ad-hoc use of apt-get

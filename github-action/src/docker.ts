@@ -2,7 +2,7 @@ import path from 'path'
 import * as core from '@actions/core'
 import * as config from './config'
 import {exec, execWithOptions} from './exec'
-import {getAbsolutePath} from './file'
+import {getAbsolutePath} from '../../common/src/file'
 import {substituteValues} from './envvars'
 
 export async function isDockerBuildXInstalled(): Promise<boolean> {
