@@ -28,7 +28,6 @@
   "dependencies": {
     "@actions/core": "^1.4.0",
     "@actions/exec": "^1.1.0",
-    "csv-parse": "^4.16.0",
     "jsonc-parser": "^3.0.0"
   },
   "devDependencies": {
