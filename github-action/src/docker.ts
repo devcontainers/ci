@@ -65,7 +65,6 @@ export async function buildImage(
 			)
 			return false
 		}
-		core.info(buildResponse.stdout)
 		return true
 	} finally {
 		core.endGroup()

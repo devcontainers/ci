@@ -80,7 +80,6 @@ function buildImage(imageName, checkoutPath, subFolder) {
                 core.setFailed(`build failed with ${buildResponse.exitCode}: ${buildResponse.stderr}`);
                 return false;
             }
-            core.info(buildResponse.stdout);
             return true;
         }
         finally {
