@@ -46,6 +46,8 @@ jobs:
         id: build
         env:
           GITHUB_TOKEN: ${{ secrets.GH_CROSS_REPO_TOKEN }}
+          AZDO_TOKEN: ${{ secrets.AZDO_TOKEN }}
+          AZDO_SERVICE_URL: ${{ secrets.AZDO_SERVICE_URL }}
           BUILD_NUMBER: ${{ github.run_id }}
           IS_PR: ${{ github.head_ref }}
           BRANCH: ${{ github.ref }}
