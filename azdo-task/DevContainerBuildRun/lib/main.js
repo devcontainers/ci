@@ -28,20 +28,68 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-const tl = __importStar(require("azure-pipelines-task-lib/task"));
+const task = __importStar(require("azure-pipelines-task-lib/task"));
+const docker_1 = require("./docker");
 function run() {
     return __awaiter(this, void 0, void 0, function* () {
+        const hasRunMain = task.getTaskVariable('hasRunMain');
+        if (hasRunMain === 'true') {
+            return yield runPost();
+        }
+        else {
+            task.setTaskVariable('hasRunMain', 'true');
+            return yield runMain();
+        }
+    });
+}
+function runMain() {
+    var _a, _b, _c, _d;
+    return __awaiter(this, void 0, void 0, function* () {
         try {
-            const imageName = tl.getInput('imageName', true);
-            // if (imageName === 'bad') {
-            // 	tl.setResult(tl.TaskResult.Failed, 'Bad input was given')
-            // 	return
-            // }
-            console.log('Hello', imageName);
+            const buildXInstalled = yield docker_1.isDockerBuildXInstalled();
+            if (!buildXInstalled) {
+                task.setResult(task.TaskResult.Failed, 'docker buildx not available: add a step to set up with docker/setup-buildx-action');
+                return;
+            }
+            const checkoutPath = (_a = task.getInput('checkoutPath')) !== null && _a !== void 0 ? _a : '';
+            const imageName = task.getInput('imageName', true);
+            if (!imageName) {
+                task.setResult(task.TaskResult.Failed, 'imageName input is required');
+                return;
+            }
+            const subFolder = (_b = task.getInput('subFolder')) !== null && _b !== void 0 ? _b : '.';
+            const runCommand = task.getInput('runCmd', true);
+            if (!runCommand) {
+                task.setResult(task.TaskResult.Failed, 'runCmd input is required');
+                return;
+            }
+            const envs = (_d = (_c = task.getInput('env')) === null || _c === void 0 ? void 0 : _c.split('\n')) !== null && _d !== void 0 ? _d : [];
+            if (!(yield docker_1.buildImage(imageName, checkoutPath, subFolder))) {
+                return;
+            }
+            if (!(yield docker_1.runContainer(imageName, checkoutPath, subFolder, runCommand, envs))) {
+                return;
+            }
         }
         catch (err) {
-            tl.setResult(tl.TaskResult.Failed, err.message);
+            task.setResult(task.TaskResult.Failed, err.message);
         }
+    });
+}
+function runPost() {
+    return __awaiter(this, void 0, void 0, function* () {
+        const buildReason = process.env.BUILD_REASON;
+        if (buildReason !== 'IndividualCI') {
+            // headRef only set on PR builds
+            console.log(`Image push skipped for PR builds (buildReason was ${buildReason})`);
+            return;
+        }
+        const imageName = task.getInput('imageName', true);
+        if (!imageName) {
+            task.setResult(task.TaskResult.Failed, 'imageName input is required');
+            return;
+        }
+        yield docker_1.pushImage(imageName);
     });
 }
 run();

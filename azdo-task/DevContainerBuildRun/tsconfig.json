@@ -1,7 +1,12 @@
 {
     "extends": "../tsconfig.json",
     "compilerOptions": {
-        "outDir": "./lib", 
+        "outDir": "./lib",
         "rootDir": "./src"
-    }
-  }
+    },
+    "references": [
+        {
+            "path": "../../common"
+        }
+    ]
+}
