@@ -8,10 +8,13 @@ import {
 } from './docker'
 
 async function run(): Promise<void> {
+	console.log('DevContainerBuildRun starting...')
 	const hasRunMain = task.getTaskVariable('hasRunMain')
 	if (hasRunMain === 'true') {
+		console.log('DevContainerBuildRun running post step...')
 		return await runPost()
 	} else {
+		console.log('DevContainerBuildRun running main step...')
 		task.setTaskVariable('hasRunMain', 'true')
 		return await runMain()
 	}

@@ -19,3 +19,18 @@ cd "$script_dir/../azdo-task/DevContainerBuildRun"
 sudo npm install 
 cd "$script_dir/../azdo-task"
 ./scripts/build-package.sh --set-patch-version $BUILD_NUMBER
+
+if [[ -z IS_CI ]]; then
+    echo "IS_CI not set, skipping package/publish"
+    exit 0
+fi
+
+cd "$script_dir/.."
+
+vsix_file=$(ls azdo-task/*.vsix)
+echo "Using VSIX_FILE=$vsix_file"
+
+ tfx extension publish  --token $AZDO_TOKEN --vsix $vsix_file --override "{\"public\": false}" --share-with devcontainer-build-run,stuartle
+
+ tfx extension install  --token $AZDO_TOKEN --vsix $vsix_file --service-url https://dev.azure.com/stuartle
+

@@ -61,6 +61,8 @@ cd "$script_dir/../DevContainerBuildRun"
 npm install
 npm run all
 
+npm prune --production
+
 figlet Package extension
 cd "$script_dir/../"
 tfx extension create --manifests vss-extension.json
