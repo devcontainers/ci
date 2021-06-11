@@ -16,4 +16,4 @@ make build-package
 figlet AzDO Task
 cd "$script_dir/../azdo-task"
 sudo npm install 
-./scripts/build-package.sh
+./scripts/build-package.sh --set-patch-version $BUILD_NUMBER
