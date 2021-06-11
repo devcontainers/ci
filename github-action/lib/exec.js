@@ -28,38 +28,16 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.execWithOptions = exports.exec = void 0;
+exports.exec = void 0;
 const actions_exec = __importStar(require("@actions/exec"));
-function exec(command, ...args) {
+function exec(command, args) {
     return __awaiter(this, void 0, void 0, function* () {
-        return yield execWithOptions(command, {
-            silent: true
-        }, ...args);
+        const actionOptions = {
+            ignoreReturnCode: true,
+            silent: false
+        };
+        const exitCode = yield actions_exec.exec(command, args, actionOptions);
+        return exitCode;
     });
 }
 exports.exec = exec;
-function execWithOptions(command, options, ...args) {
-    return __awaiter(this, void 0, void 0, function* () {
-        let stdout = '';
-        let stderr = '';
-        const actionOptions = {
-            ignoreReturnCode: true,
-            silent: options.silent,
-            listeners: {
-                stdout: (data) => {
-                    stdout += data.toString();
-                },
-                stderr: (data) => {
-                    stderr += data.toString();
-                }
-            }
-        };
-        const exitCode = yield actions_exec.exec(command, args, actionOptions);
-        return {
-            exitCode,
-            stdout,
-            stderr
-        };
-    });
-}
-exports.execWithOptions = execWithOptions;

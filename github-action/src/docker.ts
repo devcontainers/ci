@@ -1,71 +1,24 @@
-import path from 'path'
 import * as core from '@actions/core'
-import * as config from './config'
-import {exec, execWithOptions} from './exec'
-import {getAbsolutePath} from '../../common/src/file'
-import {substituteValues} from './envvars'
+import {check} from 'prettier'
+import * as docker from '../../common/src/docker'
+import {exec} from './exec'
+
 
 export async function isDockerBuildXInstalled(): Promise<boolean> {
-	const r = await exec('docker', 'buildx', '--help')
-	return r.exitCode === 0
+	return await docker.isDockerBuildXInstalled(exec)
 }
 export async function buildImage(
 	imageName: string,
 	checkoutPath: string,
 	subFolder: string
 ): Promise<boolean> {
-	const folder = path.join(checkoutPath, subFolder)
-
-	const devcontainerJsonPath = path.join(
-		folder,
-		'.devcontainer/devcontainer.json'
-	)
-	const devcontainerConfig = await config.loadFromFile(devcontainerJsonPath)
-
-	const configDockerfile = config.getDockerfile(devcontainerConfig)
-	if (!configDockerfile) {
-		throw new Error(
-			'dockerfile not set in devcontainer.json - devcontainer-build-run currently only supports Dockerfile-based dev containers'
-		)
-	}
-	const dockerfilePath = path.join(folder, '.devcontainer', configDockerfile)
-
-	const configContext = config.getContext(devcontainerConfig) ?? ''
-	const contextPath = path.join(folder, '.devcontainer', configContext)
-
-	const args = ['buildx', 'build']
-	args.push('--tag')
-	args.push(`${imageName}:latest`)
-	args.push('--cache-from')
-	args.push(`type=registry,ref=${imageName}:latest`)
-	args.push('--cache-to')
-	args.push('type=inline')
-	args.push('--output=type=docker')
-
-	const buildArgs = devcontainerConfig.build?.args
-	for (const argName in buildArgs) {
-		const argValue = substituteValues(buildArgs[argName])
-		args.push('--build-arg', `${argName}=${argValue}`)
-	}
-
-	args.push('-f', dockerfilePath)
-	args.push(contextPath)
-
 	core.startGroup('🏗 Building dev container...')
 	try {
-		const buildResponse = await execWithOptions(
-			'docker',
-			{silent: false},
-			...args
-		)
-
-		if (buildResponse.exitCode !== 0) {
-			core.setFailed(
-				`build failed with ${buildResponse.exitCode}: ${buildResponse.stderr}`
-			)
-			return false
-		}
+		await docker.buildImage(exec, imageName, checkoutPath, subFolder)
 		return true
+	} catch (error) {
+		core.setFailed(error)
+		return false
 	} finally {
 		core.endGroup()
 	}
@@ -78,78 +31,26 @@ export async function runContainer(
 	command: string,
 	envs?: string[]
 ): Promise<boolean> {
-	const checkoutPathAbsolute = getAbsolutePath(checkoutPath, process.cwd())
-	const folder = path.join(checkoutPathAbsolute, subFolder)
-
-	const devcontainerJsonPath = path.join(
-		folder,
-		'.devcontainer/devcontainer.json'
-	)
-	const devcontainerConfig = await config.loadFromFile(devcontainerJsonPath)
-
-	const workspaceFolder = config.getWorkspaceFolder(devcontainerConfig, folder)
-	const remoteUser = config.getRemoteUser(devcontainerConfig)
-
-	const args = ['run']
-	args.push(
-		'--mount',
-		`type=bind,src=${checkoutPathAbsolute},dst=${workspaceFolder}`
-	)
-	args.push('--workdir', workspaceFolder)
-	args.push('--user', remoteUser)
-	if (devcontainerConfig.runArgs) {
-		const subtitutedRunArgs = devcontainerConfig.runArgs.map(a =>
-			substituteValues(a)
-		)
-		args.push(...subtitutedRunArgs)
-	}
-	if (envs) {
-		for (const env of envs) {
-			args.push('--env', env)
-		}
-	}
-	args.push(`${imageName}:latest`)
-	args.push('bash', '-c', `sudo chown -R $(whoami) . && ${command}`) // TODO sort out permissions/user alignment
-
 	core.startGroup('🏃‍♀️ Running dev container...')
 	try {
-		const buildResponse = await execWithOptions(
-			'docker',
-			{silent: false},
-			...args
-		)
-
-		if (buildResponse.exitCode !== 0) {
-			core.setFailed(
-				`run failed with ${buildResponse.exitCode}: ${buildResponse.stderr}`
-			)
-			return false
-		}
+		await docker.runContainer(exec, imageName, checkoutPath, subFolder, command, envs)
 		return true
+	} catch (error) {
+		core.setFailed(error)
+		return false
 	} finally {
 		core.endGroup()
 	}
 }
 
 export async function pushImage(imageName: string): Promise<boolean> {
-	const args = ['push']
-	args.push(`${imageName}:latest`)
-
-	core.startGroup('Pushing image...')
+	core.startGroup('📌 Pushing image...')
 	try {
-		const buildResponse = await execWithOptions(
-			'docker',
-			{silent: false},
-			...args
-		)
-
-		if (buildResponse.exitCode !== 0) {
-			core.setFailed(
-				`push failed with ${buildResponse.exitCode}: ${buildResponse.stderr}`
-			)
-			return false
-		}
+		await docker.pushImage(exec, imageName)
 		return true
+	} catch (error) {
+		core.setFailed(error)
+		return false
 	} finally {
 		core.endGroup()
 	}

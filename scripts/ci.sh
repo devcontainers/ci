@@ -14,6 +14,7 @@ sudo npm install
 make build-package
 
 figlet AzDO Task
-cd "$script_dir/../azdo-task"
+cd "$script_dir/../azdo-task/DevContainerBuildRun"
 sudo npm install 
+cd "$script_dir/../azdo-task"
 ./scripts/build-package.sh --set-patch-version $BUILD_NUMBER

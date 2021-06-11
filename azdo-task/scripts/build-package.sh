@@ -1,6 +1,7 @@
 #!/bin/bash
 set -e
 
+
 script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 
 
@@ -22,7 +23,11 @@ do
     case "$1" in
         --set-patch-version)
             set_patch_version=$2
-            shift 2
+            if [[ -z $2 ]]; then
+                shift 1
+            else
+                shift 2
+            fi
             ;;
         *)
             echo "Unexpected '$1'"
@@ -55,7 +60,6 @@ figlet Build task
 cd "$script_dir/../DevContainerBuildRun"
 npm install
 npm run all
-
 
 figlet Package extension
 cd "$script_dir/../"
