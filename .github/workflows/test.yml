@@ -35,13 +35,15 @@ jobs:
 
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v1 
+        if: github.ref == 'refs/heads/main' # only need this for push (on `main`)
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: dev container!
+      - name: Build in dev container
         uses: ./
+        id: build
         env:
           GITHUB_TOKEN: ${{ secrets.GH_CROSS_REPO_TOKEN }}
           BUILD_NUMBER: ${{ github.run_id }}
@@ -58,8 +60,35 @@ jobs:
       - uses: actions/upload-artifact@v2
         with:
           name: azdo-task
-          path: azdo-task/*.vsix
+          path: ./azdo-task/stuartleeks.devcontainer-build-run-${{ steps.build.outputs.version }}.vsix
 
+
+
+      - name: Create Release
+        id: create_release
+        if: github.ref == 'refs/heads/main' # only create release on `main`
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ steps.build.outputs.version }}
+          release_name: Release ${{ steps.build.outputs.version }}
+          draft: false
+          prerelease: true
+
+
+      - name: Upload Release Asset
+        id: upload-release-asset 
+        if: github.ref == 'refs/heads/main'
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps 
+          asset_path: ./azdo-task/stuartleeks.devcontainer-build-run-${{ steps.build.outputs.version }}.vsix
+          asset_name: stuartleeks.devcontainer-build-run-${{ steps.build.outputs.version }}.vsix
+          asset_content_type: application/zip
+          
       # - name: fail
       #   run: |
       #     echo "::error file=app.js,line=10,col=15::Something went wrong"
