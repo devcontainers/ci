@@ -28,7 +28,7 @@ fi
 figlet AzDO Test
 
 cd "$script_dir/.."
-vsix_file=$(ls azdo-task/*.vsix)
+vsix_file=$(ls azdo-task/stuartleeks-dev.*.vsix)
 echo "Using VSIX_FILE=$vsix_file"
 
 # Publish as non-public and as stuartleeks-dev
@@ -40,6 +40,8 @@ tfx extension install  --token $AZDO_TOKEN --vsix $vsix_file --service-url https
 
 if [[ $BRANCH ==  "refs/heads/main" ]]; then
     echo "Publishing extension..."
+    vsix_file=$(ls azdo-task/stuartleeks.*.vsix)
+    echo "Using VSIX_FILE=$vsix_file"
     tfx extension publish  --token $AZDO_TOKEN --vsix $vsix_file  --override "{\"public\": true}"
 else
     echo "Not on main branch - skipping publish"
