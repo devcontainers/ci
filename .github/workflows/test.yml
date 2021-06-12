@@ -7,15 +7,7 @@ on: # rebuild any PRs and main branch changes
       - 'releases/*'
 
 jobs:
-  build: # make sure build/ci work properly
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - run: |
-          npm install
-      - run: |
-          npm run all
-  test: # make sure the action works on a clean machine without building
+  build: # run build using the github action!
     runs-on: ubuntu-latest
     steps:
 
@@ -43,18 +35,73 @@ jobs:
 
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v1 
+        if: github.ref == 'refs/heads/main' # only need this for push (on `main`)
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: dev container!
+      - name: Build in dev container
         uses: ./
+        id: build
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          AZDO_TOKEN: ${{ secrets.AZDO_TOKEN }}
+          AZURE_DEVOPS_EXT_PAT: ${{ secrets.AZDO_TOKEN }}
+          AZDO_SERVICE_URL: ${{ secrets.AZDO_SERVICE_URL }}
+          BUILD_NUMBER: ${{ github.run_id }}
+          IS_PR: ${{ github.head_ref }}
+          BRANCH: ${{ github.ref }}
         with:
           checkoutPath: ${{ steps.checkout-path.outputs.checkout-path }}
           imageName: ghcr.io/stuartleeks/devcontainer-build-run-devcontainer
-          runCmd: sudo npm install && make build-package
+          runCmd: |
+            echo "Starting"
+            echo ${AZDO_TOKEN:0:2}
+            ./scripts/ci.sh
+          env: |
+            BUILD_NUMBER
+            IS_CI=1
+            IS_PR
+            BRANCH
+            AZDO_TOKEN
+            AZURE_DEVOPS_EXT_PAT
+            AZDO_ORG=https://dev.azure.com/stuartle
+            AZDO_PROJECT=AzDODevContainerBuildRunTest
+            AZDO_BUILD=AzDODevContainerBuildRunTest
 
+      - uses: actions/upload-artifact@v2
+        with:
+          name: azdo-task
+          path: ./azdo-task/stuartleeks.devcontainer-build-run-${{ steps.build.outputs.version }}.vsix
+
+
+
+      - name: Create Release
+        id: create_release
+        if: github.ref == 'refs/heads/main' # only create release on `main`
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ steps.build.outputs.version }}
+          release_name: Release ${{ steps.build.outputs.version }}
+          draft: false
+          prerelease: true
+
+
+      - name: Upload Release Asset
+        id: upload-release-asset 
+        if: github.ref == 'refs/heads/main'
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps 
+          asset_path: ./azdo-task/stuartleeks.devcontainer-build-run-${{ steps.build.outputs.version }}.vsix
+          asset_name: stuartleeks.devcontainer-build-run-${{ steps.build.outputs.version }}.vsix
+          asset_content_type: application/zip
+          
       # - name: fail
       #   run: |
       #     echo "::error file=app.js,line=10,col=15::Something went wrong"

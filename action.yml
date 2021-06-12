@@ -21,6 +21,6 @@ inputs:
     description: Specify environment variables to pass to the docker run command
 runs:
   using: 'node12'
-  main: 'dist/index.js'
-  post: 'dist/index.js'
+  main: 'github-action/dist/index.js'
+  post: 'github-action/dist/index.js'
   post-if: 'success()'

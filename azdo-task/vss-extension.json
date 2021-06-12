@@ -1,0 +1,50 @@
+{
+    "manifestVersion": 1,
+    "id": "devcontainer-build-run",
+    "name": "Dev Container Build & Run Task",
+    "version": "0.0.1",
+    "publisher": "stuartleeks",
+    "targets": [
+        {
+            "id": "Microsoft.VisualStudio.Services"
+        }
+    ],
+    "description": "Extension for building and running VS Code Dev Containers in Azure DevOps Pipelines",
+    "categories": [
+        "Azure Pipelines"
+    ],
+    "tags": [
+        "Visual Studio Extensions",
+        "Dev containers",
+        "Devcontainers"
+    ],
+    "links": {
+        "repository": {
+            "uri": "https://github.com/stuartleeks/devcontainer-build-run/"
+        },
+        "issues": {
+            "uri": "https://github.com/stuartleeks/devcontainer-build-run/issues"
+        }
+    },
+    "repository": {
+        "type": "git",
+        "uri": "https://github.com/stuartleeks/devcontainer-build-run/"
+    },
+    "files": [
+        {
+            "path": "DevContainerBuildRun"
+        }
+    ],
+    "contributions": [
+        {
+            "id": "dev-container-build-run",
+            "type": "ms.vss-distributed-task.task",
+            "targets": [
+                "ms.vss-distributed-task.tasks"
+            ],
+            "properties": {
+                "name": "DevContainerBuildRun"
+            }
+        }
+    ]
+}

@@ -38,6 +38,7 @@
 	"extensions": [
 		"ms-azuretools.vscode-docker",
 		"yzhang.markdown-all-in-one",
-		"davidanson.vscode-markdownlint"
+		"davidanson.vscode-markdownlint",
+		"heaths.vscode-guid"
 	]
 }
