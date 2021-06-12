@@ -26,18 +26,21 @@
             "uri": "https://github.com/stuartleeks/devcontainer-build-run/issues"
         }
     },
+    "icons": {
+        "default": "icon.png"
+    },
     "repository": {
         "type": "git",
         "uri": "https://github.com/stuartleeks/devcontainer-build-run/"
     },
     "content": {
         "details": {
-          "path": "README.md"
+            "path": "README.md"
         },
         "license": {
-          "path": "LICENSE.md"
+            "path": "LICENSE.md"
         }
-      },
+    },
     "files": [
         {
             "path": "DevContainerBuildRun"
