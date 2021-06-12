@@ -2,8 +2,8 @@
   "id": "bbb21824-a9e3-4b9e-a58f-af3d18dd3688",
   "name": "DevContainerBuildRun",
   "friendlyName": "Dev Container Build & Run Extension",
-  "description": "Package an Azure DevOps extension into a VSIX file",
-  "author": "Microsoft Corporation",
+  "description": "Build and run VS Code dev containers in Azure DevOps Pipelines",
+  "author": "Stuart Leeks",
   "helpMarkDown": "",
   "category": "Build",
   "version": {

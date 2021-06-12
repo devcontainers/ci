@@ -39,7 +39,7 @@ tfx extension install  --token $AZDO_TOKEN --vsix $vsix_file --service-url https
 
 if [[ $BRANCH ==  "refs/heads/main" ]]; then
     echo "Publishing extension..."
-    tfx extension publish  --token $AZDO_TOKEN --vsix $vsix_file
+    tfx extension publish  --token $AZDO_TOKEN --vsix $vsix_file  --override "{\"public\": true}"
 else
     echo "Not on main branch - skipping publish"
 fi
