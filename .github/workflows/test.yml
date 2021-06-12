@@ -61,6 +61,7 @@ jobs:
             ./scripts/ci.sh
           env: |
             BUILD_NUMBER
+            IS_CI=1
             IS_PR
             BRANCH
             AZDO_TOKEN
