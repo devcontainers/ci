@@ -9,7 +9,7 @@ function show_usage() {
     echo
     echo "build-package.sh"
     echo
-    echo "script_description"
+    echo "Build the AzDO task package"
     echo
     echo -e "\t--set-patch-version\t(Optional)If set then the patch version will be updated before packaging"
     echo

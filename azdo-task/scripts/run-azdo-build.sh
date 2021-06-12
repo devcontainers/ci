@@ -1,0 +1,86 @@
+#!/bin/bash
+set -e
+
+function show_usage() {
+    echo
+    echo "run-azdo-build.sh"
+    echo
+    echo "Run an AzDO build. Assumes that auth has been configured, e.g. via the AZURE_DEVOPS_EXT_PAT env var (https://docs.microsoft.com/en-gb/azure/devops/cli/log-in-via-pat?view=azure-devops&tabs=windows)"
+    echo
+    echo -e "\t--organization\t(Required)The AzDO organization url"
+    echo -e "\t--project\t(Required)The AzDO project name"
+    echo -e "\t--build\t(Required)The build name"
+    echo
+}
+
+
+# Set default values here
+organization=""
+project=""
+build=""
+
+# Process switches:
+while [[ $# -gt 0 ]]
+do
+    case "$1" in
+        --organization)
+            organization=$2
+            shift 2
+            ;;
+        --project)
+            project=$2
+            shift 2
+            ;;
+        --build)
+            build=$2
+            shift 2
+            ;;
+        *)
+            echo "Unexpected '$1'"
+            show_usage
+            exit 1
+            ;;
+    esac
+done
+
+
+if [[ -z $organization ]]; then
+    echo "--organization must be specified"
+    show_usage
+    exit 1
+fi
+if [[ -z $project ]]; then
+    echo "--project must be specified"
+    show_usage
+    exit 1
+fi
+if [[ -z $build ]]; then
+    echo "--build must be specified"
+    show_usage
+    exit 1
+fi
+
+
+echo "Starting AzDO pipeline..."
+run_id=$(az pipelines build queue --definition-name $build --organization $organization --project $project -o tsv --query id)
+echo "Run id: $run_id"
+while true
+do
+    run_state=$(az pipelines runs show --id $run_id --organization $organization --project $project -o json)
+    finish_time=$(echo $run_state | jq -r .finishTime)
+    if [[ $finish_time != "null" ]]; then
+        result=$(echo $run_state | jq -r .result)
+        url=$(echo $run_state | jq -r .url)
+        echo "Pipeline completed with result: $result"
+        if [[ $result != "succeeded" ]]; then
+            echo "Run url: $url"
+            echo "::error ::AzDO pipeline test did not complete successfully"
+            exit 1
+        fi
+        exit 0
+    fi
+    echo "waiting for pipeline completion..."
+    sleep 15s
+done
+
+

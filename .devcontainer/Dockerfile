@@ -66,6 +66,12 @@ RUN echo 'if [[ ! -d /home/vscode/.config/gh ]]; then mkdir -p /home/vscode/.con
 RUN sudo npm install -g tfx-cli
 
 
+# azure-cli-no-mount
+COPY scripts/azure-cli.sh /tmp/
+RUN /tmp/azure-cli.sh
+
+RUN az extension add --name azure-devops
+
 # __DEVCONTAINER_SNIPPET_INSERT__ (control where snippets get inserted using the devcontainer CLI)
 
 # Switch back to dialog for any ad-hoc use of apt-get
