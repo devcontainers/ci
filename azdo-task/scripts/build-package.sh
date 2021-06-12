@@ -66,7 +66,7 @@ npm prune --production
 figlet Package extension
 cd "$script_dir/../"
 cp "$script_dir/../../README.md" "$script_dir/../"
-cp "$script_dir/../../LICENSE" "$script_dir/../LICENSE.txt"
+cp "$script_dir/../../LICENSE" "$script_dir/../LICENSE.md"
 echo "Build stuartleeks extension vsix..."
 tfx extension create --manifests vss-extension.json --override "{\"public\": true}"
 echo "Build stuartleeks-dev extension vsix..."
