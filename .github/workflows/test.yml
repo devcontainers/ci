@@ -45,7 +45,7 @@ jobs:
         uses: ./
         id: build
         env:
-          GITHUB_TOKEN: ${{ secrets.GH_CROSS_REPO_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           AZDO_TOKEN: ${{ secrets.AZDO_TOKEN }}
           AZDO_SERVICE_URL: ${{ secrets.AZDO_SERVICE_URL }}
           BUILD_NUMBER: ${{ github.run_id }}
@@ -60,6 +60,9 @@ jobs:
             ./scripts/ci.sh
           env: |
             BUILD_NUMBER
+            IS_PR
+            BRANCH
+            AZDO_TOKEN
 
       - uses: actions/upload-artifact@v2
         with:
