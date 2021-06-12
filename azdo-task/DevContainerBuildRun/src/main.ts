@@ -66,19 +66,41 @@ async function runMain(): Promise<void> {
 }
 
 async function runPost(): Promise<void> {
+	// buildReasonsForPush
+	//sourceBranchFilterForPush
+
+	const buildReasonsForPush: string[] =
+		task.getInput('buildReasonsForPush')?.split('\n') ?? []
+	const sourceBranchFilterForPush: string[] =
+		task.getInput('sourceBranchFilterForPush')?.split('\n') ?? []
+
+	// check build reason is allowed
 	const buildReason = process.env.BUILD_REASON
-	if (buildReason !== 'IndividualCI') {
-		// headRef only set on PR builds
+	if (!buildReasonsForPush.some(s => s === buildReason)) {
 		console.log(
-			`Image push skipped for PR builds (buildReason was ${buildReason})`
+			`Image push skipped because buildReason (${buildReason}) is not in buildReasonsForPush`
 		)
 		return
 	}
+
+	// check branch is allowed
+	const sourceBranch = process.env.BUILD_SOURCEBRANCH
+	if (
+		sourceBranchFilterForPush.length !== 0 && // empty filter allows all
+		!sourceBranchFilterForPush.some(s => s === sourceBranch)
+	) {
+		console.log(
+			`Image push skipped because source branch (${sourceBranch}) is not in sourceBranchFilterForPush`
+		)
+		return
+	}
+
 	const imageName = task.getInput('imageName', true)
 	if (!imageName) {
 		task.setResult(task.TaskResult.Failed, 'imageName input is required')
 		return
 	}
+
 	await pushImage(imageName)
 }
 

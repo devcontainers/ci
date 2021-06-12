@@ -31,19 +31,34 @@
       "name": "runCmd",
       "type": "multiLine",
       "label": "Specify the command to run after building the dev container image",
-      "required": true
+      "required": true,
+      "defaultValue": "echo \"Put your command(s) here\""
     },
     {
       "name": "subFolder",
       "type": "string",
       "label": "Specify a child folder (containing a .devcontainer) instead of using the repository root",
-      "required": true
+      "required": false
     },
     {
       "name": "env",
       "type": "multiLine",
       "label": "Specify environment variables to pass to the docker run command",
-      "required": true
+      "required": false
+    },
+    {
+      "name": "buildReasonsForPush",
+      "type": "multiLine",
+      "label": "Set the Build Reasons that should trigger a push of the dev container image . Defaults to Manual, IndividualCI, BatchedCI. (see https://docs.microsoft.com/en-us/azure/devops/pipelines/build/variables?view=azure-devops&viewFallbackFrom=vsts&tabs=yaml)",
+      "required": false,
+      "defaultValue": "Manual\nIndividualCI\nBatchedCI"
+    },
+    {
+      "name": "sourceBranchFilterForPush",
+      "type": "multiLine",
+      "label": "Set the source branches (e.g. refs/heads/main) that are allows to trigger a push of the dev container image. Leave empty to allow all.",
+      "required": false,
+      "defaultValue": ""
     }
   ],
   "outputVariables": [],
@@ -54,8 +69,9 @@
     }
   },
   "postjobexecution": {
-    "Node": {
-      "target": "dist/index.js"
+    "Node10": {
+      "target": "dist/index.js",
+      "argumentFormat": ""
     }
   }
 }

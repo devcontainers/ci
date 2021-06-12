@@ -80,11 +80,23 @@ function runMain() {
     });
 }
 function runPost() {
+    var _a, _b, _c, _d;
     return __awaiter(this, void 0, void 0, function* () {
+        // buildReasonsForPush
+        //sourceBranchFilterForPush
+        const buildReasonsForPush = (_b = (_a = task.getInput('buildReasonsForPush')) === null || _a === void 0 ? void 0 : _a.split('\n')) !== null && _b !== void 0 ? _b : [];
+        const sourceBranchFilterForPush = (_d = (_c = task.getInput('sourceBranchFilterForPush')) === null || _c === void 0 ? void 0 : _c.split('\n')) !== null && _d !== void 0 ? _d : [];
+        // check build reason is allowed
         const buildReason = process.env.BUILD_REASON;
-        if (buildReason !== 'IndividualCI') {
-            // headRef only set on PR builds
-            console.log(`Image push skipped for PR builds (buildReason was ${buildReason})`);
+        if (!buildReasonsForPush.some(s => s === buildReason)) {
+            console.log(`Image push skipped because buildReason (${buildReason}) is not in buildReasonsForPush`);
+            return;
+        }
+        // check branch is allowed 
+        const sourceBranch = process.env.BUILD_SOURCEBRANCH;
+        if (sourceBranchFilterForPush.length !== 0 // empty filter allows all
+            && !sourceBranchFilterForPush.some(s => s === sourceBranch)) {
+            console.log(`Image push skipped because source branch (${sourceBranch}) is not in sourceBranchFilterForPush`);
             return;
         }
         const imageName = task.getInput('imageName', true);
