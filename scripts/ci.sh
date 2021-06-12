@@ -37,7 +37,7 @@ tfx extension install  --token $AZDO_TOKEN --vsix $vsix_file --service-url https
 
 "$script_dir/../azdo-task/scripts/run-azdo-build.sh" --organization $AZDO_ORG --project $AZDO_PROJECT --build $AZDO_BUILD
 
-if [[ $BRANCH ==  "refs/heads/main"]]; then
+if [[ $BRANCH ==  "refs/heads/main" ]]; then
     echo "Publishing extension..."
     tfx extension publish  --token $AZDO_TOKEN --vsix $vsix_file
 else
