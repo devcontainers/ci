@@ -92,10 +92,10 @@ function runPost() {
             console.log(`Image push skipped because buildReason (${buildReason}) is not in buildReasonsForPush`);
             return;
         }
-        // check branch is allowed 
+        // check branch is allowed
         const sourceBranch = process.env.BUILD_SOURCEBRANCH;
-        if (sourceBranchFilterForPush.length !== 0 // empty filter allows all
-            && !sourceBranchFilterForPush.some(s => s === sourceBranch)) {
+        if (sourceBranchFilterForPush.length !== 0 && // empty filter allows all
+            !sourceBranchFilterForPush.some(s => s === sourceBranch)) {
             console.log(`Image push skipped because source branch (${sourceBranch}) is not in sourceBranchFilterForPush`);
             return;
         }
