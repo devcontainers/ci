@@ -65,5 +65,7 @@ npm prune --production
 
 figlet Package extension
 cd "$script_dir/../"
+cp ../README.md .
+cp ../LICENSE .
 tfx extension create --manifests vss-extension.json --override "{\"public\": true}"
 tfx extension create --manifests vss-extension.json --override "{\"public\": false, \"publisher\": \"stuartleeks-dev\"}"
