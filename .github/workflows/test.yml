@@ -98,6 +98,7 @@ jobs:
           VERSION_SHORT: v${{ steps.build.outputs.verion_short }}
         run: |
           echo "VERSION_SHORT: $VERSION_SHORT"
+          sudo chown -R $(whoami) .
           git config user.name "CI build"
           git config user.email stuart@leeks.net
           git tag -fa $VERSION_SHORT -m $VERSION_SHORT
