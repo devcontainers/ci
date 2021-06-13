@@ -146,7 +146,6 @@ steps:
   env:
     ACR_TOKEN: $(ACR_TOKEN)
 
-# Change 
 - task: DevContainerBuildRun@0
   inputs:
     # Change this to point to your image name
