@@ -1,11 +1,16 @@
 name: 'build-test'
 on: # rebuild any PRs and main branch changes
   pull_request:
+    paths-ignore:
+      - README.md
+      - 'docs/**'
   push:
     branches:
       - main
       - 'releases/*'
-
+    paths-ignore:
+      - README.md
+      - 'docs/**'
 jobs:
   build: # run build using the github action!
     runs-on: ubuntu-latest
