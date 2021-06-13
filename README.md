@@ -13,7 +13,7 @@ NOTE: Currently, the devcontainer-build-run action only supports Dockerfile-base
 
 ###  Getting Started
 
-The `devcontainer-build-run` action uses Docker BuildKit to perform the Docker builds as this has support for storing layer cache metadata with the image. You can use the [docker/setup-buildx-action](https://github.com/docker/setup-buildx-action) to install this (see example below).
+The [`devcontainer-build-run` action](https://github.com/marketplace/actions/devcontainer-build-run) uses Docker BuildKit to perform the Docker builds as this has support for storing layer cache metadata with the image. You can use the [docker/setup-buildx-action](https://github.com/docker/setup-buildx-action) to install this (see example below).
 
 To enable pushing the dev container image to a container registry you need to ensure that your GitHub workflow is signed in to that registry.
 
