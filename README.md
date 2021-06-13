@@ -124,7 +124,7 @@ The result from running the container is to output "Hello - World".
 
 ### Azure DevOps Task
 
-The `devcontainer-build-run` task uses Docker BuildKit to perform the Docker builds as this has support for storing layer cache metadata with the image. A version of Docker that supports BuiltKit is installed on the default hosted agents - if using a custom agent ensure that you make BuildKit available.
+The [`devcontainer-build-run` task](https://marketplace.visualstudio.com/items?itemName=stuartleeks.devcontainer-build-run) uses Docker BuildKit to perform the Docker builds as this has support for storing layer cache metadata with the image. A version of Docker that supports BuiltKit is installed on the default hosted agents - if using a custom agent ensure that you make BuildKit available.
 
 To enable pushing the dev container image to a container registry you need to ensure that your pipeline is signed in to that registry.
 
