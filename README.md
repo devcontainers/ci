@@ -47,7 +47,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and run dev container task
-        uses: stuartleeks/devcontainer-build-run@v0.1-alpha
+        uses: stuartleeks/devcontainer-build-run@v0.1
         with:
           # Change this to point to your image name
           imageName: ghcr.io/example/example-devcontainer
@@ -92,7 +92,7 @@ To build and run the dev container from `folderB` you can specify the `subFolder
 
 ```yaml
       - name: Build and run dev container task
-        uses: stuartleeks/devcontainer-build-run@v0.1-alpha
+        uses: stuartleeks/devcontainer-build-run@v0.1
         with:
           subFolder: folderB
           imageName: ghcr.io/example/example-devcontainer
@@ -106,7 +106,7 @@ If you want to pass additional environment variables to the dev container when i
 
 ```yaml
       - name: Build and run dev container task
-        uses: stuartleeks/devcontainer-build-run@v0.1-alpha
+        uses: stuartleeks/devcontainer-build-run@v0.1
         env:
           WORLD: World
         with:
