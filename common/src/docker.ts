@@ -201,7 +201,7 @@ export async function runContainer(
 		}
 	}
 	args.push(`${imageName}:latest`)
-	args.push('bash', '-c', command)
+	args.push('sh', '-c', command)
 
 	const {exitCode} = await exec('docker', args, {})
 

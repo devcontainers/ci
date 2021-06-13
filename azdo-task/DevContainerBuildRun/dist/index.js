@@ -13158,6 +13158,7 @@ function buildImageBase(exec, imageName, folder, devcontainerConfig) {
         }
         args.push('-f', dockerfilePath);
         args.push(contextPath);
+<<<<<<< HEAD
         // TODO - add abstraction to allow startGroup on GH actions
         // core.startGroup('🏗 Building dev container...')
         try {
@@ -13168,6 +13169,22 @@ function buildImageBase(exec, imageName, folder, devcontainerConfig) {
         }
         finally {
             // core.endGroup() // TODO
+||||||| merged common ancestors
+        // TODO - add abstraction to allow startGroup on GH actions
+        // core.startGroup('🏗 Building dev container...')
+        try {
+            const exitCode = yield exec('docker', args);
+            if (exitCode !== 0) {
+                throw new Error(`build failed with ${exitCode}`);
+            }
+        }
+        finally {
+            // core.endGroup() // TODO
+=======
+        const exitCode = yield exec('docker', args);
+        if (exitCode !== 0) {
+            throw new Error(`build failed with ${exitCode}`);
+>>>>>>> convert to sh
         }
     });
 }
@@ -13270,6 +13287,7 @@ function runContainer(exec, imageName, checkoutPath, subFolder, command, envs, m
             }
         }
         args.push(`${imageName}:latest`);
+<<<<<<< HEAD
         // args.push('bash', '-c', `sudo chown -R $(whoami) . && ${command}`) // TODO sort out permissions/user alignment
         args.push('bash', '-c', command); // TODO sort out permissions/user alignment
         // core.startGroup('🏃‍♀️ Running dev container...')
@@ -13281,6 +13299,23 @@ function runContainer(exec, imageName, checkoutPath, subFolder, command, envs, m
         }
         finally {
             // core.endGroup()
+||||||| merged common ancestors
+        args.push('bash', '-c', `sudo chown -R $(whoami) . && ${command}`); // TODO sort out permissions/user alignment
+        // core.startGroup('🏃‍♀️ Running dev container...')
+        try {
+            const exitCode = yield exec('docker', args);
+            if (exitCode !== 0) {
+                throw new Error(`run failed with ${exitCode}`);
+            }
+        }
+        finally {
+            // core.endGroup()
+=======
+        args.push('sh', '-c', `sudo chown -R $(whoami) . && ${command}`); // TODO sort out permissions/user alignment
+        const exitCode = yield exec('docker', args);
+        if (exitCode !== 0) {
+            throw new Error(`run failed with ${exitCode}`);
+>>>>>>> convert to sh
         }
     });
 }
@@ -13288,6 +13323,7 @@ function pushImage(exec, imageName) {
     return docker_awaiter(this, void 0, void 0, function* () {
         const args = ['push'];
         args.push(`${imageName}:latest`);
+<<<<<<< HEAD
         // core.startGroup('Pushing image...')
         try {
             const { exitCode } = yield exec('docker', args, {});
@@ -13297,6 +13333,21 @@ function pushImage(exec, imageName) {
         }
         finally {
             // core.endGroup()
+||||||| merged common ancestors
+        // core.startGroup('Pushing image...')
+        try {
+            const exitCode = yield exec('docker', args);
+            if (exitCode !== 0) {
+                throw new Error(`push failed with ${exitCode}`);
+            }
+        }
+        finally {
+            // core.endGroup()
+=======
+        const exitCode = yield exec('docker', args);
+        if (exitCode !== 0) {
+            throw new Error(`push failed with ${exitCode}`);
+>>>>>>> convert to sh
         }
     });
 }

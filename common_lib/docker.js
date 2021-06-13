@@ -188,7 +188,7 @@ function runContainer(exec, imageName, checkoutPath, subFolder, command, envs, m
             }
         }
         args.push(`${imageName}:latest`);
-        args.push('bash', '-c', command);
+        args.push('sh', '-c', command);
         const { exitCode } = yield exec('docker', args, {});
         if (exitCode !== 0) {
             throw new Error(`run failed with ${exitCode}`);
