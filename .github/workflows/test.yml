@@ -57,7 +57,6 @@ jobs:
           imageName: ghcr.io/stuartleeks/devcontainer-build-run-devcontainer
           runCmd: |
             echo "Starting"
-            echo ${AZDO_TOKEN:0:2}
             ./scripts/ci.sh
           env: |
             BUILD_NUMBER
