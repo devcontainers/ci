@@ -95,7 +95,7 @@ jobs:
         # if: github.ref == 'refs/heads/main' # only create release on `main`
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          VERSION_SHORT: v${{ steps.build.outputs.verion_short }}
+          VERSION_SHORT: v${{ steps.build.outputs.version_short }}
         run: |
           echo "VERSION_SHORT: $VERSION_SHORT"
           sudo chown -R $(whoami) .
