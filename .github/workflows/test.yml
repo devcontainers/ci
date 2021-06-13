@@ -92,7 +92,7 @@ jobs:
 
       - name: Create Major/Minor tag
         id: create_tag_short_verison
-        # if: github.ref == 'refs/heads/main' # only create release on `main`
+        if: github.ref == 'refs/heads/main' # only create release on `main`
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VERSION_SHORT: v${{ steps.build.outputs.version_short }}
