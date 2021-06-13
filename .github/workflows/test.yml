@@ -84,10 +84,25 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{ steps.build.outputs.version }}
-          release_name: Release ${{ steps.build.outputs.version }}
+          tag_name: v${{ steps.build.outputs.version }}
+          release_name: Release v${{ steps.build.outputs.version }}
           draft: false
           prerelease: true
+
+
+      - name: Create Major/Minor tag
+        id: create_tag_short_verison
+        if: github.ref == 'refs/heads/main' # only create release on `main`
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION_SHORT: v${{ steps.build.outputs.version_short }}
+        run: |
+          echo "VERSION_SHORT: $VERSION_SHORT"
+          sudo chown -R $(whoami) .
+          git config user.name "CI build"
+          git config user.email stuart@leeks.net
+          git tag -fa $VERSION_SHORT -m $VERSION_SHORT
+          git push -f origin $VERSION_SHORT
 
 
       - name: Upload Release Asset
