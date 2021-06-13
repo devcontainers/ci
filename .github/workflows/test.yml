@@ -90,6 +90,19 @@ jobs:
           prerelease: true
 
 
+      - name: Create Major/Minor tag
+        id: create_tag_short_verison
+        # if: github.ref == 'refs/heads/main' # only create release on `main`
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION_SHORT: v${{ steps.build.outputs.verion_short }}
+        run: |
+          echo "VERSION_SHORT: $VERSION_SHORT"
+          git remote -v
+          git tag -fa $VERSION_SHORT -m $VERSION_SHORT
+          git push -f origin $VERSION_SHORT
+
+
       - name: Upload Release Asset
         id: upload-release-asset 
         if: github.ref == 'refs/heads/main'
