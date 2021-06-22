@@ -3751,7 +3751,7 @@ function buildImage(exec, imageName, checkoutPath, subFolder) {
         }
     });
 }
-function runContainer(exec, imageName, checkoutPath, subFolder, command, envs) {
+function runContainer(exec, imageName, checkoutPath, subFolder, command, envs, mounts) {
     return docker_awaiter(this, void 0, void 0, function* () {
         const checkoutPathAbsolute = getAbsolutePath(checkoutPath, process.cwd());
         const folder = external_path_default().join(checkoutPathAbsolute, subFolder);
@@ -3761,11 +3761,18 @@ function runContainer(exec, imageName, checkoutPath, subFolder, command, envs) {
         const remoteUser = getRemoteUser(devcontainerConfig);
         const args = ['run'];
         args.push('--mount', `type=bind,src=${checkoutPathAbsolute},dst=${workspaceFolder}`);
+        if (devcontainerConfig.mounts) {
+            devcontainerConfig.mounts
+                .map(m => substituteValues(m))
+                .forEach(m => {
+                args.push('--mount', m);
+            });
+        }
         args.push('--workdir', workspaceFolder);
         args.push('--user', remoteUser);
         if (devcontainerConfig.runArgs) {
-            const subtitutedRunArgs = devcontainerConfig.runArgs.map(a => substituteValues(a));
-            args.push(...subtitutedRunArgs);
+            const substitutedRunArgs = devcontainerConfig.runArgs.map(a => substituteValues(a));
+            args.push(...substitutedRunArgs);
         }
         if (envs) {
             for (const env of envs) {

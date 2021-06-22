@@ -70,7 +70,8 @@ export async function runContainer(
 	checkoutPath: string,
 	subFolder: string,
 	command: string,
-	envs?: string[]
+	envs?: string[],
+	mounts?: string[]
 ): Promise<void> {
 	const checkoutPathAbsolute = getAbsolutePath(checkoutPath, process.cwd())
 	const folder = path.join(checkoutPathAbsolute, subFolder)
@@ -89,13 +90,20 @@ export async function runContainer(
 		'--mount',
 		`type=bind,src=${checkoutPathAbsolute},dst=${workspaceFolder}`
 	)
+	if (devcontainerConfig.mounts) {
+		devcontainerConfig.mounts
+			.map(m => substituteValues(m))
+			.forEach(m => {
+				args.push('--mount', m)
+			});
+	}
 	args.push('--workdir', workspaceFolder)
 	args.push('--user', remoteUser)
 	if (devcontainerConfig.runArgs) {
-		const subtitutedRunArgs = devcontainerConfig.runArgs.map(a =>
+		const substitutedRunArgs = devcontainerConfig.runArgs.map(a =>
 			substituteValues(a)
 		)
-		args.push(...subtitutedRunArgs)
+		args.push(...substitutedRunArgs)
 	}
 	if (envs) {
 		for (const env of envs) {

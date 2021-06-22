@@ -85,7 +85,7 @@ function buildImage(exec, imageName, checkoutPath, subFolder) {
     });
 }
 exports.buildImage = buildImage;
-function runContainer(exec, imageName, checkoutPath, subFolder, command, envs) {
+function runContainer(exec, imageName, checkoutPath, subFolder, command, envs, mounts) {
     return __awaiter(this, void 0, void 0, function* () {
         const checkoutPathAbsolute = file_1.getAbsolutePath(checkoutPath, process.cwd());
         const folder = path_1.default.join(checkoutPathAbsolute, subFolder);
@@ -95,11 +95,18 @@ function runContainer(exec, imageName, checkoutPath, subFolder, command, envs) {
         const remoteUser = config.getRemoteUser(devcontainerConfig);
         const args = ['run'];
         args.push('--mount', `type=bind,src=${checkoutPathAbsolute},dst=${workspaceFolder}`);
+        if (devcontainerConfig.mounts) {
+            devcontainerConfig.mounts
+                .map(m => envvars_1.substituteValues(m))
+                .forEach(m => {
+                args.push('--mount', m);
+            });
+        }
         args.push('--workdir', workspaceFolder);
         args.push('--user', remoteUser);
         if (devcontainerConfig.runArgs) {
-            const subtitutedRunArgs = devcontainerConfig.runArgs.map(a => envvars_1.substituteValues(a));
-            args.push(...subtitutedRunArgs);
+            const substitutedRunArgs = devcontainerConfig.runArgs.map(a => envvars_1.substituteValues(a));
+            args.push(...substitutedRunArgs);
         }
         if (envs) {
             for (const env of envs) {
