@@ -3599,6 +3599,7 @@ __nccwpck_require__.r(__webpack_exports__);
 __nccwpck_require__.d(__webpack_exports__, {
   "buildImage": () => (/* binding */ buildImage),
   "isDockerBuildXInstalled": () => (/* binding */ isDockerBuildXInstalled),
+  "parseMount": () => (/* binding */ parseMount),
   "pushImage": () => (/* binding */ pushImage),
   "runContainer": () => (/* binding */ runContainer)
 });
@@ -3704,6 +3705,7 @@ var docker_awaiter = (undefined && undefined.__awaiter) || function (thisArg, _a
 
 
 
+
 function isDockerBuildXInstalled(exec) {
     return docker_awaiter(this, void 0, void 0, function* () {
         const exitCode = yield exec('docker', ['buildx', '--help']);
@@ -3765,6 +3767,14 @@ function runContainer(exec, imageName, checkoutPath, subFolder, command, envs, m
             devcontainerConfig.mounts
                 .map(m => substituteValues(m))
                 .forEach(m => {
+                const mount = parseMount(m);
+                if (mount.type === "bind") {
+                    // check path exists
+                    if (!external_fs_.existsSync(mount.source)) {
+                        console.log(`Skipping mount as source does not exist: '${m}'`);
+                        return;
+                    }
+                }
                 args.push('--mount', m);
             });
         }
@@ -3808,6 +3818,40 @@ function pushImage(exec, imageName) {
             // core.endGroup()
         }
     });
+}
+function parseMount(mountString) {
+    // https://docs.docker.com/engine/reference/commandline/service_create/#add-bind-mounts-volumes-or-memory-filesystems
+    // examples:
+    //		type=bind,source=/var/run/docker.sock,target=/var/run/docker.sock
+    //		src=home-cache,target=/home/vscode/.cache
+    let type = '';
+    let source = '';
+    let target = '';
+    const options = mountString.split(',');
+    for (const option of options) {
+        const parts = option.split('=');
+        switch (parts[0]) {
+            case 'type':
+                type = parts[1];
+                break;
+            case 'src':
+            case 'source':
+                source = parts[1];
+                break;
+            case 'dst':
+            case 'destination':
+            case 'target':
+                target = parts[1];
+                break;
+            case 'readonly':
+            case 'ro':
+                // ignore
+                break;
+            default:
+                throw new Error(`Unhandled mount option '${parts[0]}'`);
+        }
+    }
+    return { type, source, target };
 }
 
 
