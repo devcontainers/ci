@@ -31,8 +31,9 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.pushImage = exports.runContainer = exports.buildImage = exports.isDockerBuildXInstalled = void 0;
+exports.parseMount = exports.pushImage = exports.runContainer = exports.buildImage = exports.isDockerBuildXInstalled = void 0;
 const path_1 = __importDefault(require("path"));
+const fs = __importStar(require("fs"));
 const config = __importStar(require("./config"));
 const file_1 = require("./file");
 const envvars_1 = require("./envvars");
@@ -85,7 +86,7 @@ function buildImage(exec, imageName, checkoutPath, subFolder) {
     });
 }
 exports.buildImage = buildImage;
-function runContainer(exec, imageName, checkoutPath, subFolder, command, envs) {
+function runContainer(exec, imageName, checkoutPath, subFolder, command, envs, mounts) {
     return __awaiter(this, void 0, void 0, function* () {
         const checkoutPathAbsolute = file_1.getAbsolutePath(checkoutPath, process.cwd());
         const folder = path_1.default.join(checkoutPathAbsolute, subFolder);
@@ -95,11 +96,26 @@ function runContainer(exec, imageName, checkoutPath, subFolder, command, envs) {
         const remoteUser = config.getRemoteUser(devcontainerConfig);
         const args = ['run'];
         args.push('--mount', `type=bind,src=${checkoutPathAbsolute},dst=${workspaceFolder}`);
+        if (devcontainerConfig.mounts) {
+            devcontainerConfig.mounts
+                .map(m => envvars_1.substituteValues(m))
+                .forEach(m => {
+                const mount = parseMount(m);
+                if (mount.type === "bind") {
+                    // check path exists
+                    if (!fs.existsSync(mount.source)) {
+                        console.log(`Skipping mount as source does not exist: '${m}'`);
+                        return;
+                    }
+                }
+                args.push('--mount', m);
+            });
+        }
         args.push('--workdir', workspaceFolder);
         args.push('--user', remoteUser);
         if (devcontainerConfig.runArgs) {
-            const subtitutedRunArgs = devcontainerConfig.runArgs.map(a => envvars_1.substituteValues(a));
-            args.push(...subtitutedRunArgs);
+            const substitutedRunArgs = devcontainerConfig.runArgs.map(a => envvars_1.substituteValues(a));
+            args.push(...substitutedRunArgs);
         }
         if (envs) {
             for (const env of envs) {
@@ -138,3 +154,38 @@ function pushImage(exec, imageName) {
     });
 }
 exports.pushImage = pushImage;
+function parseMount(mountString) {
+    // https://docs.docker.com/engine/reference/commandline/service_create/#add-bind-mounts-volumes-or-memory-filesystems
+    // examples:
+    //		type=bind,source=/var/run/docker.sock,target=/var/run/docker.sock
+    //		src=home-cache,target=/home/vscode/.cache
+    let type = '';
+    let source = '';
+    let target = '';
+    const options = mountString.split(',');
+    for (const option of options) {
+        const parts = option.split('=');
+        switch (parts[0]) {
+            case 'type':
+                type = parts[1];
+                break;
+            case 'src':
+            case 'source':
+                source = parts[1];
+                break;
+            case 'dst':
+            case 'destination':
+            case 'target':
+                target = parts[1];
+                break;
+            case 'readonly':
+            case 'ro':
+                // ignore
+                break;
+            default:
+                throw new Error(`Unhandled mount option '${parts[0]}'`);
+        }
+    }
+    return { type, source, target };
+}
+exports.parseMount = parseMount;

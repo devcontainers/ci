@@ -1,4 +1,5 @@
 import path from 'path'
+import * as fs from 'fs'
 import * as config from './config'
 import {ExecFunction} from './exec'
 import {getAbsolutePath} from './file'
@@ -70,7 +71,8 @@ export async function runContainer(
 	checkoutPath: string,
 	subFolder: string,
 	command: string,
-	envs?: string[]
+	envs?: string[],
+	mounts?: string[]
 ): Promise<void> {
 	const checkoutPathAbsolute = getAbsolutePath(checkoutPath, process.cwd())
 	const folder = path.join(checkoutPathAbsolute, subFolder)
@@ -89,13 +91,28 @@ export async function runContainer(
 		'--mount',
 		`type=bind,src=${checkoutPathAbsolute},dst=${workspaceFolder}`
 	)
+	if (devcontainerConfig.mounts) {
+		devcontainerConfig.mounts
+			.map(m => substituteValues(m))
+			.forEach(m => {
+				const mount = parseMount(m)
+				if (mount.type === "bind") {
+					// check path exists
+					if (!fs.existsSync(mount.source)) {
+						console.log(`Skipping mount as source does not exist: '${m}'`)
+						return;
+					}
+				}
+				args.push('--mount', m)
+			});
+	}
 	args.push('--workdir', workspaceFolder)
 	args.push('--user', remoteUser)
 	if (devcontainerConfig.runArgs) {
-		const subtitutedRunArgs = devcontainerConfig.runArgs.map(a =>
+		const substitutedRunArgs = devcontainerConfig.runArgs.map(a =>
 			substituteValues(a)
 		)
-		args.push(...subtitutedRunArgs)
+		args.push(...substitutedRunArgs)
 	}
 	if (envs) {
 		for (const env of envs) {
@@ -131,4 +148,53 @@ export async function pushImage(exec: ExecFunction, imageName: string): Promise<
 	} finally {
 		// core.endGroup()
 	}
+}
+
+export interface DockerMount {
+	type: string,
+	source: string,
+	target: string,
+	// ignoring readonly as not relevant
+}
+
+export function parseMount(mountString: string): DockerMount {
+	// https://docs.docker.com/engine/reference/commandline/service_create/#add-bind-mounts-volumes-or-memory-filesystems
+	// examples:
+	//		type=bind,source=/var/run/docker.sock,target=/var/run/docker.sock
+	//		src=home-cache,target=/home/vscode/.cache
+
+	let type = ''
+	let source = ''
+	let target = ''
+
+	const options= mountString.split(',')
+	
+	for (const option of options) {
+		const parts = option.split('=');
+		
+		switch (parts[0]) {
+			case 'type':
+				type = parts[1]
+				break;
+			case 'src':
+			case 'source':
+				source = parts[1]
+				break;
+			case 'dst':
+			case 'destination':
+			case 'target':
+				target = parts[1]
+				break;
+
+			case 'readonly':
+			case 'ro':
+				// ignore
+				break;
+
+			default:
+				throw new Error(`Unhandled mount option '${parts[0]}'`);
+		}
+	}
+
+	return {type, source, target}
 }
