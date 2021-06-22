@@ -34,7 +34,7 @@ const docker = __importStar(require("../../common/src/docker"));
 const exec_1 = require("./exec");
 function isDockerBuildXInstalled() {
     return __awaiter(this, void 0, void 0, function* () {
-        return yield docker.isDockerBuildXInstalled(exec_1.exec);
+        return yield docker.isDockerBuildXInstalled(exec_1.execSilent);
     });
 }
 exports.isDockerBuildXInstalled = isDockerBuildXInstalled;

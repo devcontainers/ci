@@ -1,11 +1,10 @@
 import * as core from '@actions/core'
-import {check} from 'prettier'
 import * as docker from '../../common/src/docker'
-import {exec} from './exec'
+import {exec, execSilent} from './exec'
 
 
 export async function isDockerBuildXInstalled(): Promise<boolean> {
-	return await docker.isDockerBuildXInstalled(exec)
+	return await docker.isDockerBuildXInstalled(execSilent)
 }
 export async function buildImage(
 	imageName: string,
