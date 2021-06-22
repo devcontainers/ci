@@ -1649,7 +1649,7 @@ const docker = __importStar(__nccwpck_require__(187));
 const exec_1 = __nccwpck_require__(757);
 function isDockerBuildXInstalled() {
     return __awaiter(this, void 0, void 0, function* () {
-        return yield docker.isDockerBuildXInstalled(exec_1.exec);
+        return yield docker.isDockerBuildXInstalled(exec_1.execSilent);
     });
 }
 exports.isDockerBuildXInstalled = isDockerBuildXInstalled;
@@ -1742,7 +1742,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.exec = void 0;
+exports.execSilent = exports.exec = void 0;
 const actions_exec = __importStar(__nccwpck_require__(514));
 function exec(command, args) {
     return __awaiter(this, void 0, void 0, function* () {
@@ -1755,6 +1755,17 @@ function exec(command, args) {
     });
 }
 exports.exec = exec;
+function execSilent(command, args) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const actionOptions = {
+            ignoreReturnCode: true,
+            silent: true
+        };
+        const exitCode = yield actions_exec.exec(command, args, actionOptions);
+        return exitCode;
+    });
+}
+exports.execSilent = execSilent;
 
 
 /***/ }),

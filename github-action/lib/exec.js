@@ -28,7 +28,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.exec = void 0;
+exports.execSilent = exports.exec = void 0;
 const actions_exec = __importStar(require("@actions/exec"));
 function exec(command, args) {
     return __awaiter(this, void 0, void 0, function* () {
@@ -41,3 +41,14 @@ function exec(command, args) {
     });
 }
 exports.exec = exec;
+function execSilent(command, args) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const actionOptions = {
+            ignoreReturnCode: true,
+            silent: true
+        };
+        const exitCode = yield actions_exec.exec(command, args, actionOptions);
+        return exitCode;
+    });
+}
+exports.execSilent = execSilent;
