@@ -70,9 +70,9 @@ jobs:
             BRANCH
             AZDO_TOKEN
             AZURE_DEVOPS_EXT_PAT
-            AZDO_ORG=https://dev.azure.com/stuartle
-            AZDO_PROJECT=AzDODevContainerBuildRunTest
-            AZDO_BUILD=AzDODevContainerBuildRunTest
+            AZDO_ORG=https://dev.azure.com/devcontainer-build-run
+            AZDO_PROJECT=devcontainer-build-run-test
+            AZDO_BUILD=devcontainer-build-run-test
 
       - uses: actions/upload-artifact@v2
         with:
