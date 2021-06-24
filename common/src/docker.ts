@@ -4,9 +4,10 @@ import * as config from './config'
 import {ExecFunction} from './exec'
 import {getAbsolutePath} from './file'
 import {substituteValues} from './envvars'
+import {parseGroup, parsePasswd} from './users'
 
 export async function isDockerBuildXInstalled(exec: ExecFunction): Promise<boolean> {
-	const exitCode = await exec('docker', ['buildx', '--help'])
+	const {exitCode} = await exec('docker', ['buildx', '--help'], {silent: true})
 	return exitCode === 0
 }
 export async function buildImage(
@@ -14,15 +15,31 @@ export async function buildImage(
 	imageName: string,
 	checkoutPath: string,
 	subFolder: string
-): Promise<void> {
-	const folder = path.join(checkoutPath, subFolder)
+): Promise<string> {
 
+
+	const folder = path.join(checkoutPath, subFolder)
 	const devcontainerJsonPath = path.join(
 		folder,
 		'.devcontainer/devcontainer.json'
 	)
 	const devcontainerConfig = await config.loadFromFile(devcontainerJsonPath)
 
+	// build the image from the .devcontainer spec
+	await buildImageBase(exec, imageName, folder, devcontainerConfig)
+
+	if (!devcontainerConfig.remoteUser) {
+		return imageName
+	}
+	return await ensureHostAndContainerUsersAlign(exec, imageName, devcontainerConfig)
+}
+
+async function buildImageBase(
+	exec: ExecFunction,
+	imageName: string,
+	folder: string,
+	devcontainerConfig: config.DevContainerConfig
+): Promise<void> {
 	const configDockerfile = config.getDockerfile(devcontainerConfig)
 	if (!configDockerfile) {
 		throw new Error(
@@ -52,17 +69,87 @@ export async function buildImage(
 	args.push('-f', dockerfilePath)
 	args.push(contextPath)
 
-	// TODO - add abstraction to allow startGroup on GH actions
-	// core.startGroup('🏗 Building dev container...')
-	try {
-		const exitCode = await exec('docker', args)
+	const {exitCode} = await exec('docker', args, {})
 
-		if (exitCode !== 0) {
-			throw new Error(`build failed with ${exitCode}`)
-		}
-	} finally {
-		// core.endGroup() // TODO
+	if (exitCode !== 0) {
+		throw new Error(`build failed with ${exitCode}`)
 	}
+}
+
+// returns the name of the image to run in the next step
+async function ensureHostAndContainerUsersAlign(exec: ExecFunction, imageName: string, devcontainerConfig: config.DevContainerConfig): Promise<string> {
+	console.log("***HELLO***")
+	if (!devcontainerConfig.remoteUser) {
+		return imageName
+	}
+	const resultHostUser = await exec('/bin/sh', ['-c', 'id -u -n'], {silent: true})
+	if (resultHostUser.exitCode !== 0) {
+		throw new Error(`Failed to get host user (exitcode: ${resultHostUser.exitCode}):${resultHostUser.stdout}\n${resultHostUser.stderr}`)
+	}
+	const resultHostPasswd = await exec('/bin/sh', ['-c', "cat /etc/passwd"], {silent: true})
+	if (resultHostPasswd.exitCode !== 0) {
+		throw new Error(`Failed to get host user info (exitcode: ${resultHostPasswd.exitCode}):${resultHostPasswd.stdout}\n${resultHostPasswd.stderr}`)
+	}
+	console.log(`**Host:/etc/passwd:${resultHostPasswd.exitCode}:\n${resultHostPasswd.stdout}`)
+	// const resultHostGroup = await exec('sh', ['-c', "cat /etc/group"], {silent: true})
+	// if (resultHostGroup.exitCode !== 0) {
+	// 	throw new Error("Failed to get host group info")
+	// }
+	const resultContainerPasswd = await exec('docker', ['run', '--rm', imageName, 'sh', '-c', "cat /etc/passwd"], {silent: false})
+	if (resultContainerPasswd.exitCode !== 0) {
+		throw new Error(`Failed to get container user info (exitcode: ${resultContainerPasswd.exitCode}):${resultContainerPasswd.stdout}\n${resultContainerPasswd.stderr}`)
+	}
+	console.log(`**Host:/etc/passwd:${resultContainerPasswd.exitCode}:\n${resultContainerPasswd.stdout}`)
+	const resultContainerGroup = await exec('docker', ['run', '--rm', imageName, 'sh', '-c', "cat /etc/group"], {silent: false})
+	if (resultContainerGroup.exitCode !== 0) {
+		throw new Error(`Failed to get container group info (exitcode: ${resultContainerGroup.exitCode}):${resultContainerGroup.stdout}\n${resultContainerGroup.stderr}`)
+	}
+
+	const hostUserName = resultHostUser.stdout.trim();
+	const hostUsers = parsePasswd(resultHostPasswd.stdout)
+	// const hostGroups = parseGroup(resultHostGroup.stdout)
+	const hostUser = hostUsers.find(u => u.name === hostUserName)
+	if (!hostUser)
+		throw new Error(`Failed to find host user in host info. (hostUserName='${hostUserName}')`)
+
+
+
+	const containerUserName = devcontainerConfig.remoteUser
+	const containerUsers = parsePasswd(resultContainerPasswd.stdout)
+	const containerGroups = parseGroup(resultContainerGroup.stdout)
+	const containerUser = containerUsers.find(u => u.name === containerUserName)
+	if (!containerUser){
+		console.log(resultContainerPasswd.stdout)
+		throw new Error(`Failed to find container user in container info. (containerUserName='${containerUserName}')`)
+	}
+
+	const existingContainerUserGroup = containerGroups.find(g => g.gid == hostUser.gid)
+	if (existingContainerUserGroup)
+		throw new Error(`Host user GID (${hostUser.gid}) already exists as a group in the container`)
+
+	const containerUserAligned = hostUser.uid === containerUser.uid && hostUser.gid == containerUser.gid;
+
+	if (containerUserAligned) {
+		// all good - nothing to do
+		return imageName
+	}
+
+	// Generate a Dockerfile to run to build a derived image with the UID/GID updated
+	const dockerfileContent = `FROM ${imageName}
+RUN sudo sed -i /etc/passwd -e s/${containerUser.name}:x:${containerUser.uid}:${containerUser.gid}/${containerUser.name}:x:${hostUser.uid}:${hostUser.gid}/
+`
+	const tempDir = fs.mkdtempSync("devcontainer-build-run")
+	const derivedDockerfilePath = path.join(tempDir, "Dockerfile")
+	fs.writeFileSync(derivedDockerfilePath, dockerfileContent)
+
+	const derivedImageName = `${imageName}-userfix`
+
+	const derivedDockerBuid = await exec('docker', ['buildx', 'build', '--tag', derivedImageName, '-f', derivedDockerfilePath, tempDir, '--output=type=docker'], {})
+	if (derivedDockerBuid.exitCode !== 0) {
+		throw new Error("Failed to build derived Docker image with users updated")
+	}
+
+	return derivedImageName
 }
 
 export async function runContainer(
@@ -120,11 +207,12 @@ export async function runContainer(
 		}
 	}
 	args.push(`${imageName}:latest`)
-	args.push('bash', '-c', `sudo chown -R $(whoami) . && ${command}`) // TODO sort out permissions/user alignment
+	// args.push('bash', '-c', `sudo chown -R $(whoami) . && ${command}`) // TODO sort out permissions/user alignment
+	args.push('bash', '-c', command) // TODO sort out permissions/user alignment
 
 	// core.startGroup('🏃‍♀️ Running dev container...')
 	try {
-		const exitCode = await exec('docker', args)
+		const {exitCode} = await exec('docker', args, {})
 
 		if (exitCode !== 0) {
 			throw new Error(`run failed with ${exitCode}`)
@@ -140,7 +228,7 @@ export async function pushImage(exec: ExecFunction, imageName: string): Promise<
 
 	// core.startGroup('Pushing image...')
 	try {
-		const exitCode = await exec('docker', args)
+		const {exitCode} = await exec('docker', args, {})
 
 		if (exitCode !== 0) {
 			throw new Error(`push failed with ${exitCode}`)
@@ -167,11 +255,11 @@ export function parseMount(mountString: string): DockerMount {
 	let source = ''
 	let target = ''
 
-	const options= mountString.split(',')
-	
+	const options = mountString.split(',')
+
 	for (const option of options) {
 		const parts = option.split('=');
-		
+
 		switch (parts[0]) {
 			case 'type':
 				type = parts[1]

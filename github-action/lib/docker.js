@@ -34,7 +34,7 @@ const docker = __importStar(require("../../common/src/docker"));
 const exec_1 = require("./exec");
 function isDockerBuildXInstalled() {
     return __awaiter(this, void 0, void 0, function* () {
-        return yield docker.isDockerBuildXInstalled(exec_1.execSilent);
+        return yield docker.isDockerBuildXInstalled(exec_1.exec);
     });
 }
 exports.isDockerBuildXInstalled = isDockerBuildXInstalled;
@@ -42,12 +42,11 @@ function buildImage(imageName, checkoutPath, subFolder) {
     return __awaiter(this, void 0, void 0, function* () {
         core.startGroup('🏗 Building dev container...');
         try {
-            yield docker.buildImage(exec_1.exec, imageName, checkoutPath, subFolder);
-            return true;
+            return yield docker.buildImage(exec_1.exec, imageName, checkoutPath, subFolder);
         }
         catch (error) {
             core.setFailed(error);
-            return false;
+            return "";
         }
         finally {
             core.endGroup();

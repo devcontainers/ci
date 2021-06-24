@@ -1,20 +1,51 @@
 import * as task from 'azure-pipelines-task-lib/task'
+import {ExecOptions, ExecResult} from '../../../common/src/exec'
+import * as stream from 'stream'
 
-export async function exec(command: string, args: string[]): Promise<number> {
-	const exitCode = await task.exec(command, args, {
-		failOnStdErr: false,
-		silent: false,
-		ignoreReturnCode: true
-	})
+// https://github.com/microsoft/azure-pipelines-task-lib/blob/master/node/docs/azure-pipelines-task-lib.md
 
-	return exitCode
+/* global BufferEncoding */
+
+class TeeStream extends stream.Writable {
+	private value = ''
+	private teeStream: stream.Writable
+
+	constructor(teeStream: stream.Writable, options?: stream.WritableOptions) {
+		super(options)
+		this.teeStream = teeStream
+	}
+
+	_write(data: any, encoding: BufferEncoding, callback: Function): void {
+		this.value += data
+		this.teeStream.write(data, encoding) // NOTE - currently ignoring teeStream callback
+
+		if (callback) {
+			callback()
+		}
+	}
+
+	toString(): string {
+		return this.value
+	}
 }
-export async function execSilent(command: string, args: string[]): Promise<number> {
+
+export async function exec(
+	command: string,
+	args: string[],
+	options: ExecOptions
+): Promise<ExecResult> {
+	const outStream = new TeeStream(process.stdout)
+	const errStream = new TeeStream(process.stderr)
+
 	const exitCode = await task.exec(command, args, {
 		failOnStdErr: false,
-		silent: true,
+		silent: options.silent ?? false,
 		ignoreReturnCode: true
 	})
 
-	return exitCode
+	return {
+		exitCode,
+		stdout: outStream.toString(),
+		stderr: errStream.toString()
+	}
 }

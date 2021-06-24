@@ -1,29 +1,21 @@
 import * as actions_exec from '@actions/exec'
+import {ExecOptions, ExecResult} from 'devcontainer-build-run-common/src/exec';
 
 export async function exec(
 	command: string,
-	args: string[]
-): Promise<number> {
+	args: string[],
+	options: ExecOptions
+): Promise<ExecResult> {
 
 	const actionOptions: actions_exec.ExecOptions = {
 		ignoreReturnCode: true,
-		silent: false
+		silent: options.silent ?? false,
 	}
-	const exitCode = await actions_exec.exec(command, args, actionOptions)
+	const result = await actions_exec.getExecOutput(command, args, actionOptions)
 
-	return exitCode;
-}
-
-export async function execSilent(
-	command: string,
-	args: string[]
-): Promise<number> {
-
-	const actionOptions: actions_exec.ExecOptions = {
-		ignoreReturnCode: true,
-		silent: true
-	}
-	const exitCode = await actions_exec.exec(command, args, actionOptions)
-
-	return exitCode;
+	return {
+		exitCode: result.exitCode,
+		stdout: result.stdout,
+		stderr: result.stderr
+	};
 }

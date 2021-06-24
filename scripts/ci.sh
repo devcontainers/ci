@@ -3,10 +3,16 @@ set -e
 
 script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 
+sudo chown -R $(whoami) ~ # TODO - remove this
+# ls -al ~
+# sudo mkdir -p ~/.npm # TODO - remove this
+# sudo chown -R $(whoami) ~/.npm # TODO - remove this
+# sudo mkdir -p ~/.tpx # TODO - remove this
+# sudo chown -R $(whoami) ~/.tpx # TODO - remove this
 
 figlet common
 cd "$script_dir/../common"
-sudo npm install
+npm install
 npm run test
 
 figlet GH Action

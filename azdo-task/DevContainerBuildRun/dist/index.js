@@ -37,7 +37,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.pushImage = exports.runContainer = exports.buildImage = exports.isDockerBuildXInstalled = void 0;
 const task = __importStar(__nccwpck_require__(347));
-const docker = __importStar(__nccwpck_require__(3872));
+const docker = __importStar(__nccwpck_require__(9340));
 const exec_1 = __nccwpck_require__(7757);
 function isDockerBuildXInstalled() {
     return __awaiter(this, void 0, void 0, function* () {
@@ -127,14 +127,41 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.exec = void 0;
 const task = __importStar(__nccwpck_require__(347));
-function exec(command, args) {
+const stream = __importStar(__nccwpck_require__(2413));
+// https://github.com/microsoft/azure-pipelines-task-lib/blob/master/node/docs/azure-pipelines-task-lib.md
+/* global BufferEncoding */
+class TeeStream extends stream.Writable {
+    constructor(teeStream, options) {
+        super(options);
+        this.value = '';
+        this.teeStream = teeStream;
+    }
+    _write(data, encoding, callback) {
+        this.value += data;
+        this.teeStream.write(data, encoding); // NOTE - currently ignoring teeStream callback
+        if (callback) {
+            callback();
+        }
+    }
+    toString() {
+        return this.value;
+    }
+}
+function exec(command, args, options) {
+    var _a;
     return __awaiter(this, void 0, void 0, function* () {
+        const outStream = new TeeStream(process.stdout);
+        const errStream = new TeeStream(process.stderr);
         const exitCode = yield task.exec(command, args, {
             failOnStdErr: false,
-            silent: false,
+            silent: (_a = options.silent) !== null && _a !== void 0 ? _a : false,
             ignoreReturnCode: true
         });
-        return exitCode;
+        return {
+            exitCode,
+            stdout: outStream.toString(),
+            stderr: errStream.toString()
+        };
     });
 }
 exports.exec = exec;
@@ -12938,7 +12965,7 @@ module.exports = v4;
 
 /***/ }),
 
-/***/ 3872:
+/***/ 9340:
 /***/ ((__unused_webpack_module, __webpack_exports__, __nccwpck_require__) => {
 
 "use strict";
@@ -12949,6 +12976,7 @@ __nccwpck_require__.r(__webpack_exports__);
 __nccwpck_require__.d(__webpack_exports__, {
   "buildImage": () => (/* binding */ buildImage),
   "isDockerBuildXInstalled": () => (/* binding */ isDockerBuildXInstalled),
+  "parseMount": () => (/* binding */ parseMount),
   "pushImage": () => (/* binding */ pushImage),
   "runContainer": () => (/* binding */ runContainer)
 });
@@ -13040,6 +13068,36 @@ function getSubstitutionValue(regexMatch, placeholder) {
     return regexMatch;
 }
 
+;// CONCATENATED MODULE: ../../common/src/users.ts
+function parsePasswd(input) {
+    const result = [];
+    const lines = input.split('\n');
+    for (const line of lines) {
+        const parts = line.split(':');
+        const user = {
+            name: parts[0],
+            uid: parts[2],
+            gid: parts[3]
+        };
+        result.push(user);
+    }
+    return result;
+}
+function parseGroup(input) {
+    const result = [];
+    const lines = input.split('\n');
+    for (const line of lines) {
+        const parts = line.split(':');
+        const group = {
+            name: parts[0],
+            gid: parts[2],
+            users: parts[3] ? parts[3].split(',') : []
+        };
+        result.push(group);
+    }
+    return result;
+}
+
 ;// CONCATENATED MODULE: ../../common/src/docker.ts
 var docker_awaiter = (undefined && undefined.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
@@ -13054,18 +13112,30 @@ var docker_awaiter = (undefined && undefined.__awaiter) || function (thisArg, _a
 
 
 
+
+
 function isDockerBuildXInstalled(exec) {
     return docker_awaiter(this, void 0, void 0, function* () {
-        const exitCode = yield exec('docker', ['buildx', '--help']);
+        const { exitCode } = yield exec('docker', ['buildx', '--help'], { silent: true });
         return exitCode === 0;
     });
 }
 function buildImage(exec, imageName, checkoutPath, subFolder) {
-    var _a, _b;
     return docker_awaiter(this, void 0, void 0, function* () {
         const folder = external_path_default().join(checkoutPath, subFolder);
         const devcontainerJsonPath = external_path_default().join(folder, '.devcontainer/devcontainer.json');
         const devcontainerConfig = yield loadFromFile(devcontainerJsonPath);
+        // build the image from the .devcontainer spec
+        yield buildImageBase(exec, imageName, folder, devcontainerConfig);
+        if (!devcontainerConfig.remoteUser) {
+            return imageName;
+        }
+        return yield ensureHostAndContainerUsersAlign(exec, imageName, devcontainerConfig);
+    });
+}
+function buildImageBase(exec, imageName, folder, devcontainerConfig) {
+    var _a, _b;
+    return docker_awaiter(this, void 0, void 0, function* () {
         const configDockerfile = getDockerfile(devcontainerConfig);
         if (!configDockerfile) {
             throw new Error('dockerfile not set in devcontainer.json - devcontainer-build-run currently only supports Dockerfile-based dev containers');
@@ -13091,7 +13161,7 @@ function buildImage(exec, imageName, checkoutPath, subFolder) {
         // TODO - add abstraction to allow startGroup on GH actions
         // core.startGroup('🏗 Building dev container...')
         try {
-            const exitCode = yield exec('docker', args);
+            const { exitCode } = yield exec('docker', args, {});
             if (exitCode !== 0) {
                 throw new Error(`build failed with ${exitCode}`);
             }
@@ -13101,7 +13171,69 @@ function buildImage(exec, imageName, checkoutPath, subFolder) {
         }
     });
 }
-function runContainer(exec, imageName, checkoutPath, subFolder, command, envs) {
+// returns the name of the image to run in the next step
+function ensureHostAndContainerUsersAlign(exec, imageName, devcontainerConfig) {
+    return docker_awaiter(this, void 0, void 0, function* () {
+        console.log("***HELLO***");
+        if (!devcontainerConfig.remoteUser) {
+            return imageName;
+        }
+        const resultHostUser = yield exec('/bin/sh', ['-c', 'id -u -n'], { silent: true });
+        if (resultHostUser.exitCode !== 0) {
+            throw new Error(`Failed to get host user (exitcode: ${resultHostUser.exitCode}):${resultHostUser.stdout}\n${resultHostUser.stderr}`);
+        }
+        const resultHostPasswd = yield exec('/bin/sh', ['-c', "cat /etc/passwd"], { silent: true });
+        if (resultHostPasswd.exitCode !== 0) {
+            throw new Error(`Failed to get host user info (exitcode: ${resultHostPasswd.exitCode}):${resultHostPasswd.stdout}\n${resultHostPasswd.stderr}`);
+        }
+        // const resultHostGroup = await exec('sh', ['-c', "cat /etc/group"], {silent: true})
+        // if (resultHostGroup.exitCode !== 0) {
+        // 	throw new Error("Failed to get host group info")
+        // }
+        const resultContainerPasswd = yield exec('docker', ['run', '--rm', imageName, 'sh', '-c', "cat /etc/passwd"], { silent: true });
+        if (resultContainerPasswd.exitCode !== 0) {
+            throw new Error("Failed to get container user info");
+        }
+        const resultContainerGroup = yield exec('docker', ['run', '--rm', imageName, 'sh', '-c', "cat /etc/group"], { silent: true });
+        if (resultContainerGroup.exitCode !== 0) {
+            throw new Error("Failed to get container group info");
+        }
+        const hostUserName = resultHostUser.stdout.trim();
+        const hostUsers = parsePasswd(resultHostPasswd.stdout);
+        // const hostGroups = parseGroup(resultHostGroup.stdout)
+        const hostUser = hostUsers.find(u => u.name === hostUserName);
+        if (!hostUser)
+            throw new Error(`Failed to find host user in host info. (hostUserName='${hostUserName}')`);
+        const containerUserName = devcontainerConfig.remoteUser;
+        const containerUsers = parsePasswd(resultContainerPasswd.stdout);
+        const containerGroups = parseGroup(resultContainerGroup.stdout);
+        const containerUser = containerUsers.find(u => u.name === containerUserName);
+        if (!containerUser)
+            throw new Error("Failed to get container user info");
+        const existingContainerUserGroup = containerGroups.find(g => g.gid == hostUser.gid);
+        if (existingContainerUserGroup)
+            throw new Error(`Host user GID (${hostUser.gid}) already exists as a group in the container`);
+        const containerUserAligned = hostUser.uid === containerUser.uid && hostUser.gid == containerUser.gid;
+        if (containerUserAligned) {
+            // all good - nothing to do
+            return imageName;
+        }
+        // Generate a Dockerfile to run to build a derived image with the UID/GID updated
+        const dockerfileContent = `FROM ${imageName}
+RUN sudo sed -i /etc/passwd -e s/${containerUser.name}:x:${containerUser.uid}:${containerUser.gid}/${containerUser.name}:x:${hostUser.uid}:${hostUser.gid}/
+`;
+        const tempDir = external_fs_.mkdtempSync("devcontainer-build-run");
+        const derivedDockerfilePath = external_path_default().join(tempDir, "Dockerfile");
+        external_fs_.writeFileSync(derivedDockerfilePath, dockerfileContent);
+        const derivedImageName = `${imageName}-userfix`;
+        const derivedDockerBuid = yield exec('docker', ['buildx', 'build', '--tag', derivedImageName, '-f', derivedDockerfilePath, tempDir, '--output=type=docker'], {});
+        if (derivedDockerBuid.exitCode !== 0) {
+            throw new Error("Failed to build derived Docker image with users updated");
+        }
+        return derivedImageName;
+    });
+}
+function runContainer(exec, imageName, checkoutPath, subFolder, command, envs, mounts) {
     return docker_awaiter(this, void 0, void 0, function* () {
         const checkoutPathAbsolute = getAbsolutePath(checkoutPath, process.cwd());
         const folder = external_path_default().join(checkoutPathAbsolute, subFolder);
@@ -13111,11 +13243,26 @@ function runContainer(exec, imageName, checkoutPath, subFolder, command, envs) {
         const remoteUser = getRemoteUser(devcontainerConfig);
         const args = ['run'];
         args.push('--mount', `type=bind,src=${checkoutPathAbsolute},dst=${workspaceFolder}`);
+        if (devcontainerConfig.mounts) {
+            devcontainerConfig.mounts
+                .map(m => substituteValues(m))
+                .forEach(m => {
+                const mount = parseMount(m);
+                if (mount.type === "bind") {
+                    // check path exists
+                    if (!external_fs_.existsSync(mount.source)) {
+                        console.log(`Skipping mount as source does not exist: '${m}'`);
+                        return;
+                    }
+                }
+                args.push('--mount', m);
+            });
+        }
         args.push('--workdir', workspaceFolder);
         args.push('--user', remoteUser);
         if (devcontainerConfig.runArgs) {
-            const subtitutedRunArgs = devcontainerConfig.runArgs.map(a => substituteValues(a));
-            args.push(...subtitutedRunArgs);
+            const substitutedRunArgs = devcontainerConfig.runArgs.map(a => substituteValues(a));
+            args.push(...substitutedRunArgs);
         }
         if (envs) {
             for (const env of envs) {
@@ -13123,10 +13270,11 @@ function runContainer(exec, imageName, checkoutPath, subFolder, command, envs) {
             }
         }
         args.push(`${imageName}:latest`);
-        args.push('bash', '-c', `sudo chown -R $(whoami) . && ${command}`); // TODO sort out permissions/user alignment
+        // args.push('bash', '-c', `sudo chown -R $(whoami) . && ${command}`) // TODO sort out permissions/user alignment
+        args.push('bash', '-c', command); // TODO sort out permissions/user alignment
         // core.startGroup('🏃‍♀️ Running dev container...')
         try {
-            const exitCode = yield exec('docker', args);
+            const { exitCode } = yield exec('docker', args, {});
             if (exitCode !== 0) {
                 throw new Error(`run failed with ${exitCode}`);
             }
@@ -13142,7 +13290,7 @@ function pushImage(exec, imageName) {
         args.push(`${imageName}:latest`);
         // core.startGroup('Pushing image...')
         try {
-            const exitCode = yield exec('docker', args);
+            const { exitCode } = yield exec('docker', args, {});
             if (exitCode !== 0) {
                 throw new Error(`push failed with ${exitCode}`);
             }
@@ -13151,6 +13299,40 @@ function pushImage(exec, imageName) {
             // core.endGroup()
         }
     });
+}
+function parseMount(mountString) {
+    // https://docs.docker.com/engine/reference/commandline/service_create/#add-bind-mounts-volumes-or-memory-filesystems
+    // examples:
+    //		type=bind,source=/var/run/docker.sock,target=/var/run/docker.sock
+    //		src=home-cache,target=/home/vscode/.cache
+    let type = '';
+    let source = '';
+    let target = '';
+    const options = mountString.split(',');
+    for (const option of options) {
+        const parts = option.split('=');
+        switch (parts[0]) {
+            case 'type':
+                type = parts[1];
+                break;
+            case 'src':
+            case 'source':
+                source = parts[1];
+                break;
+            case 'dst':
+            case 'destination':
+            case 'target':
+                target = parts[1];
+                break;
+            case 'readonly':
+            case 'ro':
+                // ignore
+                break;
+            default:
+                throw new Error(`Unhandled mount option '${parts[0]}'`);
+        }
+    }
+    return { type, source, target };
 }
 
 
@@ -13201,6 +13383,14 @@ module.exports = require("os");;
 
 "use strict";
 module.exports = require("path");;
+
+/***/ }),
+
+/***/ 2413:
+/***/ ((module) => {
+
+"use strict";
+module.exports = require("stream");;
 
 /***/ }),
 
