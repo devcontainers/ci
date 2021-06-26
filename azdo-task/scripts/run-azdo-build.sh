@@ -65,7 +65,7 @@ echo "Starting AzDO pipeline..."
 # run_id=$(az pipelines build queue --definition-name $build --organization $organization --project $project -o tsv --query id)
 run_json=$(az pipelines build queue --definition-name $build --organization $organization --project $project -o json)
 run_id=$(echo $run_json | jq -r .id)
-run_url=$(echo $run_json | jq -r .url)
+run_url="$organization/$project/_build/results?buildId=$run_id"
 echo "Run id: $run_id"
 echo "Run url: $run_url"
 while true
