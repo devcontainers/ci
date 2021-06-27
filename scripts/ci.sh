@@ -4,11 +4,6 @@ set -e
 script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 
 sudo chown -R $(whoami) ~ # TODO - remove this
-# ls -al ~
-# sudo mkdir -p ~/.npm # TODO - remove this
-# sudo chown -R $(whoami) ~/.npm # TODO - remove this
-# sudo mkdir -p ~/.tpx # TODO - remove this
-# sudo chown -R $(whoami) ~/.tpx # TODO - remove this
 
 figlet common
 cd "$script_dir/../common"
@@ -30,6 +25,9 @@ if [[ -z $IS_CI ]]; then
     echo "IS_CI not set, skipping package/publish"
     exit 0
 fi
+
+figlet git status
+git status
 
 figlet AzDO Test
 

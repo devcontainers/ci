@@ -3811,7 +3811,6 @@ function ensureHostAndContainerUsersAlign(exec, imageName, devcontainerConfig) {
         if (resultContainerPasswd.exitCode !== 0) {
             throw new Error(`Failed to get container user info (exitcode: ${resultContainerPasswd.exitCode}):${resultContainerPasswd.stdout}\n${resultContainerPasswd.stderr}`);
         }
-        console.log(`**Host:/etc/passwd:${resultContainerPasswd.exitCode}:\n${resultContainerPasswd.stdout}`);
         const resultContainerGroup = yield exec('docker', ['run', '--rm', imageName, 'sh', '-c', "cat /etc/group"], { silent: true });
         if (resultContainerGroup.exitCode !== 0) {
             throw new Error(`Failed to get container group info (exitcode: ${resultContainerGroup.exitCode}):${resultContainerGroup.stdout}\n${resultContainerGroup.stderr}`);
@@ -3819,14 +3818,16 @@ function ensureHostAndContainerUsersAlign(exec, imageName, devcontainerConfig) {
         const hostUserName = resultHostUser.stdout.trim();
         const hostUsers = parsePasswd(resultHostPasswd.stdout);
         const hostUser = hostUsers.find(u => u.name === hostUserName);
-        if (!hostUser)
+        if (!hostUser) {
+            console.log(`Host /etc/passwd:\n${resultHostPasswd.stdout}`);
             throw new Error(`Failed to find host user in host info. (hostUserName='${hostUserName}')`);
+        }
         const containerUserName = devcontainerConfig.remoteUser;
         const containerUsers = parsePasswd(resultContainerPasswd.stdout);
         const containerGroups = parseGroup(resultContainerGroup.stdout);
         const containerUser = containerUsers.find(u => u.name === containerUserName);
         if (!containerUser) {
-            console.log(resultContainerPasswd.stdout);
+            console.log(`Container /etc/passwd:\n${resultContainerPasswd.stdout}`);
             throw new Error(`Failed to find container user in container info. (containerUserName='${containerUserName}')`);
         }
         const existingContainerUserGroup = containerGroups.find(g => g.gid == hostUser.gid);

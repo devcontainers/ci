@@ -93,7 +93,6 @@ async function ensureHostAndContainerUsersAlign(exec: ExecFunction, imageName: s
 	if (resultContainerPasswd.exitCode !== 0) {
 		throw new Error(`Failed to get container user info (exitcode: ${resultContainerPasswd.exitCode}):${resultContainerPasswd.stdout}\n${resultContainerPasswd.stderr}`)
 	}
-	console.log(`**Host:/etc/passwd:${resultContainerPasswd.exitCode}:\n${resultContainerPasswd.stdout}`)
 	const resultContainerGroup = await exec('docker', ['run', '--rm', imageName, 'sh', '-c', "cat /etc/group"], {silent: true})
 	if (resultContainerGroup.exitCode !== 0) {
 		throw new Error(`Failed to get container group info (exitcode: ${resultContainerGroup.exitCode}):${resultContainerGroup.stdout}\n${resultContainerGroup.stderr}`)
@@ -102,9 +101,10 @@ async function ensureHostAndContainerUsersAlign(exec: ExecFunction, imageName: s
 	const hostUserName = resultHostUser.stdout.trim();
 	const hostUsers = parsePasswd(resultHostPasswd.stdout)
 	const hostUser = hostUsers.find(u => u.name === hostUserName)
-	if (!hostUser)
+	if (!hostUser) {
+		console.log(`Host /etc/passwd:\n${resultHostPasswd.stdout}`)
 		throw new Error(`Failed to find host user in host info. (hostUserName='${hostUserName}')`)
-
+	}
 
 
 	const containerUserName = devcontainerConfig.remoteUser
@@ -112,7 +112,7 @@ async function ensureHostAndContainerUsersAlign(exec: ExecFunction, imageName: s
 	const containerGroups = parseGroup(resultContainerGroup.stdout)
 	const containerUser = containerUsers.find(u => u.name === containerUserName)
 	if (!containerUser) {
-		console.log(resultContainerPasswd.stdout)
+		console.log(`Container /etc/passwd:\n${resultContainerPasswd.stdout}`)
 		throw new Error(`Failed to find container user in container info. (containerUserName='${containerUserName}')`)
 	}
 
