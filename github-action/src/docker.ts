@@ -1,23 +1,22 @@
 import * as core from '@actions/core'
 import * as docker from '../../common/src/docker'
-import {exec, execSilent} from './exec'
+import {exec} from './exec'
 
 
 export async function isDockerBuildXInstalled(): Promise<boolean> {
-	return await docker.isDockerBuildXInstalled(execSilent)
+	return await docker.isDockerBuildXInstalled(exec)
 }
 export async function buildImage(
 	imageName: string,
 	checkoutPath: string,
 	subFolder: string
-): Promise<boolean> {
+): Promise<string> {
 	core.startGroup('🏗 Building dev container...')
 	try {
-		await docker.buildImage(exec, imageName, checkoutPath, subFolder)
-		return true
+		return await docker.buildImage(exec, imageName, checkoutPath, subFolder)
 	} catch (error) {
 		core.setFailed(error)
-		return false
+		return ""
 	} finally {
 		core.endGroup()
 	}

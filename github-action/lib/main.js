@@ -55,10 +55,11 @@ function runMain() {
             const subFolder = core.getInput('subFolder');
             const runCommand = core.getInput('runCmd', { required: true });
             const envs = core.getMultilineInput('env');
-            if (!(yield docker_1.buildImage(imageName, checkoutPath, subFolder))) {
+            const buildImageName = yield docker_1.buildImage(imageName, checkoutPath, subFolder);
+            if (buildImageName === "") {
                 return;
             }
-            if (!(yield docker_1.runContainer(imageName, checkoutPath, subFolder, runCommand, envs))) {
+            if (!(yield docker_1.runContainer(buildImageName, checkoutPath, subFolder, runCommand, envs))) {
                 return;
             }
         }

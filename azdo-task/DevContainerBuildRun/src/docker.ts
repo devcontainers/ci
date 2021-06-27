@@ -1,6 +1,6 @@
 import * as task from 'azure-pipelines-task-lib/task'
 import * as docker from '../../../common/src/docker'
-import {exec, execSilent} from './exec'
+import {exec} from './exec'
 
 export async function isDockerBuildXInstalled(): Promise<boolean> {
 	return await docker.isDockerBuildXInstalled(exec)
@@ -9,14 +9,13 @@ export async function buildImage(
 	imageName: string,
 	checkoutPath: string,
 	subFolder: string
-): Promise<boolean> {
+): Promise<string> {
 	console.log('🏗 Building dev container...')
 	try {
-		await docker.buildImage(execSilent, imageName, checkoutPath, subFolder)
-		return true
+		return await docker.buildImage(exec, imageName, checkoutPath, subFolder)
 	} catch (error) {
 		task.setResult(task.TaskResult.Failed, error)
-		return false
+		return ""
 	}
 }
 

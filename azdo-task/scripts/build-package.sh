@@ -62,6 +62,7 @@ cd "$script_dir/../DevContainerBuildRun"
 npm install
 npm run all
 
+echo prune
 npm prune --production
 
 figlet Package extension

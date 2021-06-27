@@ -37,19 +37,31 @@ const fs = __importStar(require("fs"));
 const config = __importStar(require("./config"));
 const file_1 = require("./file");
 const envvars_1 = require("./envvars");
+const users_1 = require("./users");
 function isDockerBuildXInstalled(exec) {
     return __awaiter(this, void 0, void 0, function* () {
-        const exitCode = yield exec('docker', ['buildx', '--help']);
+        const { exitCode } = yield exec('docker', ['buildx', '--help'], { silent: true });
         return exitCode === 0;
     });
 }
 exports.isDockerBuildXInstalled = isDockerBuildXInstalled;
 function buildImage(exec, imageName, checkoutPath, subFolder) {
-    var _a, _b;
     return __awaiter(this, void 0, void 0, function* () {
         const folder = path_1.default.join(checkoutPath, subFolder);
         const devcontainerJsonPath = path_1.default.join(folder, '.devcontainer/devcontainer.json');
         const devcontainerConfig = yield config.loadFromFile(devcontainerJsonPath);
+        // build the image from the .devcontainer spec
+        yield buildImageBase(exec, imageName, folder, devcontainerConfig);
+        if (!devcontainerConfig.remoteUser) {
+            return imageName;
+        }
+        return yield ensureHostAndContainerUsersAlign(exec, imageName, devcontainerConfig);
+    });
+}
+exports.buildImage = buildImage;
+function buildImageBase(exec, imageName, folder, devcontainerConfig) {
+    var _a, _b;
+    return __awaiter(this, void 0, void 0, function* () {
         const configDockerfile = config.getDockerfile(devcontainerConfig);
         if (!configDockerfile) {
             throw new Error('dockerfile not set in devcontainer.json - devcontainer-build-run currently only supports Dockerfile-based dev containers');
@@ -72,27 +84,80 @@ function buildImage(exec, imageName, checkoutPath, subFolder) {
         }
         args.push('-f', dockerfilePath);
         args.push(contextPath);
-        // TODO - add abstraction to allow startGroup on GH actions
-        // core.startGroup('🏗 Building dev container...')
-        try {
-            const exitCode = yield exec('docker', args);
-            if (exitCode !== 0) {
-                throw new Error(`build failed with ${exitCode}`);
-            }
-        }
-        finally {
-            // core.endGroup() // TODO
+        const { exitCode } = yield exec('docker', args, {});
+        if (exitCode !== 0) {
+            throw new Error(`build failed with ${exitCode}`);
         }
     });
 }
-exports.buildImage = buildImage;
+// returns the name of the image to run in the next step
+function ensureHostAndContainerUsersAlign(exec, imageName, devcontainerConfig) {
+    return __awaiter(this, void 0, void 0, function* () {
+        if (!devcontainerConfig.remoteUser) {
+            return imageName;
+        }
+        const resultHostUser = yield exec('/bin/sh', ['-c', 'id -u -n'], { silent: true });
+        if (resultHostUser.exitCode !== 0) {
+            throw new Error(`Failed to get host user (exitcode: ${resultHostUser.exitCode}):${resultHostUser.stdout}\n${resultHostUser.stderr}`);
+        }
+        const resultHostPasswd = yield exec('/bin/sh', ['-c', "cat /etc/passwd"], { silent: true });
+        if (resultHostPasswd.exitCode !== 0) {
+            throw new Error(`Failed to get host user info (exitcode: ${resultHostPasswd.exitCode}):${resultHostPasswd.stdout}\n${resultHostPasswd.stderr}`);
+        }
+        const resultContainerPasswd = yield exec('docker', ['run', '--rm', imageName, 'sh', '-c', "cat /etc/passwd"], { silent: true });
+        if (resultContainerPasswd.exitCode !== 0) {
+            throw new Error(`Failed to get container user info (exitcode: ${resultContainerPasswd.exitCode}):${resultContainerPasswd.stdout}\n${resultContainerPasswd.stderr}`);
+        }
+        const resultContainerGroup = yield exec('docker', ['run', '--rm', imageName, 'sh', '-c', "cat /etc/group"], { silent: true });
+        if (resultContainerGroup.exitCode !== 0) {
+            throw new Error(`Failed to get container group info (exitcode: ${resultContainerGroup.exitCode}):${resultContainerGroup.stdout}\n${resultContainerGroup.stderr}`);
+        }
+        const hostUserName = resultHostUser.stdout.trim();
+        const hostUsers = users_1.parsePasswd(resultHostPasswd.stdout);
+        const hostUser = hostUsers.find(u => u.name === hostUserName);
+        if (!hostUser) {
+            console.log(`Host /etc/passwd:\n${resultHostPasswd.stdout}`);
+            throw new Error(`Failed to find host user in host info. (hostUserName='${hostUserName}')`);
+        }
+        const containerUserName = devcontainerConfig.remoteUser;
+        const containerUsers = users_1.parsePasswd(resultContainerPasswd.stdout);
+        const containerGroups = users_1.parseGroup(resultContainerGroup.stdout);
+        const containerUser = containerUsers.find(u => u.name === containerUserName);
+        if (!containerUser) {
+            console.log(`Container /etc/passwd:\n${resultContainerPasswd.stdout}`);
+            throw new Error(`Failed to find container user in container info. (containerUserName='${containerUserName}')`);
+        }
+        const existingContainerUserGroup = containerGroups.find(g => g.gid == hostUser.gid);
+        if (existingContainerUserGroup)
+            throw new Error(`Host user GID (${hostUser.gid}) already exists as a group in the container`);
+        const containerUserAligned = hostUser.uid === containerUser.uid && hostUser.gid == containerUser.gid;
+        if (containerUserAligned) {
+            // all good - nothing to do
+            return imageName;
+        }
+        // Generate a Dockerfile to run to build a derived image with the UID/GID updated
+        const dockerfileContent = `FROM ${imageName}
+RUN sudo sed -i /etc/passwd -e s/${containerUser.name}:x:${containerUser.uid}:${containerUser.gid}/${containerUser.name}:x:${hostUser.uid}:${hostUser.gid}/
+`;
+        const tempDir = fs.mkdtempSync("devcontainer-build-run");
+        const derivedDockerfilePath = path_1.default.join(tempDir, "Dockerfile");
+        fs.writeFileSync(derivedDockerfilePath, dockerfileContent);
+        const derivedImageName = `${imageName}-userfix`;
+        const derivedDockerBuid = yield exec('docker', ['buildx', 'build', '--tag', derivedImageName, '-f', derivedDockerfilePath, tempDir, '--output=type=docker'], {});
+        if (derivedDockerBuid.exitCode !== 0) {
+            throw new Error("Failed to build derived Docker image with users updated");
+        }
+        return derivedImageName;
+    });
+}
 function runContainer(exec, imageName, checkoutPath, subFolder, command, envs, mounts) {
     return __awaiter(this, void 0, void 0, function* () {
         const checkoutPathAbsolute = file_1.getAbsolutePath(checkoutPath, process.cwd());
         const folder = path_1.default.join(checkoutPathAbsolute, subFolder);
         const devcontainerJsonPath = path_1.default.join(folder, '.devcontainer/devcontainer.json');
         const devcontainerConfig = yield config.loadFromFile(devcontainerJsonPath);
-        const workspaceFolder = config.getWorkspaceFolder(devcontainerConfig, folder);
+        const workspaceFolder = config.getWorkspaceFolder(devcontainerConfig, checkoutPathAbsolute);
+        const workdir = path_1.default.join(workspaceFolder, subFolder);
         const remoteUser = config.getRemoteUser(devcontainerConfig);
         const args = ['run'];
         args.push('--mount', `type=bind,src=${checkoutPathAbsolute},dst=${workspaceFolder}`);
@@ -111,7 +176,7 @@ function runContainer(exec, imageName, checkoutPath, subFolder, command, envs, m
                 args.push('--mount', m);
             });
         }
-        args.push('--workdir', workspaceFolder);
+        args.push('--workdir', workdir);
         args.push('--user', remoteUser);
         if (devcontainerConfig.runArgs) {
             const substitutedRunArgs = devcontainerConfig.runArgs.map(a => envvars_1.substituteValues(a));
@@ -123,16 +188,10 @@ function runContainer(exec, imageName, checkoutPath, subFolder, command, envs, m
             }
         }
         args.push(`${imageName}:latest`);
-        args.push('bash', '-c', `sudo chown -R $(whoami) . && ${command}`); // TODO sort out permissions/user alignment
-        // core.startGroup('🏃‍♀️ Running dev container...')
-        try {
-            const exitCode = yield exec('docker', args);
-            if (exitCode !== 0) {
-                throw new Error(`run failed with ${exitCode}`);
-            }
-        }
-        finally {
-            // core.endGroup()
+        args.push('bash', '-c', command);
+        const { exitCode } = yield exec('docker', args, {});
+        if (exitCode !== 0) {
+            throw new Error(`run failed with ${exitCode}`);
         }
     });
 }
@@ -141,15 +200,9 @@ function pushImage(exec, imageName) {
     return __awaiter(this, void 0, void 0, function* () {
         const args = ['push'];
         args.push(`${imageName}:latest`);
-        // core.startGroup('Pushing image...')
-        try {
-            const exitCode = yield exec('docker', args);
-            if (exitCode !== 0) {
-                throw new Error(`push failed with ${exitCode}`);
-            }
-        }
-        finally {
-            // core.endGroup()
+        const { exitCode } = yield exec('docker', args, {});
+        if (exitCode !== 0) {
+            throw new Error(`push failed with ${exitCode}`);
         }
     });
 }

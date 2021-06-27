@@ -30,14 +30,41 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.exec = void 0;
 const task = __importStar(require("azure-pipelines-task-lib/task"));
-function exec(command, args) {
+const stream = __importStar(require("stream"));
+// https://github.com/microsoft/azure-pipelines-task-lib/blob/master/node/docs/azure-pipelines-task-lib.md
+/* global BufferEncoding */
+class TeeStream extends stream.Writable {
+    constructor(teeStream, options) {
+        super(options);
+        this.value = '';
+        this.teeStream = teeStream;
+    }
+    _write(data, encoding, callback) {
+        this.value += data;
+        this.teeStream.write(data, encoding); // NOTE - currently ignoring teeStream callback
+        if (callback) {
+            callback();
+        }
+    }
+    toString() {
+        return this.value;
+    }
+}
+function exec(command, args, options) {
+    var _a;
     return __awaiter(this, void 0, void 0, function* () {
+        const outStream = new TeeStream(process.stdout);
+        const errStream = new TeeStream(process.stderr);
         const exitCode = yield task.exec(command, args, {
             failOnStdErr: false,
-            silent: false,
+            silent: (_a = options.silent) !== null && _a !== void 0 ? _a : false,
             ignoreReturnCode: true
         });
-        return exitCode;
+        return {
+            exitCode,
+            stdout: outStream.toString(),
+            stderr: errStream.toString()
+        };
     });
 }
 exports.exec = exec;

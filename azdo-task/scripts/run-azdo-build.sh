@@ -62,18 +62,20 @@ fi
 
 
 echo "Starting AzDO pipeline..."
-run_id=$(az pipelines build queue --definition-name $build --organization $organization --project $project -o tsv --query id)
+run_json=$(az pipelines build queue --definition-name $build --organization $organization --project $project -o json)
+run_id=$(echo $run_json | jq -r .id)
+run_url="$organization/$project/_build/results?buildId=$run_id"
 echo "Run id: $run_id"
+echo "Run url: $run_url"
 while true
 do
     run_state=$(az pipelines runs show --id $run_id --organization $organization --project $project -o json)
     finish_time=$(echo $run_state | jq -r .finishTime)
     if [[ $finish_time != "null" ]]; then
         result=$(echo $run_state | jq -r .result)
-        url=$(echo $run_state | jq -r .url)
         echo "Pipeline completed with result: $result"
         if [[ $result != "succeeded" ]]; then
-            echo "Run url: $url"
+            echo "Run url: $run_url"
             echo "::error ::AzDO pipeline test did not complete successfully"
             exit 1
         fi

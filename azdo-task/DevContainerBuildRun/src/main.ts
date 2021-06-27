@@ -45,13 +45,14 @@ async function runMain(): Promise<void> {
 		}
 		const envs = task.getInput('env')?.split('\n') ?? []
 
-		if (!(await buildImage(imageName, checkoutPath, subFolder))) {
+		const buildImageName = await buildImage(imageName, checkoutPath, subFolder)
+		if (buildImageName === "") {
 			return
 		}
 
 		if (
 			!(await runContainer(
-				imageName,
+				buildImageName,
 				checkoutPath,
 				subFolder,
 				runCommand,
@@ -66,8 +67,18 @@ async function runMain(): Promise<void> {
 }
 
 async function runPost(): Promise<void> {
-	// buildReasonsForPush
-	//sourceBranchFilterForPush
+	// https://docs.microsoft.com/en-us/azure/devops/pipelines/build/variables?view=azure-devops&tabs=yaml
+	const agentJobStatus = process.env.AGENT_JOBSTATUS
+	switch (agentJobStatus) {
+		case "Succeeded":
+		case "SucceededWithIssues":
+			// continue
+			break;
+
+		default:
+			console.log(`Image push skipped because Agent JobStatus is '${agentJobStatus}'`)
+			return;
+	}
 
 	const buildReasonsForPush: string[] =
 		task.getInput('buildReasonsForPush')?.split('\n') ?? []

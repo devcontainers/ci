@@ -6,14 +6,15 @@ import {
 } from '../src/config'
 
 describe('getWorkspaceFolder', () => {
-	test('returns configured workspaceFolder', () => {
-		const repoPath = '/path/to/project-folder'
-		const devcontainerConfig: DevContainerConfig = {
-			workspaceFolder: '/customMount'
-		}
-		const result = getWorkspaceFolder(devcontainerConfig, repoPath)
-		expect(result).toBe('/customMount')
-	})
+	// TODO - need to check workspaceMount/workspaceFolder to set the source mount (https://github.com/stuartleeks/devcontainer-build-run/issues/66)
+	// test('returns configured workspaceFolder', () => {
+	// 	const repoPath = '/path/to/project-folder'
+	// 	const devcontainerConfig: DevContainerConfig = {
+	// 		workspaceFolder: '/customMount'
+	// 	}
+	// 	const result = getWorkspaceFolder(devcontainerConfig, repoPath)
+	// 	expect(result).toBe('/customMount')
+	// })
 	test('returns default from repo path when not configured', () => {
 		const repoPath = '/path/to/project-folder'
 		const devcontainerConfig: DevContainerConfig = {}

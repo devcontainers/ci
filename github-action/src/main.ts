@@ -32,13 +32,14 @@ async function runMain(): Promise<void> {
 		const runCommand: string = core.getInput('runCmd', {required: true})
 		const envs: string[] = core.getMultilineInput('env')
 
-		if (!(await buildImage(imageName, checkoutPath, subFolder))) {
+		const buildImageName = await buildImage(imageName, checkoutPath, subFolder)
+		if (buildImageName === "") {
 			return
 		}
 
 		if (
 			!(await runContainer(
-				imageName,
+				buildImageName,
 				checkoutPath,
 				subFolder,
 				runCommand,
