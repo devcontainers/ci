@@ -93,7 +93,6 @@ function buildImageBase(exec, imageName, folder, devcontainerConfig) {
 // returns the name of the image to run in the next step
 function ensureHostAndContainerUsersAlign(exec, imageName, devcontainerConfig) {
     return __awaiter(this, void 0, void 0, function* () {
-        console.log("***HELLO***");
         if (!devcontainerConfig.remoteUser) {
             return imageName;
         }
@@ -105,23 +104,17 @@ function ensureHostAndContainerUsersAlign(exec, imageName, devcontainerConfig) {
         if (resultHostPasswd.exitCode !== 0) {
             throw new Error(`Failed to get host user info (exitcode: ${resultHostPasswd.exitCode}):${resultHostPasswd.stdout}\n${resultHostPasswd.stderr}`);
         }
-        console.log(`**Host:/etc/passwd:${resultHostPasswd.exitCode}:\n${resultHostPasswd.stdout}`);
-        // const resultHostGroup = await exec('sh', ['-c', "cat /etc/group"], {silent: true})
-        // if (resultHostGroup.exitCode !== 0) {
-        // 	throw new Error("Failed to get host group info")
-        // }
-        const resultContainerPasswd = yield exec('docker', ['run', '--rm', imageName, 'sh', '-c', "cat /etc/passwd"], { silent: false });
+        const resultContainerPasswd = yield exec('docker', ['run', '--rm', imageName, 'sh', '-c', "cat /etc/passwd"], { silent: true });
         if (resultContainerPasswd.exitCode !== 0) {
             throw new Error(`Failed to get container user info (exitcode: ${resultContainerPasswd.exitCode}):${resultContainerPasswd.stdout}\n${resultContainerPasswd.stderr}`);
         }
         console.log(`**Host:/etc/passwd:${resultContainerPasswd.exitCode}:\n${resultContainerPasswd.stdout}`);
-        const resultContainerGroup = yield exec('docker', ['run', '--rm', imageName, 'sh', '-c', "cat /etc/group"], { silent: false });
+        const resultContainerGroup = yield exec('docker', ['run', '--rm', imageName, 'sh', '-c', "cat /etc/group"], { silent: true });
         if (resultContainerGroup.exitCode !== 0) {
             throw new Error(`Failed to get container group info (exitcode: ${resultContainerGroup.exitCode}):${resultContainerGroup.stdout}\n${resultContainerGroup.stderr}`);
         }
         const hostUserName = resultHostUser.stdout.trim();
         const hostUsers = users_1.parsePasswd(resultHostPasswd.stdout);
-        // const hostGroups = parseGroup(resultHostGroup.stdout)
         const hostUser = hostUsers.find(u => u.name === hostUserName);
         if (!hostUser)
             throw new Error(`Failed to find host user in host info. (hostUserName='${hostUserName}')`);
@@ -162,7 +155,8 @@ function runContainer(exec, imageName, checkoutPath, subFolder, command, envs, m
         const folder = path_1.default.join(checkoutPathAbsolute, subFolder);
         const devcontainerJsonPath = path_1.default.join(folder, '.devcontainer/devcontainer.json');
         const devcontainerConfig = yield config.loadFromFile(devcontainerJsonPath);
-        const workspaceFolder = config.getWorkspaceFolder(devcontainerConfig, folder);
+        const workspaceFolder = config.getWorkspaceFolder(devcontainerConfig, checkoutPathAbsolute);
+        const workdir = path_1.default.join(workspaceFolder, subFolder);
         const remoteUser = config.getRemoteUser(devcontainerConfig);
         const args = ['run'];
         args.push('--mount', `type=bind,src=${checkoutPathAbsolute},dst=${workspaceFolder}`);
@@ -181,7 +175,7 @@ function runContainer(exec, imageName, checkoutPath, subFolder, command, envs, m
                 args.push('--mount', m);
             });
         }
-        args.push('--workdir', workspaceFolder);
+        args.push('--workdir', workdir);
         args.push('--user', remoteUser);
         if (devcontainerConfig.runArgs) {
             const substitutedRunArgs = devcontainerConfig.runArgs.map(a => envvars_1.substituteValues(a));
@@ -193,17 +187,10 @@ function runContainer(exec, imageName, checkoutPath, subFolder, command, envs, m
             }
         }
         args.push(`${imageName}:latest`);
-        // args.push('bash', '-c', `sudo chown -R $(whoami) . && ${command}`) // TODO sort out permissions/user alignment
-        args.push('bash', '-c', command); // TODO sort out permissions/user alignment
-        // core.startGroup('🏃‍♀️ Running dev container...')
-        try {
-            const { exitCode } = yield exec('docker', args, {});
-            if (exitCode !== 0) {
-                throw new Error(`run failed with ${exitCode}`);
-            }
-        }
-        finally {
-            // core.endGroup()
+        args.push('bash', '-c', command);
+        const { exitCode } = yield exec('docker', args, {});
+        if (exitCode !== 0) {
+            throw new Error(`run failed with ${exitCode}`);
         }
     });
 }
@@ -212,15 +199,9 @@ function pushImage(exec, imageName) {
     return __awaiter(this, void 0, void 0, function* () {
         const args = ['push'];
         args.push(`${imageName}:latest`);
-        // core.startGroup('Pushing image...')
-        try {
-            const { exitCode } = yield exec('docker', args, {});
-            if (exitCode !== 0) {
-                throw new Error(`push failed with ${exitCode}`);
-            }
-        }
-        finally {
-            // core.endGroup()
+        const { exitCode } = yield exec('docker', args, {});
+        if (exitCode !== 0) {
+            throw new Error(`push failed with ${exitCode}`);
         }
     });
 }

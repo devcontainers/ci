@@ -45,13 +45,14 @@ async function runMain(): Promise<void> {
 		}
 		const envs = task.getInput('env')?.split('\n') ?? []
 
-		if (!(await buildImage(imageName, checkoutPath, subFolder))) {
+		const buildImageName = await buildImage(imageName, checkoutPath, subFolder)
+		if (buildImageName === "") {
 			return
 		}
 
 		if (
 			!(await runContainer(
-				imageName,
+				buildImageName,
 				checkoutPath,
 				subFolder,
 				runCommand,
@@ -68,6 +69,9 @@ async function runMain(): Promise<void> {
 async function runPost(): Promise<void> {
 	// buildReasonsForPush
 	//sourceBranchFilterForPush
+
+	// TODO - check AGENT_JOBSTATUS env var:
+	// https://docs.microsoft.com/en-us/azure/devops/pipelines/build/variables?view=azure-devops&tabs=yaml
 
 	const buildReasonsForPush: string[] =
 		task.getInput('buildReasonsForPush')?.split('\n') ?? []

@@ -78,7 +78,6 @@ async function buildImageBase(
 
 // returns the name of the image to run in the next step
 async function ensureHostAndContainerUsersAlign(exec: ExecFunction, imageName: string, devcontainerConfig: config.DevContainerConfig): Promise<string> {
-	console.log("***HELLO***")
 	if (!devcontainerConfig.remoteUser) {
 		return imageName
 	}
@@ -90,24 +89,18 @@ async function ensureHostAndContainerUsersAlign(exec: ExecFunction, imageName: s
 	if (resultHostPasswd.exitCode !== 0) {
 		throw new Error(`Failed to get host user info (exitcode: ${resultHostPasswd.exitCode}):${resultHostPasswd.stdout}\n${resultHostPasswd.stderr}`)
 	}
-	console.log(`**Host:/etc/passwd:${resultHostPasswd.exitCode}:\n${resultHostPasswd.stdout}`)
-	// const resultHostGroup = await exec('sh', ['-c', "cat /etc/group"], {silent: true})
-	// if (resultHostGroup.exitCode !== 0) {
-	// 	throw new Error("Failed to get host group info")
-	// }
-	const resultContainerPasswd = await exec('docker', ['run', '--rm', imageName, 'sh', '-c', "cat /etc/passwd"], {silent: false})
+	const resultContainerPasswd = await exec('docker', ['run', '--rm', imageName, 'sh', '-c', "cat /etc/passwd"], {silent: true})
 	if (resultContainerPasswd.exitCode !== 0) {
 		throw new Error(`Failed to get container user info (exitcode: ${resultContainerPasswd.exitCode}):${resultContainerPasswd.stdout}\n${resultContainerPasswd.stderr}`)
 	}
 	console.log(`**Host:/etc/passwd:${resultContainerPasswd.exitCode}:\n${resultContainerPasswd.stdout}`)
-	const resultContainerGroup = await exec('docker', ['run', '--rm', imageName, 'sh', '-c', "cat /etc/group"], {silent: false})
+	const resultContainerGroup = await exec('docker', ['run', '--rm', imageName, 'sh', '-c', "cat /etc/group"], {silent: true})
 	if (resultContainerGroup.exitCode !== 0) {
 		throw new Error(`Failed to get container group info (exitcode: ${resultContainerGroup.exitCode}):${resultContainerGroup.stdout}\n${resultContainerGroup.stderr}`)
 	}
 
 	const hostUserName = resultHostUser.stdout.trim();
 	const hostUsers = parsePasswd(resultHostPasswd.stdout)
-	// const hostGroups = parseGroup(resultHostGroup.stdout)
 	const hostUser = hostUsers.find(u => u.name === hostUserName)
 	if (!hostUser)
 		throw new Error(`Failed to find host user in host info. (hostUserName='${hostUserName}')`)
@@ -118,7 +111,7 @@ async function ensureHostAndContainerUsersAlign(exec: ExecFunction, imageName: s
 	const containerUsers = parsePasswd(resultContainerPasswd.stdout)
 	const containerGroups = parseGroup(resultContainerGroup.stdout)
 	const containerUser = containerUsers.find(u => u.name === containerUserName)
-	if (!containerUser){
+	if (!containerUser) {
 		console.log(resultContainerPasswd.stdout)
 		throw new Error(`Failed to find container user in container info. (containerUserName='${containerUserName}')`)
 	}
@@ -170,7 +163,8 @@ export async function runContainer(
 	)
 	const devcontainerConfig = await config.loadFromFile(devcontainerJsonPath)
 
-	const workspaceFolder = config.getWorkspaceFolder(devcontainerConfig, folder)
+	const workspaceFolder = config.getWorkspaceFolder(devcontainerConfig, checkoutPathAbsolute)
+	const workdir = path.join(workspaceFolder, subFolder)
 	const remoteUser = config.getRemoteUser(devcontainerConfig)
 
 	const args = ['run']
@@ -193,7 +187,7 @@ export async function runContainer(
 				args.push('--mount', m)
 			});
 	}
-	args.push('--workdir', workspaceFolder)
+	args.push('--workdir', workdir)
 	args.push('--user', remoteUser)
 	if (devcontainerConfig.runArgs) {
 		const substitutedRunArgs = devcontainerConfig.runArgs.map(a =>
@@ -207,18 +201,12 @@ export async function runContainer(
 		}
 	}
 	args.push(`${imageName}:latest`)
-	// args.push('bash', '-c', `sudo chown -R $(whoami) . && ${command}`) // TODO sort out permissions/user alignment
-	args.push('bash', '-c', command) // TODO sort out permissions/user alignment
+	args.push('bash', '-c', command)
 
-	// core.startGroup('🏃‍♀️ Running dev container...')
-	try {
-		const {exitCode} = await exec('docker', args, {})
+	const {exitCode} = await exec('docker', args, {})
 
-		if (exitCode !== 0) {
-			throw new Error(`run failed with ${exitCode}`)
-		}
-	} finally {
-		// core.endGroup()
+	if (exitCode !== 0) {
+		throw new Error(`run failed with ${exitCode}`)
 	}
 }
 
@@ -226,15 +214,10 @@ export async function pushImage(exec: ExecFunction, imageName: string): Promise<
 	const args = ['push']
 	args.push(`${imageName}:latest`)
 
-	// core.startGroup('Pushing image...')
-	try {
-		const {exitCode} = await exec('docker', args, {})
+	const {exitCode} = await exec('docker', args, {})
 
-		if (exitCode !== 0) {
-			throw new Error(`push failed with ${exitCode}`)
-		}
-	} finally {
-		// core.endGroup()
+	if (exitCode !== 0) {
+		throw new Error(`push failed with ${exitCode}`)
 	}
 }
 

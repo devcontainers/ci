@@ -42,6 +42,8 @@ tfx extension publish  --token $AZDO_TOKEN --vsix $vsix_file --override "{\"publ
 
 tfx extension install  --token $AZDO_TOKEN --vsix $vsix_file --service-url https://dev.azure.com/stuartle
 
+sleep 30s # hacky workaround for AzDO picking up stale extension version
+
 "$script_dir/../azdo-task/scripts/run-azdo-build.sh" --organization $AZDO_ORG --project $AZDO_PROJECT --build $AZDO_BUILD
 
 if [[ $BRANCH ==  "refs/heads/main" ]]; then

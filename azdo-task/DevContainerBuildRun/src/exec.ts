@@ -28,24 +28,43 @@ class TeeStream extends stream.Writable {
 		return this.value
 	}
 }
-
+class NullStream extends stream.Writable {
+	_write(data: any, encoding: BufferEncoding, callback: Function): void {
+		if (callback) {
+			callback()
+		}
+	}
+}
+function trimCommand(input: string): string {
+	if (input.startsWith('[command]')) {
+		const newLine = input.indexOf('\n')
+		return input.substring(newLine + 1)
+	}
+	return input
+}
 export async function exec(
 	command: string,
 	args: string[],
 	options: ExecOptions
 ): Promise<ExecResult> {
-	const outStream = new TeeStream(process.stdout)
-	const errStream = new TeeStream(process.stderr)
+	const outStream = new TeeStream(
+		options.silent ? new NullStream() : process.stdout
+	)
+	const errStream = new TeeStream(
+		options.silent ? new NullStream() : process.stderr
+	)
 
 	const exitCode = await task.exec(command, args, {
 		failOnStdErr: false,
-		silent: options.silent ?? false,
-		ignoreReturnCode: true
+		silent: false, // always run non-silent - we just don't output to process.stdout/stderr with the TeeStreams above
+		ignoreReturnCode: true,
+		outStream,
+		errStream
 	})
 
 	return {
 		exitCode,
-		stdout: outStream.toString(),
+		stdout: trimCommand(outStream.toString()),
 		stderr: errStream.toString()
 	}
 }

@@ -35,10 +35,11 @@ export function getWorkspaceFolder(
 	config: DevContainerConfig,
 	repoPath: string
 ): string {
-	// https://code.visualstudio.com/docs/remote/containers-advanced#_changing-the-default-source-code-mount
-	if (config.workspaceFolder) {
-		return config.workspaceFolder
-	}
+	// TODO - need to check workspaceMount/workspaceFolder to set the source mount (https://github.com/stuartleeks/devcontainer-build-run/issues/66)
+	// // https://code.visualstudio.com/docs/remote/containers-advanced#_changing-the-default-source-code-mount
+	// if (config.workspaceFolder) {
+	// 	return config.workspaceFolder
+	// }
 	return path.join('/workspaces', path.basename(repoPath))
 }
 

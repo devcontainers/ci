@@ -9,14 +9,13 @@ export async function buildImage(
 	imageName: string,
 	checkoutPath: string,
 	subFolder: string
-): Promise<boolean> {
+): Promise<string> {
 	console.log('🏗 Building dev container...')
 	try {
-		await docker.buildImage(exec, imageName, checkoutPath, subFolder)
-		return true
+		return await docker.buildImage(exec, imageName, checkoutPath, subFolder)
 	} catch (error) {
 		task.setResult(task.TaskResult.Failed, error)
-		return false
+		return ""
 	}
 }
 
