@@ -150,7 +150,8 @@ jobs:
         uses: ./
         with:
           subFolder: github-tests/run-args
-          imageName: ghcr.io/stuartleeks/devcontainer-build-run-tests-run-args
+          imageName: devcontainer-build-run-tests-run-args
+          # imageName: ghcr.io/stuartleeks/devcontainer-build-run-tests-run-args
           runCmd: echo $HOSTNAME && [[ $HOSTNAME == "my-host" ]]
 
   test-gh-build-args:
