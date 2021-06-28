@@ -46,7 +46,7 @@ async function runMain(): Promise<void> {
 		const envs = task.getInput('env')?.split('\n') ?? []
 
 		const buildImageName = await buildImage(imageName, checkoutPath, subFolder)
-		if (buildImageName === "") {
+		if (buildImageName === '') {
 			return
 		}
 
@@ -70,14 +70,16 @@ async function runPost(): Promise<void> {
 	// https://docs.microsoft.com/en-us/azure/devops/pipelines/build/variables?view=azure-devops&tabs=yaml
 	const agentJobStatus = process.env.AGENT_JOBSTATUS
 	switch (agentJobStatus) {
-		case "Succeeded":
-		case "SucceededWithIssues":
+		case 'Succeeded':
+		case 'SucceededWithIssues':
 			// continue
-			break;
+			break
 
 		default:
-			console.log(`Image push skipped because Agent JobStatus is '${agentJobStatus}'`)
-			return;
+			console.log(
+				`Image push skipped because Agent JobStatus is '${agentJobStatus}'`
+			)
+			return
 	}
 
 	const buildReasonsForPush: string[] =

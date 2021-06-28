@@ -100,3 +100,4 @@ lib/**/*
 
 
 *.vsix
+.taskkey

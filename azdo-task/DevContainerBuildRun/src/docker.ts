@@ -15,7 +15,7 @@ export async function buildImage(
 		return await docker.buildImage(exec, imageName, checkoutPath, subFolder)
 	} catch (error) {
 		task.setResult(task.TaskResult.Failed, error)
-		return ""
+		return ''
 	}
 }
 

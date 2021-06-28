@@ -50,19 +50,34 @@ class TeeStream extends stream.Writable {
         return this.value;
     }
 }
+class NullStream extends stream.Writable {
+    _write(data, encoding, callback) {
+        if (callback) {
+            callback();
+        }
+    }
+}
+function trimCommand(input) {
+    if (input.startsWith('[command]')) {
+        const newLine = input.indexOf('\n');
+        return input.substring(newLine + 1);
+    }
+    return input;
+}
 function exec(command, args, options) {
-    var _a;
     return __awaiter(this, void 0, void 0, function* () {
-        const outStream = new TeeStream(process.stdout);
-        const errStream = new TeeStream(process.stderr);
+        const outStream = new TeeStream(options.silent ? new NullStream() : process.stdout);
+        const errStream = new TeeStream(options.silent ? new NullStream() : process.stderr);
         const exitCode = yield task.exec(command, args, {
             failOnStdErr: false,
-            silent: (_a = options.silent) !== null && _a !== void 0 ? _a : false,
-            ignoreReturnCode: true
+            silent: false,
+            ignoreReturnCode: true,
+            outStream,
+            errStream
         });
         return {
             exitCode,
-            stdout: outStream.toString(),
+            stdout: trimCommand(outStream.toString()),
             stderr: errStream.toString()
         };
     });
