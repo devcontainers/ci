@@ -16,4 +16,4 @@ tfx extension install  --token $AZDO_TOKEN --vsix $vsix_file --service-url $AZDO
 
 sleep 30s # hacky workaround for AzDO picking up stale extension version
 
-"$script_dir/../output/scripts/run-azdo-build.sh" --organization $AZDO_ORG --project $AZDO_PROJECT --build $AZDO_BUILD
+"$script_dir/../azdo-task/scripts/run-azdo-build.sh" --organization $AZDO_ORG --project $AZDO_PROJECT --build $AZDO_BUILD
