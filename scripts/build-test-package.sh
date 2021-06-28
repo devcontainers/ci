@@ -23,3 +23,6 @@ cd "$script_dir/../azdo-task"
 
 mkdir -p "$script_dir/../output"
 cp *.vsix "$script_dir/../output/"
+
+figlet git status
+git status
