@@ -14,27 +14,11 @@ on: # rebuild any PRs and main branch changes
 jobs:
   build: # run build using the github action!
     runs-on: ubuntu-latest
+    name: build, test, package
     steps:
-
-      - name: Determine checkout-path
-        run: |
-          if [[ $GITHUB_ACTOR == "nektos/act" ]]; then checkout_path="devcontainer-build-run"; else checkout_path="."; fi
-          echo "::set-output name=checkout-path::$checkout_path"
-        id: checkout-path
-
-      # Perform checkout to specific path when we're running in nektos/act - see https://github.com/nektos/act/commit/f29b1f2523f5162fa42554870269160a4fb51419
-      - name: Checkout (nektos/act)
+      - name: Checkout
         uses: actions/checkout@v2
-        if: ${{ github.actor == 'nektos/act' }}
-        with:
-           path: devcontainer-build-run
-      - name: Checkout (GitHub)
-        uses: actions/checkout@v2
-        if: ${{ github.actor != 'nektos/act' }}
 
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v1
-      
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v1
 
@@ -51,6 +35,55 @@ jobs:
         id: build
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BUILD_NUMBER: ${{ github.run_id }}
+          IS_PR: ${{ github.head_ref }}
+          BRANCH: ${{ github.ref }}
+        with:
+          imageName: ghcr.io/stuartleeks/devcontainer-build-run-devcontainer
+          runCmd: |
+            echo "Starting"
+            ./scripts/build-test-package.sh
+          env: |
+            BUILD_NUMBER
+            IS_CI=1
+            IS_PR
+            BRANCH
+
+      - uses: actions/upload-artifact@v2
+        name: Create dev AzDO VSIX artifact
+        with:
+          name: azdo-task-dev
+          path: ./output/stuartleeks-dev.devcontainer-build-run-${{ steps.build.outputs.version }}.vsix
+
+      - uses: actions/upload-artifact@v2
+        name: Create release AzDO VSIX artifact
+        with:
+          name: azdo-task
+          path: ./output/stuartleeks.devcontainer-build-run-${{ steps.build.outputs.version }}.vsix
+
+  test-azdo:
+    name: Run AzDO test
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Download workflow artifacts
+        uses: actions/download-artifact@v2
+        with:
+          path: output
+
+      - name: Download release VSIX
+        uses: actions/download-artifact@v2
+        with:
+          name: azdo-task-dev
+          path: output
+
+      - name: Run AzDO test pipeline
+        uses: ./
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           AZDO_TOKEN: ${{ secrets.AZDO_TOKEN }}
           AZURE_DEVOPS_EXT_PAT: ${{ secrets.AZDO_TOKEN }}
           AZDO_SERVICE_URL: ${{ secrets.AZDO_SERVICE_URL }}
@@ -58,11 +91,10 @@ jobs:
           IS_PR: ${{ github.head_ref }}
           BRANCH: ${{ github.ref }}
         with:
-          checkoutPath: ${{ steps.checkout-path.outputs.checkout-path }}
           imageName: ghcr.io/stuartleeks/devcontainer-build-run-devcontainer
           runCmd: |
             echo "Starting"
-            ./scripts/ci.sh
+            ./scripts/test-azdo.sh
           env: |
             BUILD_NUMBER
             IS_CI=1
@@ -74,16 +106,25 @@ jobs:
             AZDO_PROJECT=AzDODevContainerBuildRunTest
             AZDO_BUILD=AzDODevContainerBuildRunTest
 
-      - uses: actions/upload-artifact@v2
+
+  release:
+    name: Create release
+    runs-on: ubuntu-latest
+    needs:
+      - test-azdo
+      - build
+    if: github.ref == 'refs/heads/main' # only create release on `main`
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Download workflow artifacts
+        uses: actions/download-artifact@v2
         with:
-          name: azdo-task
-          path: ./azdo-task/stuartleeks.devcontainer-build-run-${{ steps.build.outputs.version }}.vsix
-
-
+          path: output
 
       - name: Create Release
         id: create_release
-        if: github.ref == 'refs/heads/main' # only create release on `main`
         uses: actions/create-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -93,10 +134,8 @@ jobs:
           draft: false
           prerelease: true
 
-
       - name: Create Major/Minor tag
         id: create_tag_short_verison
-        if: github.ref == 'refs/heads/main' # only create release on `main`
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VERSION_SHORT: v${{ steps.build.outputs.version_short }}
@@ -108,10 +147,8 @@ jobs:
           git tag -fa $VERSION_SHORT -m $VERSION_SHORT
           git push -f origin $VERSION_SHORT
 
-
       - name: Upload Release Asset
         id: upload-release-asset 
-        if: github.ref == 'refs/heads/main'
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -120,6 +157,33 @@ jobs:
           asset_path: ./azdo-task/stuartleeks.devcontainer-build-run-${{ steps.build.outputs.version }}.vsix
           asset_name: stuartleeks.devcontainer-build-run-${{ steps.build.outputs.version }}.vsix
           asset_content_type: application/zip
+
+      - name: Publish AzDO Task
+        uses: ./
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          AZDO_TOKEN: ${{ secrets.AZDO_TOKEN }}
+          AZURE_DEVOPS_EXT_PAT: ${{ secrets.AZDO_TOKEN }}
+          AZDO_SERVICE_URL: ${{ secrets.AZDO_SERVICE_URL }}
+          BUILD_NUMBER: ${{ github.run_id }}
+          IS_PR: ${{ github.head_ref }}
+          BRANCH: ${{ github.ref }}
+        with:
+          imageName: ghcr.io/stuartleeks/devcontainer-build-run-devcontainer
+          runCmd: |
+            echo "Starting"
+            ./scripts/publish-azdo-task.sh
+          env: |
+            BUILD_NUMBER
+            IS_CI=1
+            IS_PR
+            BRANCH
+            AZDO_TOKEN
+            AZURE_DEVOPS_EXT_PAT
+            AZDO_ORG=https://dev.azure.com/stuartle
+            AZDO_PROJECT=AzDODevContainerBuildRunTest
+            AZDO_BUILD=AzDODevContainerBuildRunTest
+
           
       # - name: fail
       #   run: |
