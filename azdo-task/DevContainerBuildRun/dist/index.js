@@ -13242,7 +13242,10 @@ RUN sudo sed -i /etc/passwd -e s/${containerUser.name}:x:${containerUser.uid}:${
         const derivedDockerfilePath = external_path_default().join(tempDir, "Dockerfile");
         external_fs_.writeFileSync(derivedDockerfilePath, dockerfileContent);
         const derivedImageName = `${imageName}-userfix`;
-        const derivedDockerBuid = yield exec('docker', ['buildx', 'build', '--tag', derivedImageName, '-f', derivedDockerfilePath, tempDir, '--output=type=docker'], {});
+        // TODO - `buildx build` was giving issues when building an image for the first time and it is unable to 
+        // pull the image from the registry
+        // const derivedDockerBuid = await exec('docker', ['buildx', 'build', '--tag', derivedImageName, '-f', derivedDockerfilePath, tempDir, '--output=type=docker'], {})
+        const derivedDockerBuid = yield exec('docker', ['build', '--tag', derivedImageName, '-f', derivedDockerfilePath, tempDir, '--output=type=docker'], {});
         if (derivedDockerBuid.exitCode !== 0) {
             throw new Error("Failed to build derived Docker image with users updated");
         }
