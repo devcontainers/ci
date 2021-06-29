@@ -3,13 +3,7 @@
 {
 	"name": "dc-test",
 	"dockerFile": "Dockerfile",
-	"build": {
-		"cacheFrom": "ghcr.io/stuartleeks/dc-test/dev-container"
-	},
-
 	"mounts": [
-		// Keep command history 
-		"source=dc-test-bashhistory,target=/home/vscode/commandhistory",
 		// Mount host docker socket
 		"type=bind,source=/var/run/docker.sock,target=/var/run/docker.sock"
 	
@@ -56,7 +50,7 @@
 	// Use 'postCreateCommand' to run commands after the container is created.
 	// "postCreateCommand": "echo hello",
 
-	"remoteUser": "vscode",
+	// "remoteUser": "vscode",
 	
 	"extensions": [
 		"golang.go",
