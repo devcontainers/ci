@@ -152,8 +152,7 @@ jobs:
         uses: ./
         with:
           subFolder: github-tests/run-args
-          imageName: devcontainer-build-run-tests-run-args
-          # imageName: ghcr.io/stuartleeks/devcontainer-build-run-tests-run-args
+          imageName: ghcr.io/stuartleeks/devcontainer-build-run/tests/run-args
           runCmd: echo $HOSTNAME && [[ $HOSTNAME == "my-host" ]]
 
   test-gh-build-args:
@@ -205,6 +204,31 @@ jobs:
           subFolder: github-tests/dockerfile-context
           imageName: ghcr.io/stuartleeks/devcontainer-build-run/tests/dockerfile-context
           runCmd: /tmp/dummy.sh
+
+  test-gh-docker-from-docker:
+    name: Run GitHub docker-from-docker test
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v1
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run test
+        uses: ./
+        with:
+          subFolder: github-tests/docker-from-docker
+          imageName: ghcr.io/stuartleeks/devcontainer-build-run/tests/docker-from-docker
+          runCmd: make docker-build
 
   release:
     name: Create release
