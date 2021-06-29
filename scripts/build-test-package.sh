@@ -20,7 +20,7 @@ cd "$script_dir/../azdo-task/DevContainerBuildRun"
 npm install 
 npm run all
 cd "$script_dir/../azdo-task"
-if [[ -n"$SKIP_VSIX" ]]; then
+if [[ -n "$SKIP_VSIX" ]]; then
     echo "SKIP_VSIX set - skipping VSIX creation"
 else
     ./scripts/build-package.sh --set-patch-version $BUILD_NUMBER
