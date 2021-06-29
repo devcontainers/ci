@@ -80,6 +80,14 @@ jobs:
           name: azdo-task-dev
           path: output
 
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v1 
+        if: github.ref == 'refs/heads/main' # only need this for push (on `main`)
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Run AzDO test pipeline
         uses: ./
         env:
