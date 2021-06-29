@@ -15,6 +15,9 @@ jobs:
   build: # run build using the github action!
     runs-on: ubuntu-latest
     name: build, test, package
+    outputs:
+      version_short: ${{ steps.build.outputs.version_short }}
+      version: ${{ steps.build.outputs.version }}
     steps:
       - name: Checkout
         uses: actions/checkout@v2
@@ -137,8 +140,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: v${{ steps.build.outputs.version }}
-          release_name: Release v${{ steps.build.outputs.version }}
+          tag_name: v${{ needs.build.outputs.version_short  }}
+          release_name: Release v${{ needs.build.outputs.version_short  }}
           draft: false
           prerelease: true
 
@@ -146,7 +149,7 @@ jobs:
         id: create_tag_short_verison
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          VERSION_SHORT: v${{ steps.build.outputs.version_short }}
+          VERSION_SHORT: v${{ needs.build.outputs.version_short }}
         run: |
           echo "VERSION_SHORT: $VERSION_SHORT"
           # sudo chown -R $(whoami) .
@@ -162,8 +165,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps 
-          asset_path: ./output/stuartleeks.devcontainer-build-run-${{ steps.build.outputs.version }}.vsix
-          asset_name: stuartleeks.devcontainer-build-run-${{ steps.build.outputs.version }}.vsix
+          asset_path: ./output/stuartleeks.devcontainer-build-run-${{ needs.build.outputs.version }}.vsix
+          asset_name: stuartleeks.devcontainer-build-run-${{ needs.build.outputs.version }}.vsix
           asset_content_type: application/zip
 
       - name: Publish AzDO Task
