@@ -1,5 +1,6 @@
 import path from 'path'
 import * as fs from 'fs'
+import * as os from 'os'
 import * as config from './config'
 import {ExecFunction} from './exec'
 import {getAbsolutePath} from './file'
@@ -131,7 +132,7 @@ async function ensureHostAndContainerUsersAlign(exec: ExecFunction, imageName: s
 	const dockerfileContent = `FROM ${imageName}
 RUN sudo sed -i /etc/passwd -e s/${containerUser.name}:x:${containerUser.uid}:${containerUser.gid}/${containerUser.name}:x:${hostUser.uid}:${hostUser.gid}/
 `
-	const tempDir = fs.mkdtempSync("devcontainer-build-run")
+	const tempDir = fs.mkdtempSync(path.join(os.tmpdir(),"tmp-devcontainer-build-run"))
 	const derivedDockerfilePath = path.join(tempDir, "Dockerfile")
 	fs.writeFileSync(derivedDockerfilePath, dockerfileContent)
 

@@ -13010,6 +13010,8 @@ var external_path_ = __nccwpck_require__(5622);
 var external_path_default = /*#__PURE__*/__nccwpck_require__.n(external_path_);
 // EXTERNAL MODULE: external "fs"
 var external_fs_ = __nccwpck_require__(5747);
+// EXTERNAL MODULE: external "os"
+var external_os_ = __nccwpck_require__(2087);
 // EXTERNAL MODULE: ../../common/node_modules/jsonc-parser/lib/umd/main.js
 var main = __nccwpck_require__(6451);
 ;// CONCATENATED MODULE: ../../common/src/config.ts
@@ -13139,6 +13141,7 @@ var docker_awaiter = (undefined && undefined.__awaiter) || function (thisArg, _a
 
 
 
+
 function isDockerBuildXInstalled(exec) {
     return docker_awaiter(this, void 0, void 0, function* () {
         const { exitCode } = yield exec('docker', ['buildx', '--help'], { silent: true });
@@ -13238,7 +13241,7 @@ function ensureHostAndContainerUsersAlign(exec, imageName, devcontainerConfig) {
         const dockerfileContent = `FROM ${imageName}
 RUN sudo sed -i /etc/passwd -e s/${containerUser.name}:x:${containerUser.uid}:${containerUser.gid}/${containerUser.name}:x:${hostUser.uid}:${hostUser.gid}/
 `;
-        const tempDir = external_fs_.mkdtempSync("devcontainer-build-run");
+        const tempDir = external_fs_.mkdtempSync(external_path_default().join(external_os_.tmpdir(), "tmp-devcontainer-build-run"));
         const derivedDockerfilePath = external_path_default().join(tempDir, "Dockerfile");
         external_fs_.writeFileSync(derivedDockerfilePath, dockerfileContent);
         const derivedImageName = `${imageName}-userfix`;

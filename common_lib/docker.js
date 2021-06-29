@@ -34,6 +34,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.parseMount = exports.pushImage = exports.runContainer = exports.buildImage = exports.isDockerBuildXInstalled = void 0;
 const path_1 = __importDefault(require("path"));
 const fs = __importStar(require("fs"));
+const os = __importStar(require("os"));
 const config = __importStar(require("./config"));
 const file_1 = require("./file");
 const envvars_1 = require("./envvars");
@@ -139,7 +140,7 @@ function ensureHostAndContainerUsersAlign(exec, imageName, devcontainerConfig) {
         const dockerfileContent = `FROM ${imageName}
 RUN sudo sed -i /etc/passwd -e s/${containerUser.name}:x:${containerUser.uid}:${containerUser.gid}/${containerUser.name}:x:${hostUser.uid}:${hostUser.gid}/
 `;
-        const tempDir = fs.mkdtempSync("devcontainer-build-run");
+        const tempDir = fs.mkdtempSync(path_1.default.join(os.tmpdir(), "tmp-devcontainer-build-run"));
         const derivedDockerfilePath = path_1.default.join(tempDir, "Dockerfile");
         fs.writeFileSync(derivedDockerfilePath, dockerfileContent);
         const derivedImageName = `${imageName}-userfix`;
