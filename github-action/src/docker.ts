@@ -2,7 +2,6 @@ import * as core from '@actions/core'
 import * as docker from '../../common/src/docker'
 import {exec} from './exec'
 
-
 export async function isDockerBuildXInstalled(): Promise<boolean> {
 	return await docker.isDockerBuildXInstalled(exec)
 }
@@ -16,7 +15,7 @@ export async function buildImage(
 		return await docker.buildImage(exec, imageName, checkoutPath, subFolder)
 	} catch (error) {
 		core.setFailed(error)
-		return ""
+		return ''
 	} finally {
 		core.endGroup()
 	}
@@ -31,7 +30,14 @@ export async function runContainer(
 ): Promise<boolean> {
 	core.startGroup('🏃‍♀️ Running dev container...')
 	try {
-		await docker.runContainer(exec, imageName, checkoutPath, subFolder, command, envs)
+		await docker.runContainer(
+			exec,
+			imageName,
+			checkoutPath,
+			subFolder,
+			command,
+			envs
+		)
 		return true
 	} catch (error) {
 		core.setFailed(error)

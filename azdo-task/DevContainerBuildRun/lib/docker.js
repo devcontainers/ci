@@ -42,12 +42,11 @@ function buildImage(imageName, checkoutPath, subFolder) {
     return __awaiter(this, void 0, void 0, function* () {
         console.log('🏗 Building dev container...');
         try {
-            yield docker.buildImage(exec_1.exec, imageName, checkoutPath, subFolder);
-            return true;
+            return yield docker.buildImage(exec_1.exec, imageName, checkoutPath, subFolder);
         }
         catch (error) {
             task.setResult(task.TaskResult.Failed, error);
-            return false;
+            return '';
         }
     });
 }

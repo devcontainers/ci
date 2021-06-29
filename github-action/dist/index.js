@@ -1661,7 +1661,7 @@ function buildImage(imageName, checkoutPath, subFolder) {
         }
         catch (error) {
             core.setFailed(error);
-            return "";
+            return '';
         }
         finally {
             core.endGroup();
@@ -1748,7 +1748,7 @@ function exec(command, args, options) {
     return __awaiter(this, void 0, void 0, function* () {
         const actionOptions = {
             ignoreReturnCode: true,
-            silent: (_a = options.silent) !== null && _a !== void 0 ? _a : false,
+            silent: (_a = options.silent) !== null && _a !== void 0 ? _a : false
         };
         const result = yield actions_exec.getExecOutput(command, args, actionOptions);
         return {
@@ -1825,7 +1825,7 @@ function runMain() {
             const runCommand = core.getInput('runCmd', { required: true });
             const envs = core.getMultilineInput('env');
             const buildImageName = yield docker_1.buildImage(imageName, checkoutPath, subFolder);
-            if (buildImageName === "") {
+            if (buildImageName === '') {
                 return;
             }
             if (!(yield docker_1.runContainer(buildImageName, checkoutPath, subFolder, runCommand, envs))) {
