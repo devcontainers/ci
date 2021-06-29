@@ -21,7 +21,8 @@ ARG USER_GID=$USER_UID
 USER $USERNAME
 RUN \
     mkdir -p ~/.local/bin \
-    && echo "export PATH=\$PATH:~/.local/bin" >> ~/.bashrc
+    && echo "export PATH=\$PATH:~/.local/bin" >> ~/.bashrc \
+    && echo "export PATH=\$PATH:~/.local/bin" >> ~/.bash_profile
 
 # Configure apt, install packages and general tools
 RUN sudo apt-get update \
