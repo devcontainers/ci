@@ -133,6 +133,9 @@ jobs:
       - test-azdo
       - build
     if: github.ref == 'refs/heads/main' # only create release on `main`
+    env:
+      VERSION: ${{ needs.build.outputs.version }}
+      VERSION_SHORT: ${{ needs.build.outputs.version_short }}
     steps:
       - name: Checkout
         uses: actions/checkout@v2
@@ -143,9 +146,6 @@ jobs:
           path: output
 
       - name: Show version
-        env:
-          VERSION: ${{ needs.build.outputs.version }}
-          VERSION_SHORT: ${{ needs.build.outputs.version_short }}
         run: |
           echo "VERSION: $VERSION"
           echo "VERSION_SHORT: $VERSION_SHORT"
@@ -156,8 +156,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: v${{ needs.build.outputs.version_short  }}
-          release_name: Release v${{ needs.build.outputs.version_short  }}
+          tag_name: v${{ env.VERSION  }}
+          release_name: Release v${{ env.VERSION }}
           draft: false
           prerelease: true
 
@@ -165,7 +165,7 @@ jobs:
         id: create_tag_short_verison
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          VERSION_SHORT: v${{ needs.build.outputs.version_short }}
+          VERSION_SHORT: v${{ env.VERSION_SHORT }}
         run: |
           echo "VERSION_SHORT: $VERSION_SHORT"
           # sudo chown -R $(whoami) .
