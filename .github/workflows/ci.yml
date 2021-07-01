@@ -11,6 +11,8 @@ on: # rebuild any PRs and main branch changes
     paths-ignore:
       - README.md
       - 'docs/**'
+  workflow_dispatch:
+  
 jobs:
   build: # run build using the github action!
     runs-on: ubuntu-latest
