@@ -1661,7 +1661,7 @@ function buildImage(imageName, checkoutPath, subFolder) {
         }
         catch (error) {
             core.setFailed(error);
-            return "";
+            return '';
         }
         finally {
             core.endGroup();
@@ -1748,7 +1748,7 @@ function exec(command, args, options) {
     return __awaiter(this, void 0, void 0, function* () {
         const actionOptions = {
             ignoreReturnCode: true,
-            silent: (_a = options.silent) !== null && _a !== void 0 ? _a : false,
+            silent: (_a = options.silent) !== null && _a !== void 0 ? _a : false
         };
         const result = yield actions_exec.getExecOutput(command, args, actionOptions);
         return {
@@ -1825,7 +1825,7 @@ function runMain() {
             const runCommand = core.getInput('runCmd', { required: true });
             const envs = core.getMultilineInput('env');
             const buildImageName = yield docker_1.buildImage(imageName, checkoutPath, subFolder);
-            if (buildImageName === "") {
+            if (buildImageName === '') {
                 return;
             }
             if (!(yield docker_1.runContainer(buildImageName, checkoutPath, subFolder, runCommand, envs))) {
@@ -3614,6 +3614,8 @@ var external_path_ = __nccwpck_require__(622);
 var external_path_default = /*#__PURE__*/__nccwpck_require__.n(external_path_);
 // EXTERNAL MODULE: external "fs"
 var external_fs_ = __nccwpck_require__(747);
+// EXTERNAL MODULE: external "os"
+var external_os_ = __nccwpck_require__(87);
 // EXTERNAL MODULE: ../common/node_modules/jsonc-parser/lib/umd/main.js
 var main = __nccwpck_require__(787);
 ;// CONCATENATED MODULE: ../common/src/config.ts
@@ -3743,6 +3745,7 @@ var docker_awaiter = (undefined && undefined.__awaiter) || function (thisArg, _a
 
 
 
+
 function isDockerBuildXInstalled(exec) {
     return docker_awaiter(this, void 0, void 0, function* () {
         const { exitCode } = yield exec('docker', ['buildx', '--help'], { silent: true });
@@ -3842,11 +3845,14 @@ function ensureHostAndContainerUsersAlign(exec, imageName, devcontainerConfig) {
         const dockerfileContent = `FROM ${imageName}
 RUN sudo sed -i /etc/passwd -e s/${containerUser.name}:x:${containerUser.uid}:${containerUser.gid}/${containerUser.name}:x:${hostUser.uid}:${hostUser.gid}/
 `;
-        const tempDir = external_fs_.mkdtempSync("devcontainer-build-run");
+        const tempDir = external_fs_.mkdtempSync(external_path_default().join(external_os_.tmpdir(), "tmp-devcontainer-build-run"));
         const derivedDockerfilePath = external_path_default().join(tempDir, "Dockerfile");
         external_fs_.writeFileSync(derivedDockerfilePath, dockerfileContent);
         const derivedImageName = `${imageName}-userfix`;
-        const derivedDockerBuid = yield exec('docker', ['buildx', 'build', '--tag', derivedImageName, '-f', derivedDockerfilePath, tempDir, '--output=type=docker'], {});
+        // TODO - `buildx build` was giving issues when building an image for the first time and it is unable to 
+        // pull the image from the registry
+        // const derivedDockerBuid = await exec('docker', ['buildx', 'build', '--tag', derivedImageName, '-f', derivedDockerfilePath, tempDir, '--output=type=docker'], {})
+        const derivedDockerBuid = yield exec('docker', ['build', '--tag', derivedImageName, '-f', derivedDockerfilePath, tempDir, '--output=type=docker'], {});
         if (derivedDockerBuid.exitCode !== 0) {
             throw new Error("Failed to build derived Docker image with users updated");
         }

@@ -67,10 +67,11 @@ function runMain() {
                 return;
             }
             const envs = (_d = (_c = task.getInput('env')) === null || _c === void 0 ? void 0 : _c.split('\n')) !== null && _d !== void 0 ? _d : [];
-            if (!(yield docker_1.buildImage(imageName, checkoutPath, subFolder))) {
+            const buildImageName = yield docker_1.buildImage(imageName, checkoutPath, subFolder);
+            if (buildImageName === '') {
                 return;
             }
-            if (!(yield docker_1.runContainer(imageName, checkoutPath, subFolder, runCommand, envs))) {
+            if (!(yield docker_1.runContainer(buildImageName, checkoutPath, subFolder, runCommand, envs))) {
                 return;
             }
         }
@@ -82,8 +83,17 @@ function runMain() {
 function runPost() {
     var _a, _b, _c, _d;
     return __awaiter(this, void 0, void 0, function* () {
-        // buildReasonsForPush
-        //sourceBranchFilterForPush
+        // https://docs.microsoft.com/en-us/azure/devops/pipelines/build/variables?view=azure-devops&tabs=yaml
+        const agentJobStatus = process.env.AGENT_JOBSTATUS;
+        switch (agentJobStatus) {
+            case 'Succeeded':
+            case 'SucceededWithIssues':
+                // continue
+                break;
+            default:
+                console.log(`Image push skipped because Agent JobStatus is '${agentJobStatus}'`);
+                return;
+        }
         const buildReasonsForPush = (_b = (_a = task.getInput('buildReasonsForPush')) === null || _a === void 0 ? void 0 : _a.split('\n')) !== null && _b !== void 0 ? _b : [];
         const sourceBranchFilterForPush = (_d = (_c = task.getInput('sourceBranchFilterForPush')) === null || _c === void 0 ? void 0 : _c.split('\n')) !== null && _d !== void 0 ? _d : [];
         // check build reason is allowed

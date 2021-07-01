@@ -17,9 +17,3 @@ build-package:
 
 test: build-package
 	npm test
-
-act: build-package
-	act
-
-act-verbose: build-package
-	act -v

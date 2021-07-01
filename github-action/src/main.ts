@@ -33,7 +33,7 @@ async function runMain(): Promise<void> {
 		const envs: string[] = core.getMultilineInput('env')
 
 		const buildImageName = await buildImage(imageName, checkoutPath, subFolder)
-		if (buildImageName === "") {
+		if (buildImageName === '') {
 			return
 		}
 

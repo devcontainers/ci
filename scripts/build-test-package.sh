@@ -12,17 +12,23 @@ npm run test
 
 figlet GH Action
 cd "$script_dir/../github-action"
-sudo npm install
-make build-package
+npm install
+npm run all
 
 figlet AzDO Task
 cd "$script_dir/../azdo-task/DevContainerBuildRun"
-sudo npm install 
+npm install 
+npm run all
 cd "$script_dir/../azdo-task"
-./scripts/build-package.sh --set-patch-version $BUILD_NUMBER
+if [[ -n "$SKIP_VSIX" ]]; then
+    echo "SKIP_VSIX set - skipping VSIX creation"
+else
+    ./scripts/build-package.sh --set-patch-version $BUILD_NUMBER
 
-mkdir -p "$script_dir/../output"
-cp *.vsix "$script_dir/../output/"
+    mkdir -p "$script_dir/../output"
+    cp *.vsix "$script_dir/../output/"
+fi
 
+cd "$script_dir/.."
 figlet git status
 git status

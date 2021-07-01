@@ -1,6 +1,4 @@
-import {
-	exec
-} from '../src/exec'
+import {exec} from '../src/exec'
 
 describe('exec', () => {
 	test('non-silent returns correct output', async () => {

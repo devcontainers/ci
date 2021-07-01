@@ -1,5 +1,6 @@
 import path from 'path'
 import * as fs from 'fs'
+import * as os from 'os'
 import * as config from './config'
 import {ExecFunction} from './exec'
 import {getAbsolutePath} from './file'
@@ -131,13 +132,16 @@ async function ensureHostAndContainerUsersAlign(exec: ExecFunction, imageName: s
 	const dockerfileContent = `FROM ${imageName}
 RUN sudo sed -i /etc/passwd -e s/${containerUser.name}:x:${containerUser.uid}:${containerUser.gid}/${containerUser.name}:x:${hostUser.uid}:${hostUser.gid}/
 `
-	const tempDir = fs.mkdtempSync("devcontainer-build-run")
+	const tempDir = fs.mkdtempSync(path.join(os.tmpdir(),"tmp-devcontainer-build-run"))
 	const derivedDockerfilePath = path.join(tempDir, "Dockerfile")
 	fs.writeFileSync(derivedDockerfilePath, dockerfileContent)
 
 	const derivedImageName = `${imageName}-userfix`
 
-	const derivedDockerBuid = await exec('docker', ['buildx', 'build', '--tag', derivedImageName, '-f', derivedDockerfilePath, tempDir, '--output=type=docker'], {})
+	// TODO - `buildx build` was giving issues when building an image for the first time and it is unable to 
+	// pull the image from the registry
+	// const derivedDockerBuid = await exec('docker', ['buildx', 'build', '--tag', derivedImageName, '-f', derivedDockerfilePath, tempDir, '--output=type=docker'], {})
+	const derivedDockerBuid = await exec('docker', ['build', '--tag', derivedImageName, '-f', derivedDockerfilePath, tempDir, '--output=type=docker'], {})
 	if (derivedDockerBuid.exitCode !== 0) {
 		throw new Error("Failed to build derived Docker image with users updated")
 	}

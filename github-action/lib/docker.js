@@ -46,7 +46,7 @@ function buildImage(imageName, checkoutPath, subFolder) {
         }
         catch (error) {
             core.setFailed(error);
-            return "";
+            return '';
         }
         finally {
             core.endGroup();

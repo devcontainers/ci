@@ -56,7 +56,7 @@ function runMain() {
             const runCommand = core.getInput('runCmd', { required: true });
             const envs = core.getMultilineInput('env');
             const buildImageName = yield docker_1.buildImage(imageName, checkoutPath, subFolder);
-            if (buildImageName === "") {
+            if (buildImageName === '') {
                 return;
             }
             if (!(yield docker_1.runContainer(buildImageName, checkoutPath, subFolder, runCommand, envs))) {
