@@ -8,7 +8,7 @@ The [`devcontainer-build-run` task](https://marketplace.visualstudio.com/items?i
 
 To enable pushing the dev container image to a container registry you need to ensure that your pipeline is signed in to that registry.
 
-The example below shows logging in to GitHub Container Registry, and then building and running the dev container with the devcontainer-build-run action:
+The example below shows logging in to an Azure Container Registry instance, and then building and running the dev container with the devcontainer-build-run action:
 
 ```yaml
 trigger:

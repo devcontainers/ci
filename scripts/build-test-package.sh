@@ -17,9 +17,12 @@ npm run all
 
 figlet AzDO Task
 cd "$script_dir/../azdo-task/DevContainerBuildRun"
+cp "$script_dir/../docs/azure-devops-task.md" "$script_dir/../azdo-task/README.md"
+cp "$script_dir/../LICENSE" "$script_dir/../azdo-task/LICENSE.md"
 npm install 
 npm run all
 cd "$script_dir/../azdo-task"
+
 if [[ -n "$SKIP_VSIX" ]]; then
     echo "SKIP_VSIX set - skipping VSIX creation"
 else
@@ -29,6 +32,20 @@ else
     cp *.vsix "$script_dir/../output/"
 fi
 
-cd "$script_dir/.."
+if [[ -z $IS_CI ]]; then
+    echo "IS_CI not set, skipping git status check"
+    exit 0
+fi
+
 figlet git status
-git status
+cd "$script_dir/.."
+# vss-extension.json and task.json have their version info modified by the build
+# reset these before checking for changes
+git checkout azdo-task/vss-extension.json
+git checkout azdo-task/DevContainerBuildRun/task.json
+if [[ -n $(git status --short) ]]; then
+    echo "*** There are unexpected changes in the working directory (see git status output below)"
+    echo "*** Ensure you have run scripts/build-local.sh"
+    git status
+    exit 1
+fi
