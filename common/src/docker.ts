@@ -130,7 +130,8 @@ async function ensureHostAndContainerUsersAlign(exec: ExecFunction, imageName: s
 
 	// Generate a Dockerfile to run to build a derived image with the UID/GID updated
 	const dockerfileContent = `FROM ${imageName}
-RUN sudo sed -i /etc/passwd -e s/${containerUser.name}:x:${containerUser.uid}:${containerUser.gid}/${containerUser.name}:x:${hostUser.uid}:${hostUser.gid}/
+RUN sudo chown -R ${hostUser.uid}:${hostUser.gid} /home/${containerUserName} \
+    && sudo sed -i /etc/passwd -e s/${containerUser.name}:x:${containerUser.uid}:${containerUser.gid}/${containerUser.name}:x:${hostUser.uid}:${hostUser.gid}/
 `
 	const tempDir = fs.mkdtempSync(path.join(os.tmpdir(),"tmp-devcontainer-build-run"))
 	const derivedDockerfilePath = path.join(tempDir, "Dockerfile")
