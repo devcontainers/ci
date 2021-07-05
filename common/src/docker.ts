@@ -141,9 +141,9 @@ RUN sudo chown -R ${hostUser.uid}:${hostUser.gid} /home/${containerUserName} \
 
 	// TODO - `buildx build` was giving issues when building an image for the first time and it is unable to 
 	// pull the image from the registry
-	// const derivedDockerBuid = await exec('docker', ['buildx', 'build', '--tag', derivedImageName, '-f', derivedDockerfilePath, tempDir, '--output=type=docker'], {})
-	const derivedDockerBuid = await exec('docker', ['build', '--tag', derivedImageName, '-f', derivedDockerfilePath, tempDir, '--output=type=docker'], {})
-	if (derivedDockerBuid.exitCode !== 0) {
+	// const derivedDockerBuild = await exec('docker', ['buildx', 'build', '--tag', derivedImageName, '-f', derivedDockerfilePath, tempDir, '--output=type=docker'], {})
+	const derivedDockerBuild = await exec('docker', ['build', '--tag', derivedImageName, '-f', derivedDockerfilePath, tempDir, '--output=type=docker'], {})
+	if (derivedDockerBuild.exitCode !== 0) {
 		throw new Error("Failed to build derived Docker image with users updated")
 	}
 
