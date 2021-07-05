@@ -138,7 +138,8 @@ function ensureHostAndContainerUsersAlign(exec, imageName, devcontainerConfig) {
         }
         // Generate a Dockerfile to run to build a derived image with the UID/GID updated
         const dockerfileContent = `FROM ${imageName}
-RUN sudo sed -i /etc/passwd -e s/${containerUser.name}:x:${containerUser.uid}:${containerUser.gid}/${containerUser.name}:x:${hostUser.uid}:${hostUser.gid}/
+RUN sudo chown -R ${hostUser.uid}:${hostUser.gid} /home/${containerUserName} \
+    && sudo sed -i /etc/passwd -e s/${containerUser.name}:x:${containerUser.uid}:${containerUser.gid}/${containerUser.name}:x:${hostUser.uid}:${hostUser.gid}/
 `;
         const tempDir = fs.mkdtempSync(path_1.default.join(os.tmpdir(), "tmp-devcontainer-build-run"));
         const derivedDockerfilePath = path_1.default.join(tempDir, "Dockerfile");
@@ -146,9 +147,9 @@ RUN sudo sed -i /etc/passwd -e s/${containerUser.name}:x:${containerUser.uid}:${
         const derivedImageName = `${imageName}-userfix`;
         // TODO - `buildx build` was giving issues when building an image for the first time and it is unable to 
         // pull the image from the registry
-        // const derivedDockerBuid = await exec('docker', ['buildx', 'build', '--tag', derivedImageName, '-f', derivedDockerfilePath, tempDir, '--output=type=docker'], {})
-        const derivedDockerBuid = yield exec('docker', ['build', '--tag', derivedImageName, '-f', derivedDockerfilePath, tempDir, '--output=type=docker'], {});
-        if (derivedDockerBuid.exitCode !== 0) {
+        // const derivedDockerBuild = await exec('docker', ['buildx', 'build', '--tag', derivedImageName, '-f', derivedDockerfilePath, tempDir, '--output=type=docker'], {})
+        const derivedDockerBuild = yield exec('docker', ['build', '--tag', derivedImageName, '-f', derivedDockerfilePath, tempDir, '--output=type=docker'], {});
+        if (derivedDockerBuild.exitCode !== 0) {
             throw new Error("Failed to build derived Docker image with users updated");
         }
         return derivedImageName;
