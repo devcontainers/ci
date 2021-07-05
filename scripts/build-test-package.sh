@@ -17,9 +17,12 @@ npm run all
 
 figlet AzDO Task
 cd "$script_dir/../azdo-task/DevContainerBuildRun"
+cp "$script_dir/../docs/azure-devops-task.md" "$script_dir/../azdo-task/README.md"
+cp "$script_dir/../LICENSE" "$script_dir/../azdo-task/LICENSE.md"
 npm install 
 npm run all
 cd "$script_dir/../azdo-task"
+
 if [[ -n "$SKIP_VSIX" ]]; then
     echo "SKIP_VSIX set - skipping VSIX creation"
 else
