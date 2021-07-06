@@ -67,45 +67,60 @@ async function runMain(): Promise<void> {
 }
 
 async function runPost(): Promise<void> {
-	// https://docs.microsoft.com/en-us/azure/devops/pipelines/build/variables?view=azure-devops&tabs=yaml
-	const agentJobStatus = process.env.AGENT_JOBSTATUS
-	switch (agentJobStatus) {
-		case 'Succeeded':
-		case 'SucceededWithIssues':
-			// continue
-			break
+	const pushOption = task.getInput('push') ?? 'filter'
+	const pushOnFailedBuild =
+		(task.getInput('pushOnFailedBuild') ?? 'false') === 'true'
 
-		default:
+	if (pushOption === 'never') {
+		console.log(`Image push skipped because 'push' is set to '${pushOption}'`)
+		return
+	}
+	if (pushOption === 'filter') {
+		// https://docs.microsoft.com/en-us/azure/devops/pipelines/build/variables?view=azure-devops&tabs=yaml
+		const agentJobStatus = process.env.AGENT_JOBSTATUS
+		switch (agentJobStatus) {
+			case 'Succeeded':
+			case 'SucceededWithIssues':
+				// continue
+				break
+
+			default:
+				if (!pushOnFailedBuild) {
+					console.log(
+						`Image push skipped because Agent JobStatus is '${agentJobStatus}'`
+					)
+					return
+				}
+		}
+
+		const buildReasonsForPush: string[] =
+			task.getInput('buildReasonsForPush')?.split('\n') ?? []
+		const sourceBranchFilterForPush: string[] =
+			task.getInput('sourceBranchFilterForPush')?.split('\n') ?? []
+
+		// check build reason is allowed
+		const buildReason = process.env.BUILD_REASON
+		if (
+			buildReasonsForPush.length !== 0 && // empty filter allows all
+			!buildReasonsForPush.some(s => s === buildReason)
+		) {
 			console.log(
-				`Image push skipped because Agent JobStatus is '${agentJobStatus}'`
+				`Image push skipped because buildReason (${buildReason}) is not in buildReasonsForPush`
 			)
 			return
-	}
+		}
 
-	const buildReasonsForPush: string[] =
-		task.getInput('buildReasonsForPush')?.split('\n') ?? []
-	const sourceBranchFilterForPush: string[] =
-		task.getInput('sourceBranchFilterForPush')?.split('\n') ?? []
-
-	// check build reason is allowed
-	const buildReason = process.env.BUILD_REASON
-	if (!buildReasonsForPush.some(s => s === buildReason)) {
-		console.log(
-			`Image push skipped because buildReason (${buildReason}) is not in buildReasonsForPush`
-		)
-		return
-	}
-
-	// check branch is allowed
-	const sourceBranch = process.env.BUILD_SOURCEBRANCH
-	if (
-		sourceBranchFilterForPush.length !== 0 && // empty filter allows all
-		!sourceBranchFilterForPush.some(s => s === sourceBranch)
-	) {
-		console.log(
-			`Image push skipped because source branch (${sourceBranch}) is not in sourceBranchFilterForPush`
-		)
-		return
+		// check branch is allowed
+		const sourceBranch = process.env.BUILD_SOURCEBRANCH
+		if (
+			sourceBranchFilterForPush.length !== 0 && // empty filter allows all
+			!sourceBranchFilterForPush.some(s => s === sourceBranch)
+		) {
+			console.log(
+				`Image push skipped because source branch (${sourceBranch}) is not in sourceBranchFilterForPush`
+			)
+			return
+		}
 	}
 
 	const imageName = task.getInput('imageName', true)
@@ -113,7 +128,7 @@ async function runPost(): Promise<void> {
 		task.setResult(task.TaskResult.Failed, 'imageName input is required')
 		return
 	}
-
+	console.log(`Pushing image ''${imageName}...`)
 	await pushImage(imageName)
 }
 
