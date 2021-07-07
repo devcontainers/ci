@@ -54,14 +54,55 @@ async function runMain(): Promise<void> {
 }
 
 async function runPost(): Promise<void> {
-	const headRef = process.env.GITHUB_HEAD_REF
-	if (headRef) {
-		// headRef only set on PR builds
-		core.info('Image push skipped for PR builds')
+	const pushOption: string = valueOrDefault(core.getInput('push'), 'filter')
+	const refFilterForPush: string[] = core.getMultilineInput('refFilterForPush')
+	const eventFilterForPush: string[] =
+		core.getMultilineInput('eventFilterForPush')
+
+	if (pushOption === 'never') {
+		core.info(`Image push skipped because 'push' is set to '${pushOption}'`)
 		return
 	}
+
+	if (pushOption === 'filter') {
+		// https://docs.github.com/en/actions/reference/environment-variables#default-environment-variables
+		const ref = process.env.GITHUB_REF
+		if (
+			refFilterForPush.length !== 0 && // empty filter allows all
+			!refFilterForPush.some(s => s === ref)
+		) {
+			core.info(
+				`Image push skipped because GITHUB_REF (${ref}) is not in refFilterForPush`
+			)
+			return
+		}
+		const eventName = process.env.GETHUB_EVENT_NAME
+		if (
+			eventFilterForPush.length !== 0 && // empty filter allows all
+			!eventFilterForPush.some(s => s === eventName)
+		) {
+			core.info(
+				`Image push skipped because GITHUB_EVENT_NAME (${eventName}) is not in eventFilterForPush`
+			)
+			return
+		}
+	}
+
+	if (pushOption !== 'always') {
+		core.setFailed(`Unexpected push value ('${pushOption})'`)
+		return
+	}
+
 	const imageName: string = core.getInput('imageName', {required: true})
+	core.info(`Pushing image ''${imageName}...`)
 	await pushImage(imageName)
+}
+
+function valueOrDefault(value: string, defaultValue: string): string {
+	if (!value || value === '') {
+		return defaultValue
+	}
+	return value
 }
 
 run()

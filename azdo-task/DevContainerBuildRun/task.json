@@ -1,4 +1,5 @@
 {
+  "$schema": "https://raw.githubusercontent.com/microsoft/azure-pipelines-task-lib/master/tasks.schema.json",
   "id": "bbb21824-a9e3-4b9e-a58f-af3d18dd3688",
   "name": "DevContainerBuildRun",
   "friendlyName": "Dev Container Build & Run Extension",
@@ -47,6 +48,24 @@
       "required": false
     },
     {
+      "name": "push",
+      "type": "pickList",
+      "options": {
+        "never": "Never push",
+        "filter": "Push if buildReasonsForPush, sourceBranchFilterForPush, and pushOnFailedBuild conditions are met",
+        "always": "Always push"
+      },
+      "defaultValue": "filter",
+      "required": false,
+      "label": "Control when images are pushed to the registry"
+    },
+    {
+      "name": "pushOnFailedBuild",
+      "type": "boolean",
+      "defaultValue": false,
+      "required": false
+    },
+    {
       "name": "buildReasonsForPush",
       "type": "multiLine",
       "label": "Set the Build Reasons that should trigger a push of the dev container image . Defaults to Manual, IndividualCI, BatchedCI. (see https://docs.microsoft.com/en-us/azure/devops/pipelines/build/variables?view=azure-devops&viewFallbackFrom=vsts&tabs=yaml)",
@@ -56,7 +75,7 @@
     {
       "name": "sourceBranchFilterForPush",
       "type": "multiLine",
-      "label": "Set the source branches (e.g. refs/heads/main) that are allows to trigger a push of the dev container image. Leave empty to allow all.",
+      "label": "Set the source branches (e.g. refs/heads/main) that are allowed to trigger a push of the dev container image. Leave empty to allow all.",
       "required": false,
       "defaultValue": ""
     }

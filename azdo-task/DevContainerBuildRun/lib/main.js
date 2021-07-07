@@ -81,39 +81,51 @@ function runMain() {
     });
 }
 function runPost() {
-    var _a, _b, _c, _d;
+    var _a, _b, _c, _d, _e, _f;
     return __awaiter(this, void 0, void 0, function* () {
-        // https://docs.microsoft.com/en-us/azure/devops/pipelines/build/variables?view=azure-devops&tabs=yaml
-        const agentJobStatus = process.env.AGENT_JOBSTATUS;
-        switch (agentJobStatus) {
-            case 'Succeeded':
-            case 'SucceededWithIssues':
-                // continue
-                break;
-            default:
-                console.log(`Image push skipped because Agent JobStatus is '${agentJobStatus}'`);
+        const pushOption = (_a = task.getInput('push')) !== null && _a !== void 0 ? _a : 'filter';
+        const pushOnFailedBuild = ((_b = task.getInput('pushOnFailedBuild')) !== null && _b !== void 0 ? _b : 'false') === 'true';
+        if (pushOption === 'never') {
+            console.log(`Image push skipped because 'push' is set to '${pushOption}'`);
+            return;
+        }
+        if (pushOption === 'filter') {
+            // https://docs.microsoft.com/en-us/azure/devops/pipelines/build/variables?view=azure-devops&tabs=yaml
+            const agentJobStatus = process.env.AGENT_JOBSTATUS;
+            switch (agentJobStatus) {
+                case 'Succeeded':
+                case 'SucceededWithIssues':
+                    // continue
+                    break;
+                default:
+                    if (!pushOnFailedBuild) {
+                        console.log(`Image push skipped because Agent JobStatus is '${agentJobStatus}'`);
+                        return;
+                    }
+            }
+            const buildReasonsForPush = (_d = (_c = task.getInput('buildReasonsForPush')) === null || _c === void 0 ? void 0 : _c.split('\n')) !== null && _d !== void 0 ? _d : [];
+            const sourceBranchFilterForPush = (_f = (_e = task.getInput('sourceBranchFilterForPush')) === null || _e === void 0 ? void 0 : _e.split('\n')) !== null && _f !== void 0 ? _f : [];
+            // check build reason is allowed
+            const buildReason = process.env.BUILD_REASON;
+            if (buildReasonsForPush.length !== 0 && // empty filter allows all
+                !buildReasonsForPush.some(s => s === buildReason)) {
+                console.log(`Image push skipped because buildReason (${buildReason}) is not in buildReasonsForPush`);
                 return;
-        }
-        const buildReasonsForPush = (_b = (_a = task.getInput('buildReasonsForPush')) === null || _a === void 0 ? void 0 : _a.split('\n')) !== null && _b !== void 0 ? _b : [];
-        const sourceBranchFilterForPush = (_d = (_c = task.getInput('sourceBranchFilterForPush')) === null || _c === void 0 ? void 0 : _c.split('\n')) !== null && _d !== void 0 ? _d : [];
-        // check build reason is allowed
-        const buildReason = process.env.BUILD_REASON;
-        if (!buildReasonsForPush.some(s => s === buildReason)) {
-            console.log(`Image push skipped because buildReason (${buildReason}) is not in buildReasonsForPush`);
-            return;
-        }
-        // check branch is allowed
-        const sourceBranch = process.env.BUILD_SOURCEBRANCH;
-        if (sourceBranchFilterForPush.length !== 0 && // empty filter allows all
-            !sourceBranchFilterForPush.some(s => s === sourceBranch)) {
-            console.log(`Image push skipped because source branch (${sourceBranch}) is not in sourceBranchFilterForPush`);
-            return;
+            }
+            // check branch is allowed
+            const sourceBranch = process.env.BUILD_SOURCEBRANCH;
+            if (sourceBranchFilterForPush.length !== 0 && // empty filter allows all
+                !sourceBranchFilterForPush.some(s => s === sourceBranch)) {
+                console.log(`Image push skipped because source branch (${sourceBranch}) is not in sourceBranchFilterForPush`);
+                return;
+            }
         }
         const imageName = task.getInput('imageName', true);
         if (!imageName) {
             task.setResult(task.TaskResult.Failed, 'imageName input is required');
             return;
         }
+        console.log(`Pushing image ''${imageName}...`);
         yield docker_1.pushImage(imageName);
     });
 }

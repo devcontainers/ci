@@ -1,6 +1,9 @@
 name: 'devcontainer-build-run'
 description: 'Action to simplify using VS Code dev containers in GitHub workflows'
 author: 'stuartleeks'
+branding:
+  color: purple
+  icon: box
 inputs:
   imageName:
     required: true
@@ -16,6 +19,18 @@ inputs:
     required: false
     description: Specify path to checked out folder if not using default (or for testing with nektos/act)
     default: .
+  push:
+    required: false
+    default: filter
+    description: Control when images are pushed. Options are never, filter, always. For filter (default), images are pushed if the refFilterForPush and eventFilterForPush conditions are met
+  refFilterForPush:
+    required: false
+    default:
+    description: Set the source branches (e.g. refs/heads/main) that are allowed to trigger a push of the dev container image. Leave empty to allow all.
+  eventFilterForPush:
+    required: false
+    default: push
+    description: Set the event names (e.g. pull_request, push) that are allowed to trigger a push of the dev container image. Defaults to push. Leave empty for all
   env:
     required: false
     description: Specify environment variables to pass to the docker run command
