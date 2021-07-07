@@ -13096,7 +13096,7 @@ function getSubstitutionValue(regexMatch, placeholder) {
     if (parts.length === 2) {
         const type = parts[0];
         const key = parts[1];
-        switch (type) {
+        switch (type.toLowerCase()) {
             case 'env':
             case 'localenv':
                 return (_a = process.env[key]) !== null && _a !== void 0 ? _a : '';
