@@ -85,7 +85,7 @@ function runPost() {
                 core.info(`Image push skipped because GITHUB_REF (${ref}) is not in refFilterForPush`);
                 return;
             }
-            const eventName = process.env.GETHUB_EVENT_NAME;
+            const eventName = process.env.GITHUB_EVENT_NAME;
             if (eventFilterForPush.length !== 0 && // empty filter allows all
                 !eventFilterForPush.some(s => s === eventName)) {
                 core.info(`Image push skipped because GITHUB_EVENT_NAME (${eventName}) is not in eventFilterForPush`);
