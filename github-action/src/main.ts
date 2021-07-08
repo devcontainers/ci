@@ -86,9 +86,7 @@ async function runPost(): Promise<void> {
 			)
 			return
 		}
-	}
-
-	if (pushOption !== 'always') {
+	} else if (pushOption !== 'always') {
 		core.setFailed(`Unexpected push value ('${pushOption})'`)
 		return
 	}
