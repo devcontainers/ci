@@ -92,7 +92,7 @@ function runPost() {
                 return;
             }
         }
-        if (pushOption !== 'always') {
+        else if (pushOption !== 'always') {
             core.setFailed(`Unexpected push value ('${pushOption})'`);
             return;
         }
