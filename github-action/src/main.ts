@@ -76,7 +76,7 @@ async function runPost(): Promise<void> {
 			)
 			return
 		}
-		const eventName = process.env.GETHUB_EVENT_NAME
+		const eventName = process.env.GITHUB_EVENT_NAME
 		if (
 			eventFilterForPush.length !== 0 && // empty filter allows all
 			!eventFilterForPush.some(s => s === eventName)
