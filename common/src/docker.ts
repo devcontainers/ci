@@ -172,7 +172,7 @@ export async function runContainer(
 	const workdir = path.join(workspaceFolder, subFolder)
 	const remoteUser = config.getRemoteUser(devcontainerConfig)
 
-	const args = ['run']
+	const args = ['run', '--rm']
 	args.push(
 		'--mount',
 		`type=bind,src=${checkoutPathAbsolute},dst=${workspaceFolder}`
