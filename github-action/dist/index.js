@@ -3896,7 +3896,7 @@ function runContainer(exec, imageName, checkoutPath, subFolder, command, envs, m
         const workspaceFolder = getWorkspaceFolder(devcontainerConfig, checkoutPathAbsolute);
         const workdir = external_path_default().join(workspaceFolder, subFolder);
         const remoteUser = getRemoteUser(devcontainerConfig);
-        const args = ['run'];
+        const args = ['run', '--rm'];
         args.push('--mount', `type=bind,src=${checkoutPathAbsolute},dst=${workspaceFolder}`);
         if (devcontainerConfig.mounts) {
             devcontainerConfig.mounts
