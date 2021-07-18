@@ -29,6 +29,12 @@
       "required": true
     },
     {
+      "name": "imageTag",
+      "type": "string",
+      "label": "Image tag (defaults to latest)",
+      "required": false
+    },
+    {
       "name": "runCmd",
       "type": "multiLine",
       "label": "Specify the command to run after building the dev container image",

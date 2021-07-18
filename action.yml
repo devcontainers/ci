@@ -8,6 +8,9 @@ inputs:
   imageName:
     required: true
     description: Image name (including registry)
+  imageTag:
+    required: false
+    description: Image tag (defaults to latest)
   runCmd:
     required: true
     description: Specify the command to run after building the dev container image

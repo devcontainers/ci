@@ -38,11 +38,11 @@ function isDockerBuildXInstalled() {
     });
 }
 exports.isDockerBuildXInstalled = isDockerBuildXInstalled;
-function buildImage(imageName, checkoutPath, subFolder) {
+function buildImage(imageName, imageTag, checkoutPath, subFolder) {
     return __awaiter(this, void 0, void 0, function* () {
         core.startGroup('🏗 Building dev container...');
         try {
-            return yield docker.buildImage(exec_1.exec, imageName, checkoutPath, subFolder);
+            return yield docker.buildImage(exec_1.exec, imageName, imageTag, checkoutPath, subFolder);
         }
         catch (error) {
             core.setFailed(error);
@@ -54,11 +54,11 @@ function buildImage(imageName, checkoutPath, subFolder) {
     });
 }
 exports.buildImage = buildImage;
-function runContainer(imageName, checkoutPath, subFolder, command, envs) {
+function runContainer(imageName, imageTag, checkoutPath, subFolder, command, envs) {
     return __awaiter(this, void 0, void 0, function* () {
         core.startGroup('🏃‍♀️ Running dev container...');
         try {
-            yield docker.runContainer(exec_1.exec, imageName, checkoutPath, subFolder, command, envs);
+            yield docker.runContainer(exec_1.exec, imageName, imageTag, checkoutPath, subFolder, command, envs);
             return true;
         }
         catch (error) {
@@ -71,11 +71,11 @@ function runContainer(imageName, checkoutPath, subFolder, command, envs) {
     });
 }
 exports.runContainer = runContainer;
-function pushImage(imageName) {
+function pushImage(imageName, imageTag) {
     return __awaiter(this, void 0, void 0, function* () {
         core.startGroup('📌 Pushing image...');
         try {
-            yield docker.pushImage(exec_1.exec, imageName);
+            yield docker.pushImage(exec_1.exec, imageName, imageTag);
             return true;
         }
         catch (error) {

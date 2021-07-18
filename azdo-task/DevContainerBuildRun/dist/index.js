@@ -45,11 +45,11 @@ function isDockerBuildXInstalled() {
     });
 }
 exports.isDockerBuildXInstalled = isDockerBuildXInstalled;
-function buildImage(imageName, checkoutPath, subFolder) {
+function buildImage(imageName, imageTag, checkoutPath, subFolder) {
     return __awaiter(this, void 0, void 0, function* () {
         console.log('🏗 Building dev container...');
         try {
-            return yield docker.buildImage(exec_1.exec, imageName, checkoutPath, subFolder);
+            return yield docker.buildImage(exec_1.exec, imageName, imageTag, checkoutPath, subFolder);
         }
         catch (error) {
             task.setResult(task.TaskResult.Failed, error);
@@ -58,11 +58,11 @@ function buildImage(imageName, checkoutPath, subFolder) {
     });
 }
 exports.buildImage = buildImage;
-function runContainer(imageName, checkoutPath, subFolder, command, envs) {
+function runContainer(imageName, imageTag, checkoutPath, subFolder, command, envs) {
     return __awaiter(this, void 0, void 0, function* () {
         console.log('🏃‍♀️ Running dev container...');
         try {
-            yield docker.runContainer(exec_1.exec, imageName, checkoutPath, subFolder, command, envs);
+            yield docker.runContainer(exec_1.exec, imageName, imageTag, checkoutPath, subFolder, command, envs);
             return true;
         }
         catch (error) {
@@ -72,11 +72,11 @@ function runContainer(imageName, checkoutPath, subFolder, command, envs) {
     });
 }
 exports.runContainer = runContainer;
-function pushImage(imageName) {
+function pushImage(imageName, imageTag) {
     return __awaiter(this, void 0, void 0, function* () {
         console.log('📌 Pushing image...');
         try {
-            yield docker.pushImage(exec_1.exec, imageName);
+            yield docker.pushImage(exec_1.exec, imageName, imageTag);
             return true;
         }
         catch (error) {
@@ -249,6 +249,7 @@ function runMain() {
                 task.setResult(task.TaskResult.Failed, 'imageName input is required');
                 return;
             }
+            const imageTag = task.getInput('imageTag');
             const subFolder = (_b = task.getInput('subFolder')) !== null && _b !== void 0 ? _b : '.';
             const runCommand = task.getInput('runCmd', true);
             if (!runCommand) {
@@ -256,11 +257,11 @@ function runMain() {
                 return;
             }
             const envs = (_d = (_c = task.getInput('env')) === null || _c === void 0 ? void 0 : _c.split('\n')) !== null && _d !== void 0 ? _d : [];
-            const buildImageName = yield docker_1.buildImage(imageName, checkoutPath, subFolder);
+            const buildImageName = yield docker_1.buildImage(imageName, imageTag, checkoutPath, subFolder);
             if (buildImageName === '') {
                 return;
             }
-            if (!(yield docker_1.runContainer(buildImageName, checkoutPath, subFolder, runCommand, envs))) {
+            if (!(yield docker_1.runContainer(buildImageName, imageTag, checkoutPath, subFolder, runCommand, envs))) {
                 return;
             }
         }
@@ -314,8 +315,9 @@ function runPost() {
             task.setResult(task.TaskResult.Failed, 'imageName input is required');
             return;
         }
-        console.log(`Pushing image ''${imageName}...`);
-        yield docker_1.pushImage(imageName);
+        const imageTag = task.getInput('imageTag');
+        console.log(`Pushing image ''${imageName}:${imageTag !== null && imageTag !== void 0 ? imageTag : 'latest'}...`);
+        yield docker_1.pushImage(imageName, imageTag);
     });
 }
 run();
@@ -13160,20 +13162,20 @@ function isDockerBuildXInstalled(exec) {
         return exitCode === 0;
     });
 }
-function buildImage(exec, imageName, checkoutPath, subFolder) {
+function buildImage(exec, imageName, imageTag, checkoutPath, subFolder) {
     return docker_awaiter(this, void 0, void 0, function* () {
         const folder = external_path_default().join(checkoutPath, subFolder);
         const devcontainerJsonPath = external_path_default().join(folder, '.devcontainer/devcontainer.json');
         const devcontainerConfig = yield loadFromFile(devcontainerJsonPath);
         // build the image from the .devcontainer spec
-        yield buildImageBase(exec, imageName, folder, devcontainerConfig);
+        yield buildImageBase(exec, imageName, imageTag, folder, devcontainerConfig);
         if (!devcontainerConfig.remoteUser) {
             return imageName;
         }
-        return yield ensureHostAndContainerUsersAlign(exec, imageName, devcontainerConfig);
+        return yield ensureHostAndContainerUsersAlign(exec, imageName, imageTag, devcontainerConfig);
     });
 }
-function buildImageBase(exec, imageName, folder, devcontainerConfig) {
+function buildImageBase(exec, imageName, imageTag, folder, devcontainerConfig) {
     var _a, _b;
     return docker_awaiter(this, void 0, void 0, function* () {
         const configDockerfile = getDockerfile(devcontainerConfig);
@@ -13185,9 +13187,9 @@ function buildImageBase(exec, imageName, folder, devcontainerConfig) {
         const contextPath = external_path_default().join(folder, '.devcontainer', configContext);
         const args = ['buildx', 'build'];
         args.push('--tag');
-        args.push(`${imageName}:latest`);
+        args.push(`${imageName}:${imageTag !== null && imageTag !== void 0 ? imageTag : 'latest'}`);
         args.push('--cache-from');
-        args.push(`type=registry,ref=${imageName}:latest`);
+        args.push(`type=registry,ref=${imageTag !== null && imageTag !== void 0 ? imageTag : 'latest'}`);
         args.push('--cache-to');
         args.push('type=inline');
         args.push('--output=type=docker');
@@ -13205,7 +13207,7 @@ function buildImageBase(exec, imageName, folder, devcontainerConfig) {
     });
 }
 // returns the name of the image to run in the next step
-function ensureHostAndContainerUsersAlign(exec, imageName, devcontainerConfig) {
+function ensureHostAndContainerUsersAlign(exec, imageName, imageTag, devcontainerConfig) {
     return docker_awaiter(this, void 0, void 0, function* () {
         if (!devcontainerConfig.remoteUser) {
             return imageName;
@@ -13218,11 +13220,11 @@ function ensureHostAndContainerUsersAlign(exec, imageName, devcontainerConfig) {
         if (resultHostPasswd.exitCode !== 0) {
             throw new Error(`Failed to get host user info (exitcode: ${resultHostPasswd.exitCode}):${resultHostPasswd.stdout}\n${resultHostPasswd.stderr}`);
         }
-        const resultContainerPasswd = yield exec('docker', ['run', '--rm', imageName, 'sh', '-c', "cat /etc/passwd"], { silent: true });
+        const resultContainerPasswd = yield exec('docker', ['run', '--rm', `${imageName}:${imageTag !== null && imageTag !== void 0 ? imageTag : 'latest'}`, 'sh', '-c', "cat /etc/passwd"], { silent: true });
         if (resultContainerPasswd.exitCode !== 0) {
             throw new Error(`Failed to get container user info (exitcode: ${resultContainerPasswd.exitCode}):${resultContainerPasswd.stdout}\n${resultContainerPasswd.stderr}`);
         }
-        const resultContainerGroup = yield exec('docker', ['run', '--rm', imageName, 'sh', '-c', "cat /etc/group"], { silent: true });
+        const resultContainerGroup = yield exec('docker', ['run', '--rm', `${imageName}:${imageTag !== null && imageTag !== void 0 ? imageTag : 'latest'}`, 'sh', '-c', "cat /etc/group"], { silent: true });
         if (resultContainerGroup.exitCode !== 0) {
             throw new Error(`Failed to get container group info (exitcode: ${resultContainerGroup.exitCode}):${resultContainerGroup.stdout}\n${resultContainerGroup.stderr}`);
         }
@@ -13250,7 +13252,7 @@ function ensureHostAndContainerUsersAlign(exec, imageName, devcontainerConfig) {
             return imageName;
         }
         // Generate a Dockerfile to run to build a derived image with the UID/GID updated
-        const dockerfileContent = `FROM ${imageName}
+        const dockerfileContent = `FROM ${imageName}:${imageTag !== null && imageTag !== void 0 ? imageTag : 'latest'}
 RUN sudo chown -R ${hostUser.uid}:${hostUser.gid} /home/${containerUserName} \
     && sudo sed -i /etc/passwd -e s/${containerUser.name}:x:${containerUser.uid}:${containerUser.gid}/${containerUser.name}:x:${hostUser.uid}:${hostUser.gid}/
 `;
@@ -13261,14 +13263,14 @@ RUN sudo chown -R ${hostUser.uid}:${hostUser.gid} /home/${containerUserName} \
         // TODO - `buildx build` was giving issues when building an image for the first time and it is unable to 
         // pull the image from the registry
         // const derivedDockerBuild = await exec('docker', ['buildx', 'build', '--tag', derivedImageName, '-f', derivedDockerfilePath, tempDir, '--output=type=docker'], {})
-        const derivedDockerBuild = yield exec('docker', ['build', '--tag', derivedImageName, '-f', derivedDockerfilePath, tempDir, '--output=type=docker'], {});
+        const derivedDockerBuild = yield exec('docker', ['build', '--tag', `${derivedImageName}:${imageTag !== null && imageTag !== void 0 ? imageTag : 'latest'}`, '-f', derivedDockerfilePath, tempDir, '--output=type=docker'], {});
         if (derivedDockerBuild.exitCode !== 0) {
             throw new Error("Failed to build derived Docker image with users updated");
         }
         return derivedImageName;
     });
 }
-function runContainer(exec, imageName, checkoutPath, subFolder, command, envs, mounts) {
+function runContainer(exec, imageName, imageTag, checkoutPath, subFolder, command, envs, mounts) {
     return docker_awaiter(this, void 0, void 0, function* () {
         const checkoutPathAbsolute = getAbsolutePath(checkoutPath, process.cwd());
         const folder = external_path_default().join(checkoutPathAbsolute, subFolder);
@@ -13305,7 +13307,7 @@ function runContainer(exec, imageName, checkoutPath, subFolder, command, envs, m
                 args.push('--env', env);
             }
         }
-        args.push(`${imageName}:latest`);
+        args.push(`${imageName}:${imageTag !== null && imageTag !== void 0 ? imageTag : 'latest'}`);
         args.push('bash', '-c', command);
         const { exitCode } = yield exec('docker', args, {});
         if (exitCode !== 0) {
@@ -13313,10 +13315,10 @@ function runContainer(exec, imageName, checkoutPath, subFolder, command, envs, m
         }
     });
 }
-function pushImage(exec, imageName) {
+function pushImage(exec, imageName, imageTag) {
     return docker_awaiter(this, void 0, void 0, function* () {
         const args = ['push'];
-        args.push(`${imageName}:latest`);
+        args.push(`${imageName}:${imageTag !== null && imageTag !== void 0 ? imageTag : 'latest'}`);
         const { exitCode } = yield exec('docker', args, {});
         if (exitCode !== 0) {
             throw new Error(`push failed with ${exitCode}`);
