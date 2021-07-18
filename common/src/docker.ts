@@ -177,6 +177,10 @@ export async function runContainer(
 
 	const args = ['run', '--rm']
 	args.push(
+		'--label',
+		`github.com/stuartleeks/devcontainer-build-run/`
+	)
+	args.push(
 		'--mount',
 		`type=bind,src=${checkoutPathAbsolute},dst=${workspaceFolder}`
 	)

@@ -13280,6 +13280,7 @@ function runContainer(exec, imageName, imageTag, checkoutPath, subFolder, comman
         const workdir = external_path_default().join(workspaceFolder, subFolder);
         const remoteUser = getRemoteUser(devcontainerConfig);
         const args = ['run', '--rm'];
+        args.push('--label', `github.com/stuartleeks/devcontainer-build-run/`);
         args.push('--mount', `type=bind,src=${checkoutPathAbsolute},dst=${workspaceFolder}`);
         if (devcontainerConfig.mounts) {
             devcontainerConfig.mounts
