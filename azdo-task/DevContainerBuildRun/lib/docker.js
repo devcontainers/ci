@@ -38,11 +38,11 @@ function isDockerBuildXInstalled() {
     });
 }
 exports.isDockerBuildXInstalled = isDockerBuildXInstalled;
-function buildImage(imageName, imageTag, checkoutPath, subFolder) {
+function buildImage(imageName, imageTag, checkoutPath, subFolder, skipContainerUserIdUpdate) {
     return __awaiter(this, void 0, void 0, function* () {
         console.log('🏗 Building dev container...');
         try {
-            return yield docker.buildImage(exec_1.exec, imageName, imageTag, checkoutPath, subFolder);
+            return yield docker.buildImage(exec_1.exec, imageName, imageTag, checkoutPath, subFolder, skipContainerUserIdUpdate);
         }
         catch (error) {
             task.setResult(task.TaskResult.Failed, error);

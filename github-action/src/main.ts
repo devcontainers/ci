@@ -32,12 +32,16 @@ async function runMain(): Promise<void> {
 		const subFolder: string = core.getInput('subFolder')
 		const runCommand: string = core.getInput('runCmd', {required: true})
 		const envs: string[] = core.getMultilineInput('env')
+		const skipContainerUserIdUpdate = core.getBooleanInput(
+			'skipContainerUserIdUpdate'
+		)
 
 		const buildImageName = await buildImage(
 			imageName,
 			imageTag,
 			checkoutPath,
-			subFolder
+			subFolder,
+			skipContainerUserIdUpdate
 		)
 		if (buildImageName === '') {
 			return

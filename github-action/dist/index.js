@@ -1653,11 +1653,11 @@ function isDockerBuildXInstalled() {
     });
 }
 exports.isDockerBuildXInstalled = isDockerBuildXInstalled;
-function buildImage(imageName, imageTag, checkoutPath, subFolder) {
+function buildImage(imageName, imageTag, checkoutPath, subFolder, skipContainerUserIdUpdate) {
     return __awaiter(this, void 0, void 0, function* () {
         core.startGroup('🏗 Building dev container...');
         try {
-            return yield docker.buildImage(exec_1.exec, imageName, imageTag, checkoutPath, subFolder);
+            return yield docker.buildImage(exec_1.exec, imageName, imageTag, checkoutPath, subFolder, skipContainerUserIdUpdate);
         }
         catch (error) {
             core.setFailed(error);
@@ -1825,7 +1825,8 @@ function runMain() {
             const subFolder = core.getInput('subFolder');
             const runCommand = core.getInput('runCmd', { required: true });
             const envs = core.getMultilineInput('env');
-            const buildImageName = yield docker_1.buildImage(imageName, imageTag, checkoutPath, subFolder);
+            const skipContainerUserIdUpdate = core.getBooleanInput('skipContainerUserIdUpdate');
+            const buildImageName = yield docker_1.buildImage(imageName, imageTag, checkoutPath, subFolder, skipContainerUserIdUpdate);
             if (buildImageName === '') {
                 return;
             }
@@ -3787,14 +3788,14 @@ function isDockerBuildXInstalled(exec) {
         return exitCode === 0;
     });
 }
-function buildImage(exec, imageName, imageTag, checkoutPath, subFolder) {
+function buildImage(exec, imageName, imageTag, checkoutPath, subFolder, skipContainerUserIdUpdate) {
     return docker_awaiter(this, void 0, void 0, function* () {
         const folder = external_path_default().join(checkoutPath, subFolder);
         const devcontainerJsonPath = external_path_default().join(folder, '.devcontainer/devcontainer.json');
         const devcontainerConfig = yield loadFromFile(devcontainerJsonPath);
         // build the image from the .devcontainer spec
         yield buildImageBase(exec, imageName, imageTag, folder, devcontainerConfig);
-        if (!devcontainerConfig.remoteUser) {
+        if (!devcontainerConfig.remoteUser || skipContainerUserIdUpdate == true) {
             return imageName;
         }
         return yield ensureHostAndContainerUsersAlign(exec, imageName, imageTag, devcontainerConfig);

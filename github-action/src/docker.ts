@@ -9,7 +9,8 @@ export async function buildImage(
 	imageName: string,
 	imageTag: string | undefined,
 	checkoutPath: string,
-	subFolder: string
+	subFolder: string,
+	skipContainerUserIdUpdate: boolean
 ): Promise<string> {
 	core.startGroup('🏗 Building dev container...')
 	try {
@@ -18,7 +19,8 @@ export async function buildImage(
 			imageName,
 			imageTag,
 			checkoutPath,
-			subFolder
+			subFolder,
+			skipContainerUserIdUpdate
 		)
 	} catch (error) {
 		core.setFailed(error)

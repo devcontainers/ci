@@ -45,12 +45,15 @@ async function runMain(): Promise<void> {
 			return
 		}
 		const envs = task.getInput('env')?.split('\n') ?? []
+		const skipContainerUserIdUpdate =
+			(task.getInput('skipContainerUserIdUpdate') ?? 'false') === 'true'
 
 		const buildImageName = await buildImage(
 			imageName,
 			imageTag,
 			checkoutPath,
-			subFolder
+			subFolder,
+			skipContainerUserIdUpdate
 		)
 		if (buildImageName === '') {
 			return
