@@ -14,6 +14,7 @@ export interface DevContainerConfig {
 		dockerfile?: string
 		context?: string
 		args?: Record<string, string>
+		cacheFrom?: string | string[]
 	}
 	runArgs?: string[]
 	mounts?: string[]

@@ -3800,8 +3800,11 @@ function buildImage(exec, imageName, imageTag, checkoutPath, subFolder) {
         return yield ensureHostAndContainerUsersAlign(exec, imageName, imageTag, devcontainerConfig);
     });
 }
+function coerceToArray(value) {
+    return (typeof (value) === 'string') ? [value] : value;
+}
 function buildImageBase(exec, imageName, imageTag, folder, devcontainerConfig) {
-    var _a, _b;
+    var _a, _b, _c;
     return docker_awaiter(this, void 0, void 0, function* () {
         const configDockerfile = getDockerfile(devcontainerConfig);
         if (!configDockerfile) {
@@ -3815,10 +3818,14 @@ function buildImageBase(exec, imageName, imageTag, folder, devcontainerConfig) {
         args.push(`${imageName}:${imageTag !== null && imageTag !== void 0 ? imageTag : 'latest'}`);
         args.push('--cache-from');
         args.push(`type=registry,ref=${imageTag !== null && imageTag !== void 0 ? imageTag : 'latest'}`);
+        const configCacheFrom = (_b = devcontainerConfig.build) === null || _b === void 0 ? void 0 : _b.cacheFrom;
+        if (configCacheFrom) {
+            coerceToArray(configCacheFrom).forEach(cacheValue => args.push('--cache-from', cacheValue));
+        }
         args.push('--cache-to');
         args.push('type=inline');
         args.push('--output=type=docker');
-        const buildArgs = (_b = devcontainerConfig.build) === null || _b === void 0 ? void 0 : _b.args;
+        const buildArgs = (_c = devcontainerConfig.build) === null || _c === void 0 ? void 0 : _c.args;
         for (const argName in buildArgs) {
             const argValue = substituteValues(buildArgs[argName]);
             args.push('--build-arg', `${argName}=${argValue}`);
