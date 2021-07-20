@@ -59,18 +59,18 @@ In the example above, the devcontainer-build-run will perform the following step
 
 ## Inputs
 
-| Name               | Required | Description                                                                                                                                                                              |
-| ------------------ | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| imageName          | true     | Image name to use when building the dev container image (including registry)                                                                                                             |
-| imageTag           | false    | Image tag to use when building/pushing the dev container image (defaults to `latest`)                                                                                                    |
-| subFolder          | false    | Use this to specify the repo-relative path to the folder containing the dev container (i.e. the folder that contains the `.devcontainer` folder). Defaults to repo root                  |
-| runCmd             | true     | The command to run after building the dev container image                                                                                                                                |
-| env                | false    | Specify environment variables to pass to the dev container when run                                                                                                                      |
-| checkoutPath       | false    | Only used for development/testing                                                                                                                                                        |
-| push               | false    | Control when images are pushed. Options are `never`, `filter`, `always`. For `filter` (default), images are pushed if the `refFilterForPush` and `eventFilterForPush` conditions are met |
-| refFilterForPush   | false    | Set the source branches (e.g. `refs/heads/main`) that are allowed to trigger a push of the dev container image. Leave empty to allow all (default)                                       |
-| eventFilterForPush | false    | Set the event names (e.g. `pull_request`, `push`) that are allowed to trigger a push of the dev container image. Defaults to `push`. Leave empty for all                                 |
-
+| Name                      | Required | Description                                                                                                                                                                                                         |
+| ------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| imageName                 | true     | Image name to use when building the dev container image (including registry)                                                                                                                                        |
+| imageTag                  | false    | Image tag to use when building/pushing the dev container image (defaults to `latest`)                                                                                                                               |
+| subFolder                 | false    | Use this to specify the repo-relative path to the folder containing the dev container (i.e. the folder that contains the `.devcontainer` folder). Defaults to repo root                                             |
+| runCmd                    | true     | The command to run after building the dev container image                                                                                                                                                           |
+| env                       | false    | Specify environment variables to pass to the dev container when run                                                                                                                                                 |
+| checkoutPath              | false    | Only used for development/testing                                                                                                                                                                                   |
+| push                      | false    | Control when images are pushed. Options are `never`, `filter`, `always`. For `filter` (default), images are pushed if the `refFilterForPush` and `eventFilterForPush` conditions are met                            |
+| refFilterForPush          | false    | Set the source branches (e.g. `refs/heads/main`) that are allowed to trigger a push of the dev container image. Leave empty to allow all (default)                                                                  |
+| eventFilterForPush        | false    | Set the event names (e.g. `pull_request`, `push`) that are allowed to trigger a push of the dev container image. Defaults to `push`. Leave empty for all                                                            |
+| skipContainerUserIdUpdate | false    | For non-root dev containers (i.e. where `remoteUser` is specified), the action attempts to make the container user UID and GID match those of the host user. Set this to true to skip this step (defaults to false) |
 ## Specifying a sub-folder
 
 Suppose your repo has the following structure:

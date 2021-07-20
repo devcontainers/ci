@@ -46,14 +46,14 @@ function isDockerBuildXInstalled(exec) {
     });
 }
 exports.isDockerBuildXInstalled = isDockerBuildXInstalled;
-function buildImage(exec, imageName, imageTag, checkoutPath, subFolder) {
+function buildImage(exec, imageName, imageTag, checkoutPath, subFolder, skipContainerUserIdUpdate) {
     return __awaiter(this, void 0, void 0, function* () {
         const folder = path_1.default.join(checkoutPath, subFolder);
         const devcontainerJsonPath = path_1.default.join(folder, '.devcontainer/devcontainer.json');
         const devcontainerConfig = yield config.loadFromFile(devcontainerJsonPath);
         // build the image from the .devcontainer spec
         yield buildImageBase(exec, imageName, imageTag, folder, devcontainerConfig);
-        if (!devcontainerConfig.remoteUser) {
+        if (!devcontainerConfig.remoteUser || skipContainerUserIdUpdate == true) {
             return imageName;
         }
         return yield ensureHostAndContainerUsersAlign(exec, imageName, imageTag, devcontainerConfig);

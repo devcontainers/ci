@@ -84,6 +84,14 @@
       "label": "Set the source branches (e.g. refs/heads/main) that are allowed to trigger a push of the dev container image. Leave empty to allow all.",
       "required": false,
       "defaultValue": ""
+    },
+    {
+      "name": "skipContainerUserIdUpdate",
+      "type": "boolean",
+      "label": "For non-root dev containers (i.e. where `remoteUser` is specified), the action attempts to make the container user UID and GID match those of the host user. Set this to true to skip this step (defaults to false)",
+      "required": false,
+      "defaultValue": false
+
     }
   ],
   "outputVariables": [],

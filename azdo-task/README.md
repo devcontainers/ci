@@ -56,6 +56,7 @@ In the example above, the devcontainer-build-run will perform the following step
 | pushOnFailedBuild         | false    | If `false` (default), only push if the build is successful. Set to true to push on failed builds                                                                                                                                                                 |
 | sourceBranchFilterForPush | false    | Allows you to limit which branch's builds are pushed to the registry (only specified branches are allowed to push). If empty, all branches are allowed                                                                                                           |
 | buildReasonsForPush       | false    | Allows you to limit the Build.Reason values that are allowed to push to the registry. Defaults to Manual, IndividualCI, BatchedCI. See https://docs.microsoft.com/en-us/azure/devops/pipelines/build/variables?view=azure-devops&viewFallbackFrom=vsts&tabs=yaml |
+| skipContainerUserIdUpdate | false    | For non-root dev containers (i.e. where `remoteUser` is specified), the action attempts to make the container user UID and GID match those of the host user. Set this to true to skip this step (defaults to false)                                              |
 
 
 ## Specifying a sub-folder

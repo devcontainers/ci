@@ -37,6 +37,10 @@ inputs:
   env:
     required: false
     description: Specify environment variables to pass to the docker run command
+  skipContainerUserIdUpdate:
+    required: false
+    default: false
+    description: For non-root dev containers (i.e. where `remoteUser` is specified), the action attempts to make the container user UID and GID match those of the host user. Set this to true to skip this step (defaults to false)
 runs:
   using: 'node12'
   main: 'github-action/dist/index.js'

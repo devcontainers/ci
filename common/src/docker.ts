@@ -16,7 +16,8 @@ export async function buildImage(
 	imageName: string,
 	imageTag: string | undefined,
 	checkoutPath: string,
-	subFolder: string
+	subFolder: string,
+	skipContainerUserIdUpdate: boolean
 ): Promise<string> {
 
 
@@ -30,7 +31,7 @@ export async function buildImage(
 	// build the image from the .devcontainer spec
 	await buildImageBase(exec, imageName, imageTag, folder, devcontainerConfig)
 
-	if (!devcontainerConfig.remoteUser) {
+	if (!devcontainerConfig.remoteUser || skipContainerUserIdUpdate == true) {
 		return imageName
 	}
 	return await ensureHostAndContainerUsersAlign(exec, imageName, imageTag, devcontainerConfig)
