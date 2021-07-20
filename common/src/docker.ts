@@ -36,6 +36,10 @@ export async function buildImage(
 	return await ensureHostAndContainerUsersAlign(exec, imageName, imageTag, devcontainerConfig)
 }
 
+function coerceToArray(value: string | string[]): string[] {
+	return (typeof (value) === 'string') ? [value] : value;
+}
+
 async function buildImageBase(
 	exec: ExecFunction,
 	imageName: string,
@@ -59,6 +63,10 @@ async function buildImageBase(
 	args.push(`${imageName}:${imageTag ?? 'latest'}`)
 	args.push('--cache-from')
 	args.push(`type=registry,ref=${imageTag ?? 'latest'}`)
+	const configCacheFrom = devcontainerConfig.build?.cacheFrom;
+	if (configCacheFrom) {
+		coerceToArray(configCacheFrom).forEach(cacheValue => args.push('--cache-from', cacheValue));
+	}
 	args.push('--cache-to')
 	args.push('type=inline')
 	args.push('--output=type=docker')
