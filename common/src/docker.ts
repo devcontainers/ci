@@ -14,6 +14,7 @@ export async function isDockerBuildXInstalled(exec: ExecFunction): Promise<boole
 export async function buildImage(
 	exec: ExecFunction,
 	imageName: string,
+	imageTag: string | undefined,
 	checkoutPath: string,
 	subFolder: string
 ): Promise<string> {
@@ -27,17 +28,18 @@ export async function buildImage(
 	const devcontainerConfig = await config.loadFromFile(devcontainerJsonPath)
 
 	// build the image from the .devcontainer spec
-	await buildImageBase(exec, imageName, folder, devcontainerConfig)
+	await buildImageBase(exec, imageName, imageTag, folder, devcontainerConfig)
 
 	if (!devcontainerConfig.remoteUser) {
 		return imageName
 	}
-	return await ensureHostAndContainerUsersAlign(exec, imageName, devcontainerConfig)
+	return await ensureHostAndContainerUsersAlign(exec, imageName, imageTag, devcontainerConfig)
 }
 
 async function buildImageBase(
 	exec: ExecFunction,
 	imageName: string,
+	imageTag: string | undefined,
 	folder: string,
 	devcontainerConfig: config.DevContainerConfig
 ): Promise<void> {
@@ -54,9 +56,9 @@ async function buildImageBase(
 
 	const args = ['buildx', 'build']
 	args.push('--tag')
-	args.push(`${imageName}:latest`)
+	args.push(`${imageName}:${imageTag ?? 'latest'}`)
 	args.push('--cache-from')
-	args.push(`type=registry,ref=${imageName}:latest`)
+	args.push(`type=registry,ref=${imageTag ?? 'latest'}`)
 	args.push('--cache-to')
 	args.push('type=inline')
 	args.push('--output=type=docker')
@@ -78,7 +80,7 @@ async function buildImageBase(
 }
 
 // returns the name of the image to run in the next step
-async function ensureHostAndContainerUsersAlign(exec: ExecFunction, imageName: string, devcontainerConfig: config.DevContainerConfig): Promise<string> {
+async function ensureHostAndContainerUsersAlign(exec: ExecFunction, imageName: string, imageTag: string | undefined, devcontainerConfig: config.DevContainerConfig): Promise<string> {
 	if (!devcontainerConfig.remoteUser) {
 		return imageName
 	}
@@ -90,11 +92,11 @@ async function ensureHostAndContainerUsersAlign(exec: ExecFunction, imageName: s
 	if (resultHostPasswd.exitCode !== 0) {
 		throw new Error(`Failed to get host user info (exitcode: ${resultHostPasswd.exitCode}):${resultHostPasswd.stdout}\n${resultHostPasswd.stderr}`)
 	}
-	const resultContainerPasswd = await exec('docker', ['run', '--rm', imageName, 'sh', '-c', "cat /etc/passwd"], {silent: true})
+	const resultContainerPasswd = await exec('docker', ['run', '--rm', `${imageName}:${imageTag ?? 'latest'}`, 'sh', '-c', "cat /etc/passwd"], {silent: true})
 	if (resultContainerPasswd.exitCode !== 0) {
 		throw new Error(`Failed to get container user info (exitcode: ${resultContainerPasswd.exitCode}):${resultContainerPasswd.stdout}\n${resultContainerPasswd.stderr}`)
 	}
-	const resultContainerGroup = await exec('docker', ['run', '--rm', imageName, 'sh', '-c', "cat /etc/group"], {silent: true})
+	const resultContainerGroup = await exec('docker', ['run', '--rm', `${imageName}:${imageTag ?? 'latest'}`, 'sh', '-c', "cat /etc/group"], {silent: true})
 	if (resultContainerGroup.exitCode !== 0) {
 		throw new Error(`Failed to get container group info (exitcode: ${resultContainerGroup.exitCode}):${resultContainerGroup.stdout}\n${resultContainerGroup.stderr}`)
 	}
@@ -129,11 +131,11 @@ async function ensureHostAndContainerUsersAlign(exec: ExecFunction, imageName: s
 	}
 
 	// Generate a Dockerfile to run to build a derived image with the UID/GID updated
-	const dockerfileContent = `FROM ${imageName}
+	const dockerfileContent = `FROM ${imageName}:${imageTag ?? 'latest'}
 RUN sudo chown -R ${hostUser.uid}:${hostUser.gid} /home/${containerUserName} \
     && sudo sed -i /etc/passwd -e s/${containerUser.name}:x:${containerUser.uid}:${containerUser.gid}/${containerUser.name}:x:${hostUser.uid}:${hostUser.gid}/
 `
-	const tempDir = fs.mkdtempSync(path.join(os.tmpdir(),"tmp-devcontainer-build-run"))
+	const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "tmp-devcontainer-build-run"))
 	const derivedDockerfilePath = path.join(tempDir, "Dockerfile")
 	fs.writeFileSync(derivedDockerfilePath, dockerfileContent)
 
@@ -142,7 +144,7 @@ RUN sudo chown -R ${hostUser.uid}:${hostUser.gid} /home/${containerUserName} \
 	// TODO - `buildx build` was giving issues when building an image for the first time and it is unable to 
 	// pull the image from the registry
 	// const derivedDockerBuild = await exec('docker', ['buildx', 'build', '--tag', derivedImageName, '-f', derivedDockerfilePath, tempDir, '--output=type=docker'], {})
-	const derivedDockerBuild = await exec('docker', ['build', '--tag', derivedImageName, '-f', derivedDockerfilePath, tempDir, '--output=type=docker'], {})
+	const derivedDockerBuild = await exec('docker', ['build', '--tag', `${derivedImageName}:${imageTag ?? 'latest'}`, '-f', derivedDockerfilePath, tempDir, '--output=type=docker'], {})
 	if (derivedDockerBuild.exitCode !== 0) {
 		throw new Error("Failed to build derived Docker image with users updated")
 	}
@@ -153,6 +155,7 @@ RUN sudo chown -R ${hostUser.uid}:${hostUser.gid} /home/${containerUserName} \
 export async function runContainer(
 	exec: ExecFunction,
 	imageName: string,
+	imageTag: string | undefined,
 	checkoutPath: string,
 	subFolder: string,
 	command: string,
@@ -173,6 +176,10 @@ export async function runContainer(
 	const remoteUser = config.getRemoteUser(devcontainerConfig)
 
 	const args = ['run', '--rm']
+	args.push(
+		'--label',
+		`github.com/stuartleeks/devcontainer-build-run/`
+	)
 	args.push(
 		'--mount',
 		`type=bind,src=${checkoutPathAbsolute},dst=${workspaceFolder}`
@@ -205,7 +212,7 @@ export async function runContainer(
 			args.push('--env', env)
 		}
 	}
-	args.push(`${imageName}:latest`)
+	args.push(`${imageName}:${imageTag ?? 'latest'}`)
 	args.push('bash', '-c', command)
 
 	const {exitCode} = await exec('docker', args, {})
@@ -215,9 +222,9 @@ export async function runContainer(
 	}
 }
 
-export async function pushImage(exec: ExecFunction, imageName: string): Promise<void> {
+export async function pushImage(exec: ExecFunction, imageName: string, imageTag: string | undefined): Promise<void> {
 	const args = ['push']
-	args.push(`${imageName}:latest`)
+	args.push(`${imageName}:${imageTag ?? 'latest'}`)
 
 	const {exitCode} = await exec('docker', args, {})
 

@@ -28,11 +28,17 @@ async function runMain(): Promise<void> {
 
 		const checkoutPath: string = core.getInput('checkoutPath')
 		const imageName: string = core.getInput('imageName', {required: true})
+		const imageTag = emptyStringAsUndefined(core.getInput('imageTag'))
 		const subFolder: string = core.getInput('subFolder')
 		const runCommand: string = core.getInput('runCmd', {required: true})
 		const envs: string[] = core.getMultilineInput('env')
 
-		const buildImageName = await buildImage(imageName, checkoutPath, subFolder)
+		const buildImageName = await buildImage(
+			imageName,
+			imageTag,
+			checkoutPath,
+			subFolder
+		)
 		if (buildImageName === '') {
 			return
 		}
@@ -40,6 +46,7 @@ async function runMain(): Promise<void> {
 		if (
 			!(await runContainer(
 				buildImageName,
+				imageTag,
 				checkoutPath,
 				subFolder,
 				runCommand,
@@ -92,13 +99,20 @@ async function runPost(): Promise<void> {
 	}
 
 	const imageName: string = core.getInput('imageName', {required: true})
-	core.info(`Pushing image ''${imageName}...`)
-	await pushImage(imageName)
+	const imageTag = emptyStringAsUndefined(core.getInput('imageTag'))
+	core.info(`Pushing image ''${imageName}:${imageTag ?? 'latest'}...`)
+	await pushImage(imageName, imageTag)
 }
 
 function valueOrDefault(value: string, defaultValue: string): string {
 	if (!value || value === '') {
 		return defaultValue
+	}
+	return value
+}
+function emptyStringAsUndefined(value: string): string | undefined {
+	if (value === '') {
+		return undefined
 	}
 	return value
 }

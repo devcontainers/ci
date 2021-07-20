@@ -52,14 +52,15 @@ function runMain() {
             }
             const checkoutPath = core.getInput('checkoutPath');
             const imageName = core.getInput('imageName', { required: true });
+            const imageTag = emptyStringAsUndefined(core.getInput('imageTag'));
             const subFolder = core.getInput('subFolder');
             const runCommand = core.getInput('runCmd', { required: true });
             const envs = core.getMultilineInput('env');
-            const buildImageName = yield docker_1.buildImage(imageName, checkoutPath, subFolder);
+            const buildImageName = yield docker_1.buildImage(imageName, imageTag, checkoutPath, subFolder);
             if (buildImageName === '') {
                 return;
             }
-            if (!(yield docker_1.runContainer(buildImageName, checkoutPath, subFolder, runCommand, envs))) {
+            if (!(yield docker_1.runContainer(buildImageName, imageTag, checkoutPath, subFolder, runCommand, envs))) {
                 return;
             }
         }
@@ -97,13 +98,20 @@ function runPost() {
             return;
         }
         const imageName = core.getInput('imageName', { required: true });
-        core.info(`Pushing image ''${imageName}...`);
-        yield docker_1.pushImage(imageName);
+        const imageTag = emptyStringAsUndefined(core.getInput('imageTag'));
+        core.info(`Pushing image ''${imageName}:${imageTag !== null && imageTag !== void 0 ? imageTag : 'latest'}...`);
+        yield docker_1.pushImage(imageName, imageTag);
     });
 }
 function valueOrDefault(value, defaultValue) {
     if (!value || value === '') {
         return defaultValue;
+    }
+    return value;
+}
+function emptyStringAsUndefined(value) {
+    if (value === '') {
+        return undefined;
     }
     return value;
 }

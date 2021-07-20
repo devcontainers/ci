@@ -37,6 +37,7 @@ async function runMain(): Promise<void> {
 			task.setResult(task.TaskResult.Failed, 'imageName input is required')
 			return
 		}
+		const imageTag = task.getInput('imageTag')
 		const subFolder = task.getInput('subFolder') ?? '.'
 		const runCommand = task.getInput('runCmd', true)
 		if (!runCommand) {
@@ -45,7 +46,12 @@ async function runMain(): Promise<void> {
 		}
 		const envs = task.getInput('env')?.split('\n') ?? []
 
-		const buildImageName = await buildImage(imageName, checkoutPath, subFolder)
+		const buildImageName = await buildImage(
+			imageName,
+			imageTag,
+			checkoutPath,
+			subFolder
+		)
 		if (buildImageName === '') {
 			return
 		}
@@ -53,6 +59,7 @@ async function runMain(): Promise<void> {
 		if (
 			!(await runContainer(
 				buildImageName,
+				imageTag,
 				checkoutPath,
 				subFolder,
 				runCommand,
@@ -128,8 +135,9 @@ async function runPost(): Promise<void> {
 		task.setResult(task.TaskResult.Failed, 'imageName input is required')
 		return
 	}
-	console.log(`Pushing image ''${imageName}...`)
-	await pushImage(imageName)
+	const imageTag = task.getInput('imageTag')
+	console.log(`Pushing image ''${imageName}:${imageTag ?? 'latest'}...`)
+	await pushImage(imageName, imageTag)
 }
 
 run()

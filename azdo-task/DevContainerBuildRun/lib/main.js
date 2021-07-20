@@ -60,6 +60,7 @@ function runMain() {
                 task.setResult(task.TaskResult.Failed, 'imageName input is required');
                 return;
             }
+            const imageTag = task.getInput('imageTag');
             const subFolder = (_b = task.getInput('subFolder')) !== null && _b !== void 0 ? _b : '.';
             const runCommand = task.getInput('runCmd', true);
             if (!runCommand) {
@@ -67,11 +68,11 @@ function runMain() {
                 return;
             }
             const envs = (_d = (_c = task.getInput('env')) === null || _c === void 0 ? void 0 : _c.split('\n')) !== null && _d !== void 0 ? _d : [];
-            const buildImageName = yield docker_1.buildImage(imageName, checkoutPath, subFolder);
+            const buildImageName = yield docker_1.buildImage(imageName, imageTag, checkoutPath, subFolder);
             if (buildImageName === '') {
                 return;
             }
-            if (!(yield docker_1.runContainer(buildImageName, checkoutPath, subFolder, runCommand, envs))) {
+            if (!(yield docker_1.runContainer(buildImageName, imageTag, checkoutPath, subFolder, runCommand, envs))) {
                 return;
             }
         }
@@ -125,8 +126,9 @@ function runPost() {
             task.setResult(task.TaskResult.Failed, 'imageName input is required');
             return;
         }
-        console.log(`Pushing image ''${imageName}...`);
-        yield docker_1.pushImage(imageName);
+        const imageTag = task.getInput('imageTag');
+        console.log(`Pushing image ''${imageName}:${imageTag !== null && imageTag !== void 0 ? imageTag : 'latest'}...`);
+        yield docker_1.pushImage(imageName, imageTag);
     });
 }
 run();
