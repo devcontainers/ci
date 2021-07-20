@@ -80,6 +80,7 @@ jobs:
       - test-gh-docker-from-docker-non-root
       - test-gh-docker-from-docker-root
       - test-gh-image-tag
+      - test-gh-skip-user-update
     if: github.ref == 'refs/heads/main' # only create release on `main`
     env:
       VERSION: ${{ needs.build.outputs.version }}
@@ -396,6 +397,38 @@ jobs:
             echo "Container tag: $container_tag"
             [[ $container_tag == "custom-tag" ]]
 
+  test-gh-skip-user-update:
+    name: Run GitHub skipContainerUserIdUpdate test
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v1 
+        if: github.ref == 'refs/heads/main' # only need this for push (on `main`)
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run test
+        uses: ./
+        with:
+          subFolder: github-tests/skip-user-update
+          imageName: ghcr.io/stuartleeks/devcontainer-build-run/tests/skip-user-update
+          skipContainerUserIdUpdate: true
+          runCmd: |
+            echo "Get user/group info ..."
+            user_id=$(id -u $(whoami))
+            echo "User ID: $user_id"
+            group_id=$(id -g $(whoami))
+            echo "Group ID: $group_id"
+            [[ $user_id == 1000 ]] && [[ $group_id == 1000 ]]
 
       # - name: fail
       #   run: |
