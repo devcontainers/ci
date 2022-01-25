@@ -10,13 +10,14 @@ function getSubstitutionValue(regexMatch: string, placeholder: string): string {
 	// e.g. env:MY_ENV
 
 	const parts = placeholder.split(':')
-	if (parts.length === 2) {
+	if (parts.length === 2 || parts.length ===3) {
 		const type = parts[0]
 		const key = parts[1]
+		const defaultValue = (parts.length === 3) ? parts[2] : ''
 		switch (type.toLowerCase()) {
 			case 'env':
 			case 'localenv':
-				return process.env[key] ?? ''
+				return process.env[key] ?? defaultValue
 		}
 	}
 
