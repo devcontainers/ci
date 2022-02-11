@@ -46,13 +46,13 @@ function isDockerBuildXInstalled(exec) {
     });
 }
 exports.isDockerBuildXInstalled = isDockerBuildXInstalled;
-function buildImage(exec, imageName, imageTag, checkoutPath, subFolder, skipContainerUserIdUpdate) {
+function buildImage(exec, imageName, imageTag, checkoutPath, subFolder, skipContainerUserIdUpdate, cacheFrom) {
     return __awaiter(this, void 0, void 0, function* () {
         const folder = path_1.default.join(checkoutPath, subFolder);
         const devcontainerJsonPath = path_1.default.join(folder, '.devcontainer/devcontainer.json');
         const devcontainerConfig = yield config.loadFromFile(devcontainerJsonPath);
         // build the image from the .devcontainer spec
-        yield buildImageBase(exec, imageName, imageTag, folder, devcontainerConfig);
+        yield buildImageBase(exec, imageName, imageTag, folder, devcontainerConfig, cacheFrom);
         if (!devcontainerConfig.remoteUser || skipContainerUserIdUpdate == true) {
             return imageName;
         }
@@ -63,7 +63,7 @@ exports.buildImage = buildImage;
 function coerceToArray(value) {
     return (typeof (value) === 'string') ? [value] : value;
 }
-function buildImageBase(exec, imageName, imageTag, folder, devcontainerConfig) {
+function buildImageBase(exec, imageName, imageTag, folder, devcontainerConfig, cacheFrom) {
     var _a, _b, _c;
     return __awaiter(this, void 0, void 0, function* () {
         const configDockerfile = config.getDockerfile(devcontainerConfig);
@@ -82,6 +82,7 @@ function buildImageBase(exec, imageName, imageTag, folder, devcontainerConfig) {
         if (configCacheFrom) {
             coerceToArray(configCacheFrom).forEach(cacheValue => args.push('--cache-from', cacheValue));
         }
+        cacheFrom.forEach(cacheValue => args.push('--cache-from', cacheValue));
         args.push('--cache-to');
         args.push('type=inline');
         args.push('--output=type=docker');

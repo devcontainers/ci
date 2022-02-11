@@ -32,6 +32,7 @@ async function runMain(): Promise<void> {
 		const subFolder: string = core.getInput('subFolder')
 		const runCommand: string = core.getInput('runCmd', {required: true})
 		const envs: string[] = core.getMultilineInput('env')
+		const cacheFrom: string[] = core.getMultilineInput('cacheFrom')
 		const skipContainerUserIdUpdate = core.getBooleanInput(
 			'skipContainerUserIdUpdate'
 		)
@@ -41,7 +42,8 @@ async function runMain(): Promise<void> {
 			imageTag,
 			checkoutPath,
 			subFolder,
-			skipContainerUserIdUpdate
+			skipContainerUserIdUpdate,
+			cacheFrom
 		)
 		if (buildImageName === '') {
 			return

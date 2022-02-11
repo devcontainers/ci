@@ -56,8 +56,9 @@ function runMain() {
             const subFolder = core.getInput('subFolder');
             const runCommand = core.getInput('runCmd', { required: true });
             const envs = core.getMultilineInput('env');
+            const cacheFrom = core.getMultilineInput('cacheFrom');
             const skipContainerUserIdUpdate = core.getBooleanInput('skipContainerUserIdUpdate');
-            const buildImageName = yield docker_1.buildImage(imageName, imageTag, checkoutPath, subFolder, skipContainerUserIdUpdate);
+            const buildImageName = yield docker_1.buildImage(imageName, imageTag, checkoutPath, subFolder, skipContainerUserIdUpdate, cacheFrom);
             if (buildImageName === '') {
                 return;
             }
