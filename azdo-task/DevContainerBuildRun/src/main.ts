@@ -45,6 +45,7 @@ async function runMain(): Promise<void> {
 			return
 		}
 		const envs = task.getInput('env')?.split('\n') ?? []
+		const cacheFrom = task.getInput('cacheFrom')?.split('\n') ?? []
 		const skipContainerUserIdUpdate =
 			(task.getInput('skipContainerUserIdUpdate') ?? 'false') === 'true'
 
@@ -53,7 +54,8 @@ async function runMain(): Promise<void> {
 			imageTag,
 			checkoutPath,
 			subFolder,
-			skipContainerUserIdUpdate
+			skipContainerUserIdUpdate,
+			cacheFrom
 		)
 		if (buildImageName === '') {
 			return
