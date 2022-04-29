@@ -1,5 +1,6 @@
 import * as task from 'azure-pipelines-task-lib/task'
 import * as docker from '../../../common/src/docker'
+import {errorToString} from '../../../common/src/errors'
 import {exec} from './exec'
 
 export async function isDockerBuildXInstalled(): Promise<boolean> {
@@ -25,7 +26,7 @@ export async function buildImage(
 			cacheFrom
 		)
 	} catch (error) {
-		task.setResult(task.TaskResult.Failed, error)
+		task.setResult(task.TaskResult.Failed, errorToString(error))
 		return ''
 	}
 }
@@ -51,7 +52,7 @@ export async function runContainer(
 		)
 		return true
 	} catch (error) {
-		task.setResult(task.TaskResult.Failed, error)
+		task.setResult(task.TaskResult.Failed, errorToString(error))
 		return false
 	}
 }
@@ -65,7 +66,7 @@ export async function pushImage(
 		await docker.pushImage(exec, imageName, imageTag)
 		return true
 	} catch (error) {
-		task.setResult(task.TaskResult.Failed, error)
+		task.setResult(task.TaskResult.Failed, errorToString(error))
 		return false
 	}
 }

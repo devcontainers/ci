@@ -1,4 +1,5 @@
 import * as core from '@actions/core'
+import {errorToString} from '../../common/src/errors'
 
 import {
 	isDockerBuildXInstalled,
@@ -62,7 +63,7 @@ async function runMain(): Promise<void> {
 			return
 		}
 	} catch (error) {
-		core.setFailed(error.message)
+		core.setFailed(errorToString(error))
 	}
 }
 

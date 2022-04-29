@@ -11,6 +11,7 @@
       "eslint-comments/no-use": "off",
       "import/no-namespace": "off",
       "no-unused-vars": "off",
+      "i18n-text/no-en": "off",
       "@typescript-eslint/no-unused-vars": "error",
       "@typescript-eslint/explicit-member-accessibility": ["error", {"accessibility": "no-public"}],
       "@typescript-eslint/no-require-imports": "error",
@@ -49,6 +50,7 @@
     "env": {
       "node": true,
       "es6": true,
-      "jest/globals": true
+      "jest": true
+      // "jest/globals": true
     }
   }

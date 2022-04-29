@@ -1,7 +1,11 @@
 "use strict";
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
-    Object.defineProperty(o, k2, { enumerable: true, get: function() { return m[k]; } });
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
 }) : (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
     o[k2] = m[k];
@@ -29,6 +33,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const task = __importStar(require("azure-pipelines-task-lib/task"));
+const errors_1 = require("../../../common/src/errors");
 const docker_1 = require("./docker");
 function run() {
     return __awaiter(this, void 0, void 0, function* () {
@@ -49,7 +54,7 @@ function runMain() {
     var _a, _b, _c, _d, _e, _f, _g;
     return __awaiter(this, void 0, void 0, function* () {
         try {
-            const buildXInstalled = yield docker_1.isDockerBuildXInstalled();
+            const buildXInstalled = yield (0, docker_1.isDockerBuildXInstalled)();
             if (!buildXInstalled) {
                 task.setResult(task.TaskResult.Failed, 'docker buildx not available: add a step to set up with docker/setup-buildx-action');
                 return;
@@ -70,16 +75,16 @@ function runMain() {
             const envs = (_d = (_c = task.getInput('env')) === null || _c === void 0 ? void 0 : _c.split('\n')) !== null && _d !== void 0 ? _d : [];
             const cacheFrom = (_f = (_e = task.getInput('cacheFrom')) === null || _e === void 0 ? void 0 : _e.split('\n')) !== null && _f !== void 0 ? _f : [];
             const skipContainerUserIdUpdate = ((_g = task.getInput('skipContainerUserIdUpdate')) !== null && _g !== void 0 ? _g : 'false') === 'true';
-            const buildImageName = yield docker_1.buildImage(imageName, imageTag, checkoutPath, subFolder, skipContainerUserIdUpdate, cacheFrom);
+            const buildImageName = yield (0, docker_1.buildImage)(imageName, imageTag, checkoutPath, subFolder, skipContainerUserIdUpdate, cacheFrom);
             if (buildImageName === '') {
                 return;
             }
-            if (!(yield docker_1.runContainer(buildImageName, imageTag, checkoutPath, subFolder, runCommand, envs))) {
+            if (!(yield (0, docker_1.runContainer)(buildImageName, imageTag, checkoutPath, subFolder, runCommand, envs))) {
                 return;
             }
         }
         catch (err) {
-            task.setResult(task.TaskResult.Failed, err.message);
+            task.setResult(task.TaskResult.Failed, (0, errors_1.errorToString)(err));
         }
     });
 }
@@ -130,7 +135,7 @@ function runPost() {
         }
         const imageTag = task.getInput('imageTag');
         console.log(`Pushing image ''${imageName}:${imageTag !== null && imageTag !== void 0 ? imageTag : 'latest'}...`);
-        yield docker_1.pushImage(imageName, imageTag);
+        yield (0, docker_1.pushImage)(imageName, imageTag);
     });
 }
 run();

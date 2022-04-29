@@ -1,4 +1,5 @@
 import * as task from 'azure-pipelines-task-lib/task'
+import {errorToString} from '../../../common/src/errors'
 
 import {
 	isDockerBuildXInstalled,
@@ -74,7 +75,7 @@ async function runMain(): Promise<void> {
 			return
 		}
 	} catch (err) {
-		task.setResult(task.TaskResult.Failed, err.message)
+		task.setResult(task.TaskResult.Failed, errorToString(err))
 	}
 }
 

@@ -1,7 +1,4 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.parseGroup = exports.parsePasswd = void 0;
-function parsePasswd(input) {
+export function parsePasswd(input) {
     const result = [];
     const lines = input.split('\n');
     for (const line of lines) {
@@ -15,8 +12,7 @@ function parsePasswd(input) {
     }
     return result;
 }
-exports.parsePasswd = parsePasswd;
-function parseGroup(input) {
+export function parseGroup(input) {
     const result = [];
     const lines = input.split('\n');
     for (const line of lines) {
@@ -30,4 +26,3 @@ function parseGroup(input) {
     }
     return result;
 }
-exports.parseGroup = parseGroup;

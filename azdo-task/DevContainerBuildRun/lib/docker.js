@@ -1,7 +1,11 @@
 "use strict";
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
-    Object.defineProperty(o, k2, { enumerable: true, get: function() { return m[k]; } });
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
 }) : (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
     o[k2] = m[k];
@@ -31,6 +35,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.pushImage = exports.runContainer = exports.buildImage = exports.isDockerBuildXInstalled = void 0;
 const task = __importStar(require("azure-pipelines-task-lib/task"));
 const docker = __importStar(require("../../../common/src/docker"));
+const errors_1 = require("../../../common/src/errors");
 const exec_1 = require("./exec");
 function isDockerBuildXInstalled() {
     return __awaiter(this, void 0, void 0, function* () {
@@ -45,7 +50,7 @@ function buildImage(imageName, imageTag, checkoutPath, subFolder, skipContainerU
             return yield docker.buildImage(exec_1.exec, imageName, imageTag, checkoutPath, subFolder, skipContainerUserIdUpdate, cacheFrom);
         }
         catch (error) {
-            task.setResult(task.TaskResult.Failed, error);
+            task.setResult(task.TaskResult.Failed, (0, errors_1.errorToString)(error));
             return '';
         }
     });
@@ -59,7 +64,7 @@ function runContainer(imageName, imageTag, checkoutPath, subFolder, command, env
             return true;
         }
         catch (error) {
-            task.setResult(task.TaskResult.Failed, error);
+            task.setResult(task.TaskResult.Failed, (0, errors_1.errorToString)(error));
             return false;
         }
     });
@@ -73,7 +78,7 @@ function pushImage(imageName, imageTag) {
             return true;
         }
         catch (error) {
-            task.setResult(task.TaskResult.Failed, error);
+            task.setResult(task.TaskResult.Failed, (0, errors_1.errorToString)(error));
             return false;
         }
     });

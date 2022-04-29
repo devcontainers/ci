@@ -8,7 +8,11 @@ require('./sourcemap-register.js');/******/ (() => { // webpackBootstrap
 
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
-    Object.defineProperty(o, k2, { enumerable: true, get: function() { return m[k]; } });
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
 }) : (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
     o[k2] = m[k];
@@ -38,6 +42,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.pushImage = exports.runContainer = exports.buildImage = exports.isDockerBuildXInstalled = void 0;
 const task = __importStar(__nccwpck_require__(347));
 const docker = __importStar(__nccwpck_require__(9340));
+const errors_1 = __nccwpck_require__(2165);
 const exec_1 = __nccwpck_require__(7757);
 function isDockerBuildXInstalled() {
     return __awaiter(this, void 0, void 0, function* () {
@@ -52,7 +57,7 @@ function buildImage(imageName, imageTag, checkoutPath, subFolder, skipContainerU
             return yield docker.buildImage(exec_1.exec, imageName, imageTag, checkoutPath, subFolder, skipContainerUserIdUpdate, cacheFrom);
         }
         catch (error) {
-            task.setResult(task.TaskResult.Failed, error);
+            task.setResult(task.TaskResult.Failed, (0, errors_1.errorToString)(error));
             return '';
         }
     });
@@ -66,7 +71,7 @@ function runContainer(imageName, imageTag, checkoutPath, subFolder, command, env
             return true;
         }
         catch (error) {
-            task.setResult(task.TaskResult.Failed, error);
+            task.setResult(task.TaskResult.Failed, (0, errors_1.errorToString)(error));
             return false;
         }
     });
@@ -80,7 +85,7 @@ function pushImage(imageName, imageTag) {
             return true;
         }
         catch (error) {
-            task.setResult(task.TaskResult.Failed, error);
+            task.setResult(task.TaskResult.Failed, (0, errors_1.errorToString)(error));
             return false;
         }
     });
@@ -97,7 +102,11 @@ exports.pushImage = pushImage;
 
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
-    Object.defineProperty(o, k2, { enumerable: true, get: function() { return m[k]; } });
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
 }) : (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
     o[k2] = m[k];
@@ -190,7 +199,11 @@ exports.exec = exec;
 
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
-    Object.defineProperty(o, k2, { enumerable: true, get: function() { return m[k]; } });
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
 }) : (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
     o[k2] = m[k];
@@ -218,6 +231,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 const task = __importStar(__nccwpck_require__(347));
+const errors_1 = __nccwpck_require__(2165);
 const docker_1 = __nccwpck_require__(3758);
 function run() {
     return __awaiter(this, void 0, void 0, function* () {
@@ -238,7 +252,7 @@ function runMain() {
     var _a, _b, _c, _d, _e, _f, _g;
     return __awaiter(this, void 0, void 0, function* () {
         try {
-            const buildXInstalled = yield docker_1.isDockerBuildXInstalled();
+            const buildXInstalled = yield (0, docker_1.isDockerBuildXInstalled)();
             if (!buildXInstalled) {
                 task.setResult(task.TaskResult.Failed, 'docker buildx not available: add a step to set up with docker/setup-buildx-action');
                 return;
@@ -259,16 +273,16 @@ function runMain() {
             const envs = (_d = (_c = task.getInput('env')) === null || _c === void 0 ? void 0 : _c.split('\n')) !== null && _d !== void 0 ? _d : [];
             const cacheFrom = (_f = (_e = task.getInput('cacheFrom')) === null || _e === void 0 ? void 0 : _e.split('\n')) !== null && _f !== void 0 ? _f : [];
             const skipContainerUserIdUpdate = ((_g = task.getInput('skipContainerUserIdUpdate')) !== null && _g !== void 0 ? _g : 'false') === 'true';
-            const buildImageName = yield docker_1.buildImage(imageName, imageTag, checkoutPath, subFolder, skipContainerUserIdUpdate, cacheFrom);
+            const buildImageName = yield (0, docker_1.buildImage)(imageName, imageTag, checkoutPath, subFolder, skipContainerUserIdUpdate, cacheFrom);
             if (buildImageName === '') {
                 return;
             }
-            if (!(yield docker_1.runContainer(buildImageName, imageTag, checkoutPath, subFolder, runCommand, envs))) {
+            if (!(yield (0, docker_1.runContainer)(buildImageName, imageTag, checkoutPath, subFolder, runCommand, envs))) {
                 return;
             }
         }
         catch (err) {
-            task.setResult(task.TaskResult.Failed, err.message);
+            task.setResult(task.TaskResult.Failed, (0, errors_1.errorToString)(err));
         }
     });
 }
@@ -319,7 +333,7 @@ function runPost() {
         }
         const imageTag = task.getInput('imageTag');
         console.log(`Pushing image ''${imageName}:${imageTag !== null && imageTag !== void 0 ? imageTag : 'latest'}...`);
-        yield docker_1.pushImage(imageName, imageTag);
+        yield (0, docker_1.pushImage)(imageName, imageTag);
     });
 }
 run();
@@ -16817,24 +16831,13 @@ var external_os_ = __nccwpck_require__(2087);
 // EXTERNAL MODULE: ../../common/node_modules/jsonc-parser/lib/umd/main.js
 var main = __nccwpck_require__(6451);
 ;// CONCATENATED MODULE: ../../common/src/config.ts
-var __awaiter = (undefined && undefined.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 
 
 
 const { readFile } = external_fs_.promises;
-function loadFromFile(filepath) {
-    return __awaiter(this, void 0, void 0, function* () {
-        const jsonContent = yield readFile(filepath);
-        return loadFromString(jsonContent.toString());
-    });
+async function loadFromFile(filepath) {
+    const jsonContent = await readFile(filepath);
+    return loadFromString(jsonContent.toString());
 }
 function loadFromString(content) {
     const config = main.parse(content);
@@ -16849,17 +16852,14 @@ function getWorkspaceFolder(config, repoPath) {
     return external_path_.join('/workspaces', external_path_.basename(repoPath));
 }
 function getRemoteUser(config) {
-    var _a;
     // https://code.visualstudio.com/docs/remote/containers-advanced#_specifying-a-user-for-vs-code
-    return (_a = config.remoteUser) !== null && _a !== void 0 ? _a : 'root';
+    return config.remoteUser ?? 'root';
 }
 function getDockerfile(config) {
-    var _a, _b;
-    return (_b = (_a = config.build) === null || _a === void 0 ? void 0 : _a.dockerfile) !== null && _b !== void 0 ? _b : config.dockerFile;
+    return config.build?.dockerfile ?? config.dockerFile;
 }
 function getContext(config) {
-    var _a, _b;
-    return (_b = (_a = config.build) === null || _a === void 0 ? void 0 : _a.context) !== null && _b !== void 0 ? _b : config.context;
+    return config.build?.context ?? config.context;
 }
 
 ;// CONCATENATED MODULE: ../../common/src/file.ts
@@ -16881,7 +16881,6 @@ function substituteValues(input) {
 function getSubstitutionValue(regexMatch, placeholder) {
     // Substitution values are in TYPE:KEY form
     // e.g. env:MY_ENV
-    var _a;
     const parts = placeholder.split(':');
     if (parts.length === 2) {
         const type = parts[0];
@@ -16889,7 +16888,7 @@ function getSubstitutionValue(regexMatch, placeholder) {
         switch (type.toLowerCase()) {
             case 'env':
             case 'localenv':
-                return (_a = process.env[key]) !== null && _a !== void 0 ? _a : '';
+                return process.env[key] ?? '';
         }
     }
     // if we can't process the format then return the original string
@@ -16928,15 +16927,6 @@ function parseGroup(input) {
 }
 
 ;// CONCATENATED MODULE: ../../common/src/docker.ts
-var docker_awaiter = (undefined && undefined.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 
 
 
@@ -16944,183 +16934,170 @@ var docker_awaiter = (undefined && undefined.__awaiter) || function (thisArg, _a
 
 
 
-function isDockerBuildXInstalled(exec) {
-    return docker_awaiter(this, void 0, void 0, function* () {
-        const { exitCode } = yield exec('docker', ['buildx', '--help'], { silent: true });
-        return exitCode === 0;
-    });
+async function isDockerBuildXInstalled(exec) {
+    const { exitCode } = await exec('docker', ['buildx', '--help'], { silent: true });
+    return exitCode === 0;
 }
-function buildImage(exec, imageName, imageTag, checkoutPath, subFolder, skipContainerUserIdUpdate, cacheFrom) {
-    return docker_awaiter(this, void 0, void 0, function* () {
-        const folder = external_path_default().join(checkoutPath, subFolder);
-        const devcontainerJsonPath = external_path_default().join(folder, '.devcontainer/devcontainer.json');
-        const devcontainerConfig = yield loadFromFile(devcontainerJsonPath);
-        // build the image from the .devcontainer spec
-        yield buildImageBase(exec, imageName, imageTag, folder, devcontainerConfig, cacheFrom);
-        if (!devcontainerConfig.remoteUser || skipContainerUserIdUpdate == true) {
-            return imageName;
-        }
-        return yield ensureHostAndContainerUsersAlign(exec, imageName, imageTag, devcontainerConfig);
-    });
+async function buildImage(exec, imageName, imageTag, checkoutPath, subFolder, skipContainerUserIdUpdate, cacheFrom) {
+    const folder = external_path_default().join(checkoutPath, subFolder);
+    const devcontainerJsonPath = external_path_default().join(folder, '.devcontainer/devcontainer.json');
+    const devcontainerConfig = await loadFromFile(devcontainerJsonPath);
+    // build the image from the .devcontainer spec
+    await buildImageBase(exec, imageName, imageTag, folder, devcontainerConfig, cacheFrom);
+    if (!devcontainerConfig.remoteUser || skipContainerUserIdUpdate == true) {
+        return imageName;
+    }
+    return await ensureHostAndContainerUsersAlign(exec, imageName, imageTag, devcontainerConfig);
 }
 function coerceToArray(value) {
     return (typeof (value) === 'string') ? [value] : value;
 }
-function buildImageBase(exec, imageName, imageTag, folder, devcontainerConfig, cacheFrom) {
-    var _a, _b, _c;
-    return docker_awaiter(this, void 0, void 0, function* () {
-        const configDockerfile = getDockerfile(devcontainerConfig);
-        if (!configDockerfile) {
-            throw new Error('dockerfile not set in devcontainer.json - devcontainer-build-run currently only supports Dockerfile-based dev containers');
-        }
-        const dockerfilePath = external_path_default().join(folder, '.devcontainer', configDockerfile);
-        const configContext = (_a = getContext(devcontainerConfig)) !== null && _a !== void 0 ? _a : '';
-        const contextPath = external_path_default().join(folder, '.devcontainer', configContext);
-        const args = ['buildx', 'build'];
-        args.push('--tag');
-        args.push(`${imageName}:${imageTag !== null && imageTag !== void 0 ? imageTag : 'latest'}`);
-        args.push('--cache-from');
-        args.push(`type=registry,ref=${imageTag !== null && imageTag !== void 0 ? imageTag : 'latest'}`);
-        const configCacheFrom = (_b = devcontainerConfig.build) === null || _b === void 0 ? void 0 : _b.cacheFrom;
-        if (configCacheFrom) {
-            coerceToArray(configCacheFrom).forEach(cacheValue => args.push('--cache-from', cacheValue));
-        }
-        cacheFrom.forEach(cacheValue => args.push('--cache-from', cacheValue));
-        args.push('--cache-to');
-        args.push('type=inline');
-        args.push('--output=type=docker');
-        const buildArgs = (_c = devcontainerConfig.build) === null || _c === void 0 ? void 0 : _c.args;
-        for (const argName in buildArgs) {
-            const argValue = substituteValues(buildArgs[argName]);
-            args.push('--build-arg', `${argName}=${argValue}`);
-        }
-        args.push('-f', dockerfilePath);
-        args.push(contextPath);
-        const { exitCode } = yield exec('docker', args, {});
-        if (exitCode !== 0) {
-            throw new Error(`build failed with ${exitCode}`);
-        }
-    });
+async function buildImageBase(exec, imageName, imageTag, folder, devcontainerConfig, cacheFrom) {
+    const configDockerfile = getDockerfile(devcontainerConfig);
+    if (!configDockerfile) {
+        throw new Error('dockerfile not set in devcontainer.json - devcontainer-build-run currently only supports Dockerfile-based dev containers');
+    }
+    const dockerfilePath = external_path_default().join(folder, '.devcontainer', configDockerfile);
+    const configContext = getContext(devcontainerConfig) ?? '';
+    const contextPath = external_path_default().join(folder, '.devcontainer', configContext);
+    const args = ['buildx', 'build'];
+    args.push('--tag');
+    args.push(`${imageName}:${imageTag ?? 'latest'}`);
+    args.push('--cache-from');
+    args.push(`type=registry,ref=${imageTag ?? 'latest'}`);
+    const configCacheFrom = devcontainerConfig.build?.cacheFrom;
+    if (configCacheFrom) {
+        coerceToArray(configCacheFrom).forEach(cacheValue => args.push('--cache-from', cacheValue));
+    }
+    cacheFrom.forEach(cacheValue => args.push('--cache-from', cacheValue));
+    args.push('--cache-to');
+    args.push('type=inline');
+    args.push('--output=type=docker');
+    const buildArgs = devcontainerConfig.build?.args;
+    for (const argName in buildArgs) {
+        const argValue = substituteValues(buildArgs[argName]);
+        args.push('--build-arg', `${argName}=${argValue}`);
+    }
+    args.push('-f', dockerfilePath);
+    args.push(contextPath);
+    const { exitCode } = await exec('docker', args, {});
+    if (exitCode !== 0) {
+        throw new Error(`build failed with ${exitCode}`);
+    }
 }
 // returns the name of the image to run in the next step
-function ensureHostAndContainerUsersAlign(exec, imageName, imageTag, devcontainerConfig) {
-    return docker_awaiter(this, void 0, void 0, function* () {
-        if (!devcontainerConfig.remoteUser) {
-            return imageName;
-        }
-        const resultHostUser = yield exec('/bin/sh', ['-c', 'id -u -n'], { silent: true });
-        if (resultHostUser.exitCode !== 0) {
-            throw new Error(`Failed to get host user (exitcode: ${resultHostUser.exitCode}):${resultHostUser.stdout}\n${resultHostUser.stderr}`);
-        }
-        const resultHostPasswd = yield exec('/bin/sh', ['-c', "cat /etc/passwd"], { silent: true });
-        if (resultHostPasswd.exitCode !== 0) {
-            throw new Error(`Failed to get host user info (exitcode: ${resultHostPasswd.exitCode}):${resultHostPasswd.stdout}\n${resultHostPasswd.stderr}`);
-        }
-        const resultContainerPasswd = yield exec('docker', ['run', '--rm', `${imageName}:${imageTag !== null && imageTag !== void 0 ? imageTag : 'latest'}`, 'sh', '-c', "cat /etc/passwd"], { silent: true });
-        if (resultContainerPasswd.exitCode !== 0) {
-            throw new Error(`Failed to get container user info (exitcode: ${resultContainerPasswd.exitCode}):${resultContainerPasswd.stdout}\n${resultContainerPasswd.stderr}`);
-        }
-        const resultContainerGroup = yield exec('docker', ['run', '--rm', `${imageName}:${imageTag !== null && imageTag !== void 0 ? imageTag : 'latest'}`, 'sh', '-c', "cat /etc/group"], { silent: true });
-        if (resultContainerGroup.exitCode !== 0) {
-            throw new Error(`Failed to get container group info (exitcode: ${resultContainerGroup.exitCode}):${resultContainerGroup.stdout}\n${resultContainerGroup.stderr}`);
-        }
-        const hostUserName = resultHostUser.stdout.trim();
-        const hostUsers = parsePasswd(resultHostPasswd.stdout);
-        const hostUser = hostUsers.find(u => u.name === hostUserName);
-        if (!hostUser) {
-            console.log(`Host /etc/passwd:\n${resultHostPasswd.stdout}`);
-            throw new Error(`Failed to find host user in host info. (hostUserName='${hostUserName}')`);
-        }
-        const containerUserName = devcontainerConfig.remoteUser;
-        const containerUsers = parsePasswd(resultContainerPasswd.stdout);
-        const containerGroups = parseGroup(resultContainerGroup.stdout);
-        const containerUser = containerUsers.find(u => u.name === containerUserName);
-        if (!containerUser) {
-            console.log(`Container /etc/passwd:\n${resultContainerPasswd.stdout}`);
-            throw new Error(`Failed to find container user in container info. (containerUserName='${containerUserName}')`);
-        }
-        const existingContainerUserGroup = containerGroups.find(g => g.gid == hostUser.gid);
-        if (existingContainerUserGroup)
-            throw new Error(`Host user GID (${hostUser.gid}) already exists as a group in the container`);
-        const containerUserAligned = hostUser.uid === containerUser.uid && hostUser.gid == containerUser.gid;
-        if (containerUserAligned) {
-            // all good - nothing to do
-            return imageName;
-        }
-        // Generate a Dockerfile to run to build a derived image with the UID/GID updated
-        const dockerfileContent = `FROM ${imageName}:${imageTag !== null && imageTag !== void 0 ? imageTag : 'latest'}
+async function ensureHostAndContainerUsersAlign(exec, imageName, imageTag, devcontainerConfig) {
+    if (!devcontainerConfig.remoteUser) {
+        return imageName;
+    }
+    const resultHostUser = await exec('/bin/sh', ['-c', 'id -u -n'], { silent: true });
+    if (resultHostUser.exitCode !== 0) {
+        throw new Error(`Failed to get host user (exitcode: ${resultHostUser.exitCode}):${resultHostUser.stdout}\n${resultHostUser.stderr}`);
+    }
+    const resultHostPasswd = await exec('/bin/sh', ['-c', "cat /etc/passwd"], { silent: true });
+    if (resultHostPasswd.exitCode !== 0) {
+        throw new Error(`Failed to get host user info (exitcode: ${resultHostPasswd.exitCode}):${resultHostPasswd.stdout}\n${resultHostPasswd.stderr}`);
+    }
+    const resultContainerPasswd = await exec('docker', ['run', '--rm', `${imageName}:${imageTag ?? 'latest'}`, 'sh', '-c', "cat /etc/passwd"], { silent: true });
+    if (resultContainerPasswd.exitCode !== 0) {
+        throw new Error(`Failed to get container user info (exitcode: ${resultContainerPasswd.exitCode}):${resultContainerPasswd.stdout}\n${resultContainerPasswd.stderr}`);
+    }
+    const resultContainerGroup = await exec('docker', ['run', '--rm', `${imageName}:${imageTag ?? 'latest'}`, 'sh', '-c', "cat /etc/group"], { silent: true });
+    if (resultContainerGroup.exitCode !== 0) {
+        throw new Error(`Failed to get container group info (exitcode: ${resultContainerGroup.exitCode}):${resultContainerGroup.stdout}\n${resultContainerGroup.stderr}`);
+    }
+    const hostUserName = resultHostUser.stdout.trim();
+    const hostUsers = parsePasswd(resultHostPasswd.stdout);
+    const hostUser = hostUsers.find(u => u.name === hostUserName);
+    if (!hostUser) {
+        console.log(`Host /etc/passwd:\n${resultHostPasswd.stdout}`);
+        throw new Error(`Failed to find host user in host info. (hostUserName='${hostUserName}')`);
+    }
+    const containerUserName = devcontainerConfig.remoteUser;
+    const containerUsers = parsePasswd(resultContainerPasswd.stdout);
+    const containerGroups = parseGroup(resultContainerGroup.stdout);
+    const containerUser = containerUsers.find(u => u.name === containerUserName);
+    if (!containerUser) {
+        console.log(`Container /etc/passwd:\n${resultContainerPasswd.stdout}`);
+        throw new Error(`Failed to find container user in container info. (containerUserName='${containerUserName}')`);
+    }
+    const existingContainerUserGroup = containerGroups.find(g => g.gid == hostUser.gid);
+    if (existingContainerUserGroup)
+        throw new Error(`Host user GID (${hostUser.gid}) already exists as a group in the container`);
+    const containerUserAligned = hostUser.uid === containerUser.uid && hostUser.gid == containerUser.gid;
+    if (containerUserAligned) {
+        // all good - nothing to do
+        return imageName;
+    }
+    // Generate a Dockerfile to run to build a derived image with the UID/GID updated
+    const dockerfileContent = `FROM ${imageName}:${imageTag ?? 'latest'}
 RUN sudo chown -R ${hostUser.uid}:${hostUser.gid} /home/${containerUserName} \
     && sudo sed -i /etc/passwd -e s/${containerUser.name}:x:${containerUser.uid}:${containerUser.gid}/${containerUser.name}:x:${hostUser.uid}:${hostUser.gid}/
 `;
-        const tempDir = external_fs_.mkdtempSync(external_path_default().join(external_os_.tmpdir(), "tmp-devcontainer-build-run"));
-        const derivedDockerfilePath = external_path_default().join(tempDir, "Dockerfile");
-        external_fs_.writeFileSync(derivedDockerfilePath, dockerfileContent);
-        const derivedImageName = `${imageName}-userfix`;
-        // TODO - `buildx build` was giving issues when building an image for the first time and it is unable to 
-        // pull the image from the registry
-        // const derivedDockerBuild = await exec('docker', ['buildx', 'build', '--tag', derivedImageName, '-f', derivedDockerfilePath, tempDir, '--output=type=docker'], {})
-        const derivedDockerBuild = yield exec('docker', ['build', '--tag', `${derivedImageName}:${imageTag !== null && imageTag !== void 0 ? imageTag : 'latest'}`, '-f', derivedDockerfilePath, tempDir, '--output=type=docker'], {});
-        if (derivedDockerBuild.exitCode !== 0) {
-            throw new Error("Failed to build derived Docker image with users updated");
-        }
-        return derivedImageName;
-    });
+    const tempDir = external_fs_.mkdtempSync(external_path_default().join(external_os_.tmpdir(), "tmp-devcontainer-build-run"));
+    const derivedDockerfilePath = external_path_default().join(tempDir, "Dockerfile");
+    external_fs_.writeFileSync(derivedDockerfilePath, dockerfileContent);
+    const derivedImageName = `${imageName}-userfix`;
+    // TODO - `buildx build` was giving issues when building an image for the first time and it is unable to 
+    // pull the image from the registry
+    // const derivedDockerBuild = await exec('docker', ['buildx', 'build', '--tag', derivedImageName, '-f', derivedDockerfilePath, tempDir, '--output=type=docker'], {})
+    const derivedDockerBuild = await exec('docker', ['build', '--tag', `${derivedImageName}:${imageTag ?? 'latest'}`, '-f', derivedDockerfilePath, tempDir, '--output=type=docker'], {});
+    if (derivedDockerBuild.exitCode !== 0) {
+        throw new Error("Failed to build derived Docker image with users updated");
+    }
+    return derivedImageName;
 }
-function runContainer(exec, imageName, imageTag, checkoutPath, subFolder, command, envs, mounts) {
-    return docker_awaiter(this, void 0, void 0, function* () {
-        const checkoutPathAbsolute = getAbsolutePath(checkoutPath, process.cwd());
-        const folder = external_path_default().join(checkoutPathAbsolute, subFolder);
-        const devcontainerJsonPath = external_path_default().join(folder, '.devcontainer/devcontainer.json');
-        const devcontainerConfig = yield loadFromFile(devcontainerJsonPath);
-        const workspaceFolder = getWorkspaceFolder(devcontainerConfig, checkoutPathAbsolute);
-        const workdir = external_path_default().join(workspaceFolder, subFolder);
-        const remoteUser = getRemoteUser(devcontainerConfig);
-        const args = ['run', '--rm'];
-        args.push('--label', `github.com/stuartleeks/devcontainer-build-run/`);
-        args.push('--mount', `type=bind,src=${checkoutPathAbsolute},dst=${workspaceFolder}`);
-        if (devcontainerConfig.mounts) {
-            devcontainerConfig.mounts
-                .map(m => substituteValues(m))
-                .forEach(m => {
-                const mount = parseMount(m);
-                if (mount.type === "bind") {
-                    // check path exists
-                    if (!external_fs_.existsSync(mount.source)) {
-                        console.log(`Skipping mount as source does not exist: '${m}'`);
-                        return;
-                    }
+async function runContainer(exec, imageName, imageTag, checkoutPath, subFolder, command, envs, mounts) {
+    const checkoutPathAbsolute = getAbsolutePath(checkoutPath, process.cwd());
+    const folder = external_path_default().join(checkoutPathAbsolute, subFolder);
+    const devcontainerJsonPath = external_path_default().join(folder, '.devcontainer/devcontainer.json');
+    const devcontainerConfig = await loadFromFile(devcontainerJsonPath);
+    const workspaceFolder = getWorkspaceFolder(devcontainerConfig, checkoutPathAbsolute);
+    const workdir = external_path_default().join(workspaceFolder, subFolder);
+    const remoteUser = getRemoteUser(devcontainerConfig);
+    const args = ['run', '--rm'];
+    args.push('--label', `github.com/stuartleeks/devcontainer-build-run/`);
+    args.push('--mount', `type=bind,src=${checkoutPathAbsolute},dst=${workspaceFolder}`);
+    if (devcontainerConfig.mounts) {
+        devcontainerConfig.mounts
+            .map(m => substituteValues(m))
+            .forEach(m => {
+            const mount = parseMount(m);
+            if (mount.type === "bind") {
+                // check path exists
+                if (!external_fs_.existsSync(mount.source)) {
+                    console.log(`Skipping mount as source does not exist: '${m}'`);
+                    return;
                 }
-                args.push('--mount', m);
-            });
-        }
-        args.push('--workdir', workdir);
-        args.push('--user', remoteUser);
-        if (devcontainerConfig.runArgs) {
-            const substitutedRunArgs = devcontainerConfig.runArgs.map(a => substituteValues(a));
-            args.push(...substitutedRunArgs);
-        }
-        if (envs) {
-            for (const env of envs) {
-                args.push('--env', env);
             }
+            args.push('--mount', m);
+        });
+    }
+    args.push('--workdir', workdir);
+    args.push('--user', remoteUser);
+    if (devcontainerConfig.runArgs) {
+        const substitutedRunArgs = devcontainerConfig.runArgs.map(a => substituteValues(a));
+        args.push(...substitutedRunArgs);
+    }
+    if (envs) {
+        for (const env of envs) {
+            args.push('--env', env);
         }
-        args.push(`${imageName}:${imageTag !== null && imageTag !== void 0 ? imageTag : 'latest'}`);
-        args.push('bash', '-c', command);
-        const { exitCode } = yield exec('docker', args, {});
-        if (exitCode !== 0) {
-            throw new Error(`run failed with ${exitCode}`);
-        }
-    });
+    }
+    args.push(`${imageName}:${imageTag ?? 'latest'}`);
+    args.push('bash', '-c', command);
+    const { exitCode } = await exec('docker', args, {});
+    if (exitCode !== 0) {
+        throw new Error(`run failed with ${exitCode}`);
+    }
 }
-function pushImage(exec, imageName, imageTag) {
-    return docker_awaiter(this, void 0, void 0, function* () {
-        const args = ['push'];
-        args.push(`${imageName}:${imageTag !== null && imageTag !== void 0 ? imageTag : 'latest'}`);
-        const { exitCode } = yield exec('docker', args, {});
-        if (exitCode !== 0) {
-            throw new Error(`push failed with ${exitCode}`);
-        }
-    });
+async function pushImage(exec, imageName, imageTag) {
+    const args = ['push'];
+    args.push(`${imageName}:${imageTag ?? 'latest'}`);
+    const { exitCode } = await exec('docker', args, {});
+    if (exitCode !== 0) {
+        throw new Error(`push failed with ${exitCode}`);
+    }
 }
 function parseMount(mountString) {
     // https://docs.docker.com/engine/reference/commandline/service_create/#add-bind-mounts-volumes-or-memory-filesystems
@@ -17155,6 +17132,33 @@ function parseMount(mountString) {
         }
     }
     return { type, source, target };
+}
+
+
+/***/ }),
+
+/***/ 2165:
+/***/ ((__unused_webpack_module, __webpack_exports__, __nccwpck_require__) => {
+
+"use strict";
+__nccwpck_require__.r(__webpack_exports__);
+/* harmony export */ __nccwpck_require__.d(__webpack_exports__, {
+/* harmony export */   "errorToString": () => (/* binding */ errorToString)
+/* harmony export */ });
+/* harmony import */ var util__WEBPACK_IMPORTED_MODULE_0__ = __nccwpck_require__(1669);
+/* harmony import */ var util__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__nccwpck_require__.n(util__WEBPACK_IMPORTED_MODULE_0__);
+
+function isString(value) {
+    return typeof (value) === 'string';
+}
+function errorToString(error) {
+    if (isString(error)) {
+        return error;
+    }
+    if (util__WEBPACK_IMPORTED_MODULE_0__.types.isNativeError(error)) {
+        return error.message;
+    }
+    return JSON.stringify(error);
 }
 
 

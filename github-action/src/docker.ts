@@ -1,5 +1,6 @@
 import * as core from '@actions/core'
 import * as docker from '../../common/src/docker'
+import {errorToString} from '../../common/src/errors'
 import {exec} from './exec'
 
 export async function isDockerBuildXInstalled(): Promise<boolean> {
@@ -25,7 +26,7 @@ export async function buildImage(
 			cacheFrom
 		)
 	} catch (error) {
-		core.setFailed(error)
+		core.setFailed(errorToString(error))
 		return ''
 	} finally {
 		core.endGroup()
@@ -53,7 +54,7 @@ export async function runContainer(
 		)
 		return true
 	} catch (error) {
-		core.setFailed(error)
+		core.setFailed(errorToString(error))
 		return false
 	} finally {
 		core.endGroup()
@@ -69,7 +70,7 @@ export async function pushImage(
 		await docker.pushImage(exec, imageName, imageTag)
 		return true
 	} catch (error) {
-		core.setFailed(error)
+		core.setFailed(errorToString(error))
 		return false
 	} finally {
 		core.endGroup()
