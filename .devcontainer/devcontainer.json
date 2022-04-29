@@ -5,9 +5,11 @@
 	"dockerFile": "Dockerfile",
 	"build": {
 		// "cacheFrom": "ghcr.io/stuartleeks/devcontainer-build-run-devcontainer:latest"
-		"cacheFrom": ["ghcr.io/stuartleeks/devcontainer-build-run-devcontainer:latest", "stuartleeks/foo"]
+		"cacheFrom": [
+			"ghcr.io/stuartleeks/devcontainer-build-run-devcontainer:latest",
+			"stuartleeks/foo"
+		]
 	},
-
 	"mounts": [
 		// Keep command history 
 		"source=devcontainer-build-run-bashhistory,target=/home/vscode/commandhistory",
@@ -18,27 +20,24 @@
 		// Instead monut to another location and symlink in Dockerfile
 		"type=bind,source=${env:HOME}${env:USERPROFILE}/.config/gh,target=/config/gh",
 	],
-
 	// Set *default* container specific settings.json values on container create.
-	"settings": { 
+	"settings": {
 		"terminal.integrated.shell.linux": "/bin/bash",
 		"files.eol": "\n",
 	},
-	
 	// Add the IDs of extensions you want installed when the container is created.
 	// "extensions": [],
-
 	// Use 'forwardPorts' to make a list of ports inside the container available locally.
 	// "forwardPorts": [],
-
 	// Use 'postCreateCommand' to run commands after the container is created.
 	// "postCreateCommand": "echo hello",
-
 	"remoteUser": "vscode",
 	"extensions": [
 		"ms-azuretools.vscode-docker",
 		"yzhang.markdown-all-in-one",
 		"davidanson.vscode-markdownlint",
-		"heaths.vscode-guid"
+		"heaths.vscode-guid",
+		"esbenp.prettier-vscode",
+		"meganrogge.template-string-converter"
 	]
 }

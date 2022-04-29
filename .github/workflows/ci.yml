@@ -14,12 +14,9 @@ on: # rebuild any PRs and main branch changes
   workflow_dispatch:
   
 jobs:
-  build: # run build using the github action!
+  test-gh-temp:
+    name: Run GitHub temp test (spec-cli)
     runs-on: ubuntu-latest
-    name: build, test, package
-    outputs:
-      version_short: ${{ steps.build.outputs.version_short }}
-      version: ${{ steps.build.outputs.version }}
     steps:
       - name: Checkout
         uses: actions/checkout@v2
@@ -35,402 +32,440 @@ jobs:
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build in dev container
-        uses: ./
-        id: build
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          BUILD_NUMBER: ${{ github.run_id }}
-          IS_PR: ${{ github.head_ref }}
-          BRANCH: ${{ github.ref }}
-        with:
-          imageName: ghcr.io/stuartleeks/devcontainer-build-run-devcontainer
-          runCmd: |
-            echo "Starting"
-            ./scripts/build-test-package.sh
-          env: |
-            BUILD_NUMBER
-            IS_CI=1
-            IS_PR
-            BRANCH
 
-      - uses: actions/upload-artifact@v2
-        name: Create dev AzDO VSIX artifact
-        with:
-          name: azdo-task-dev
-          path: ./output/stuartleeks-dev.devcontainer-build-run-${{ steps.build.outputs.version }}.vsix
-          if-no-files-found: error 
-
-      - uses: actions/upload-artifact@v2
-        name: Create release AzDO VSIX artifact
-        with:
-          name: azdo-task
-          path: ./output/stuartleeks.devcontainer-build-run-${{ steps.build.outputs.version }}.vsix
-          if-no-files-found: error 
-
-  release:
-    name: Create release
-    runs-on: ubuntu-latest
-    needs:
-      - test-azdo
-      - build
-      - test-gh-run-args
-      - test-gh-build-args
-      - test-gh-dockerfile-context
-      - test-gh-docker-from-docker-non-root
-      - test-gh-docker-from-docker-root
-      - test-gh-image-tag
-      - test-gh-skip-user-update
-    if: github.ref == 'refs/heads/main' # only create release on `main`
-    env:
-      VERSION: ${{ needs.build.outputs.version }}
-      VERSION_SHORT: ${{ needs.build.outputs.version_short }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-
-      - name: Download release VSIX
-        uses: actions/download-artifact@v2
-        with:
-          name: azdo-task
-          path: output
-
-      - name: Show version
+      - name: temp npm install (speccli) - TODO REMOVE THIS!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         run: |
-          echo "VERSION: $VERSION"
-          echo "VERSION_SHORT: $VERSION_SHORT"
+          cd cli
+          npm install
+          npm install -g
+          dev-containers-cli --version
 
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@v1 
-        if: github.ref == 'refs/heads/main' # only need this for push (on `main`)
-        with:
-          registry: ghcr.io
-          username: ${{ github.repository_owner }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Create Release
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: v${{ env.VERSION  }}
-          release_name: Release v${{ env.VERSION }}
-          draft: false
-          prerelease: true
-
-      - name: Create Major/Minor tag
-        id: create_tag_short_verison
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          VERSION_SHORT: v${{ env.VERSION_SHORT }}
-        run: |
-          echo "VERSION_SHORT: $VERSION_SHORT"
-          # sudo chown -R $(whoami) .
-          git config user.name "CI build"
-          git config user.email stuart@leeks.net
-          git tag -fa $VERSION_SHORT -m $VERSION_SHORT
-          git push -f origin $VERSION_SHORT
-
-      - name: Upload Release Asset
-        id: upload-release-asset 
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps 
-          asset_path: ./output/stuartleeks.devcontainer-build-run-${{ needs.build.outputs.version }}.vsix
-          asset_name: stuartleeks.devcontainer-build-run-${{ needs.build.outputs.version }}.vsix
-          asset_content_type: application/zip
-
-      - name: Publish AzDO Task
-        uses: ./
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          AZDO_TOKEN: ${{ secrets.AZDO_TOKEN }}
-          AZURE_DEVOPS_EXT_PAT: ${{ secrets.AZDO_TOKEN }}
-          AZDO_SERVICE_URL: ${{ secrets.AZDO_SERVICE_URL }}
-          BUILD_NUMBER: ${{ github.run_id }}
-          IS_PR: ${{ github.head_ref }}
-          BRANCH: ${{ github.ref }}
-        with:
-          imageName: ghcr.io/stuartleeks/devcontainer-build-run-devcontainer
-          runCmd: |
-            echo "Starting"
-            ./scripts/publish-azdo-task.sh
-          env: |
-            BUILD_NUMBER
-            IS_CI=1
-            IS_PR
-            BRANCH
-            AZDO_TOKEN
-            AZURE_DEVOPS_EXT_PAT
-            AZDO_ORG=https://dev.azure.com/stuartle
-            AZDO_PROJECT=AzDODevContainerBuildRunTest
-            AZDO_BUILD=AzDODevContainerBuildRunTest
-
-  #
-  # Jobs to test
-  # (ensure that any new tests are added to the `needs` section for the release job)
-  #
-
-  test-azdo:
-    name: Run AzDO test
-    runs-on: ubuntu-latest
-    needs: build
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-
-      - name: Show version
-        env:
-          VERSION: ${{ needs.build.outputs.version }}
-          VERSION_SHORT: ${{ needs.build.outputs.version_short }}
-        run: |
-          echo "VERSION: $VERSION"
-          echo "VERSION_SHORT: $VERSION_SHORT"
-
-      - name: Download workflow artifacts
-        uses: actions/download-artifact@v2
-        with:
-          path: output
-
-      - name: Download release VSIX
-        uses: actions/download-artifact@v2
-        with:
-          name: azdo-task-dev
-          path: output
-
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@v1 
-        if: github.ref == 'refs/heads/main' # only need this for push (on `main`)
-        with:
-          registry: ghcr.io
-          username: ${{ github.repository_owner }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Run AzDO test pipeline
-        uses: ./
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          AZDO_TOKEN: ${{ secrets.AZDO_TOKEN }}
-          AZURE_DEVOPS_EXT_PAT: ${{ secrets.AZDO_TOKEN }}
-          AZDO_SERVICE_URL: ${{ secrets.AZDO_SERVICE_URL }}
-          BUILD_NUMBER: ${{ github.run_id }}
-          IS_PR: ${{ github.head_ref }}
-          BRANCH: ${{ github.ref }}
-        with:
-          imageName: ghcr.io/stuartleeks/devcontainer-build-run-devcontainer
-          runCmd: |
-            echo "Starting"
-            ./scripts/test-azdo.sh
-          env: |
-            BUILD_NUMBER
-            IS_CI=1
-            IS_PR
-            BRANCH
-            AZDO_TOKEN
-            AZURE_DEVOPS_EXT_PAT
-            AZDO_ORG=https://dev.azure.com/stuartle
-            AZDO_PROJECT=AzDODevContainerBuildRunTest
-            AZDO_BUILD=AzDODevContainerBuildRunTest
-
-  test-gh-run-args:
-    name: Run GitHub run-args test
-    runs-on: ubuntu-latest
-    needs: build
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v1
-
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@v1 
-        if: github.ref == 'refs/heads/main' # only need this for push (on `main`)
-        with:
-          registry: ghcr.io
-          username: ${{ github.repository_owner }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Run test
-        uses: ./
-        with:
-          subFolder: github-tests/run-args
-          imageName: ghcr.io/stuartleeks/devcontainer-build-run/tests/run-args
-          runCmd: echo $HOSTNAME && [[ $HOSTNAME == "my-host" ]]
-
-  test-gh-build-args:
-    name: Run GitHub build-args test
-    runs-on: ubuntu-latest
-    needs: build
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v1
-
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@v1
-        with:
-          registry: ghcr.io
-          username: ${{ github.repository_owner }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Run test
-        uses: ./
-        with:
-          subFolder: github-tests/build-args
-          imageName: ghcr.io/stuartleeks/devcontainer-build-run/tests/build-args
-          runCmd: echo $BUILD_ARG_TEST && [[ $BUILD_ARG_TEST == "Hello build-args!" ]]
-
-  test-gh-dockerfile-context:
-    name: Run GitHub dockerfile-context test
-    runs-on: ubuntu-latest
-    needs: build
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v1
-
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@v1
-        with:
-          registry: ghcr.io
-          username: ${{ github.repository_owner }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Run test
-        uses: ./
-        with:
-          subFolder: github-tests/dockerfile-context
-          imageName: ghcr.io/stuartleeks/devcontainer-build-run/tests/dockerfile-context
-          runCmd: /tmp/dummy.sh
-
-  test-gh-docker-from-docker-non-root:
-    name: Run GitHub docker-from-docker-non-root test
-    runs-on: ubuntu-latest
-    needs: build
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v1
-
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@v1
-        with:
-          registry: ghcr.io
-          username: ${{ github.repository_owner }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Run test
-        uses: ./
-        with:
-          subFolder: github-tests/docker-from-docker-non-root
-          imageName: ghcr.io/stuartleeks/devcontainer-build-run/tests/docker-from-docker-non-root
-          runCmd: make docker-build
-
-  test-gh-docker-from-docker-root:
-    name: Run GitHub docker-from-docker-root test
-    runs-on: ubuntu-latest
-    needs: build
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v1
-
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@v1
-        with:
-          registry: ghcr.io
-          username: ${{ github.repository_owner }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Run test
-        uses: ./
-        with:
-          subFolder: github-tests/docker-from-docker-root
-          imageName: ghcr.io/stuartleeks/devcontainer-build-run/tests/docker-from-docker-root
-          runCmd: make docker-build
+      # - name: Run test
+      #   uses: ./
+      #   with:
+      #     subFolder: github-tests/run-args
+      #     imageName: ghcr.io/stuartleeks/devcontainer-build-run/tests/run-args
+      #     runCmd: echo $HOSTNAME && [[ $HOSTNAME == "my-host" ]]
 
 
-  test-gh-image-tag:
-    name: Run GitHub image-tag test
-    runs-on: ubuntu-latest
-    needs: build
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v2
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v1
+  # build: # run build using the github action!
+  #   runs-on: ubuntu-latest
+  #   name: build, test, package
+  #   outputs:
+  #     version_short: ${{ steps.build.outputs.version_short }}
+  #     version: ${{ steps.build.outputs.version }}
+  #   steps:
+  #     - name: Checkout
+  #       uses: actions/checkout@v2
 
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@v1 
-        if: github.ref == 'refs/heads/main' # only need this for push (on `main`)
-        with:
-          registry: ghcr.io
-          username: ${{ github.repository_owner }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+  #     - name: Set up Docker Buildx
+  #       uses: docker/setup-buildx-action@v1
 
-      - name: Run test
-        uses: ./
-        with:
-          subFolder: github-tests/image-tag
-          imageName: ghcr.io/stuartleeks/devcontainer-build-run/tests/image-tag
-          imageTag: custom-tag
-          runCmd: |
-            echo "Get dev container..."
-            container_id=$(docker ps --latest --format "{{.ID}}" --no-trunc)
-            echo "Container ID: $container_id"
-            container_image=$(docker inspect $container_id --format "{{.Config.Image}}")
-            echo "Container Image: $container_image"
-            container_tag=$(echo $container_image | sed s/[^:].*://g)
-            echo "Container tag: $container_tag"
-            [[ $container_tag == "custom-tag" ]]
+  #     - name: Login to GitHub Container Registry
+  #       uses: docker/login-action@v1 
+  #       if: github.ref == 'refs/heads/main' # only need this for push (on `main`)
+  #       with:
+  #         registry: ghcr.io
+  #         username: ${{ github.repository_owner }}
+  #         password: ${{ secrets.GITHUB_TOKEN }}
 
-  test-gh-skip-user-update:
-    name: Run GitHub skipContainerUserIdUpdate test
-    runs-on: ubuntu-latest
-    needs: build
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v2
+  #     - name: Build in dev container
+  #       uses: ./
+  #       id: build
+  #       env:
+  #         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  #         BUILD_NUMBER: ${{ github.run_id }}
+  #         IS_PR: ${{ github.head_ref }}
+  #         BRANCH: ${{ github.ref }}
+  #       with:
+  #         imageName: ghcr.io/stuartleeks/devcontainer-build-run-devcontainer
+  #         runCmd: |
+  #           echo "Starting"
+  #           ./scripts/build-test-package.sh
+  #         env: |
+  #           BUILD_NUMBER
+  #           IS_CI=1
+  #           IS_PR
+  #           BRANCH
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v1
+  #     - uses: actions/upload-artifact@v2
+  #       name: Create dev AzDO VSIX artifact
+  #       with:
+  #         name: azdo-task-dev
+  #         path: ./output/stuartleeks-dev.devcontainer-build-run-${{ steps.build.outputs.version }}.vsix
+  #         if-no-files-found: error 
 
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@v1 
-        if: github.ref == 'refs/heads/main' # only need this for push (on `main`)
-        with:
-          registry: ghcr.io
-          username: ${{ github.repository_owner }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+  #     - uses: actions/upload-artifact@v2
+  #       name: Create release AzDO VSIX artifact
+  #       with:
+  #         name: azdo-task
+  #         path: ./output/stuartleeks.devcontainer-build-run-${{ steps.build.outputs.version }}.vsix
+  #         if-no-files-found: error 
 
-      - name: Run test
-        uses: ./
-        with:
-          subFolder: github-tests/skip-user-update
-          imageName: ghcr.io/stuartleeks/devcontainer-build-run/tests/skip-user-update
-          skipContainerUserIdUpdate: true
-          runCmd: |
-            echo "Get user/group info ..."
-            user_id=$(id -u $(whoami))
-            echo "User ID: $user_id"
-            group_id=$(id -g $(whoami))
-            echo "Group ID: $group_id"
-            [[ $user_id == 1000 ]] && [[ $group_id == 1000 ]]
+  # release:
+  #   name: Create release
+  #   runs-on: ubuntu-latest
+  #   needs:
+  #     - test-azdo
+  #     - build
+  #     - test-gh-run-args
+  #     - test-gh-build-args
+  #     - test-gh-dockerfile-context
+  #     - test-gh-docker-from-docker-non-root
+  #     - test-gh-docker-from-docker-root
+  #     - test-gh-image-tag
+  #     - test-gh-skip-user-update
+  #   if: github.ref == 'refs/heads/main' # only create release on `main`
+  #   env:
+  #     VERSION: ${{ needs.build.outputs.version }}
+  #     VERSION_SHORT: ${{ needs.build.outputs.version_short }}
+  #   steps:
+  #     - name: Checkout
+  #       uses: actions/checkout@v2
 
-      # - name: fail
-      #   run: |
-      #     echo "::error file=app.js,line=10,col=15::Something went wrong"
-      #     exit 1
+  #     - name: Download release VSIX
+  #       uses: actions/download-artifact@v2
+  #       with:
+  #         name: azdo-task
+  #         path: output
+
+  #     - name: Show version
+  #       run: |
+  #         echo "VERSION: $VERSION"
+  #         echo "VERSION_SHORT: $VERSION_SHORT"
+
+  #     - name: Login to GitHub Container Registry
+  #       uses: docker/login-action@v1 
+  #       if: github.ref == 'refs/heads/main' # only need this for push (on `main`)
+  #       with:
+  #         registry: ghcr.io
+  #         username: ${{ github.repository_owner }}
+  #         password: ${{ secrets.GITHUB_TOKEN }}
+
+  #     - name: Create Release
+  #       id: create_release
+  #       uses: actions/create-release@v1
+  #       env:
+  #         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  #       with:
+  #         tag_name: v${{ env.VERSION  }}
+  #         release_name: Release v${{ env.VERSION }}
+  #         draft: false
+  #         prerelease: true
+
+  #     - name: Create Major/Minor tag
+  #       id: create_tag_short_verison
+  #       env:
+  #         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  #         VERSION_SHORT: v${{ env.VERSION_SHORT }}
+  #       run: |
+  #         echo "VERSION_SHORT: $VERSION_SHORT"
+  #         # sudo chown -R $(whoami) .
+  #         git config user.name "CI build"
+  #         git config user.email stuart@leeks.net
+  #         git tag -fa $VERSION_SHORT -m $VERSION_SHORT
+  #         git push -f origin $VERSION_SHORT
+
+  #     - name: Upload Release Asset
+  #       id: upload-release-asset 
+  #       uses: actions/upload-release-asset@v1
+  #       env:
+  #         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  #       with:
+  #         upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps 
+  #         asset_path: ./output/stuartleeks.devcontainer-build-run-${{ needs.build.outputs.version }}.vsix
+  #         asset_name: stuartleeks.devcontainer-build-run-${{ needs.build.outputs.version }}.vsix
+  #         asset_content_type: application/zip
+
+  #     - name: Publish AzDO Task
+  #       uses: ./
+  #       env:
+  #         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  #         AZDO_TOKEN: ${{ secrets.AZDO_TOKEN }}
+  #         AZURE_DEVOPS_EXT_PAT: ${{ secrets.AZDO_TOKEN }}
+  #         AZDO_SERVICE_URL: ${{ secrets.AZDO_SERVICE_URL }}
+  #         BUILD_NUMBER: ${{ github.run_id }}
+  #         IS_PR: ${{ github.head_ref }}
+  #         BRANCH: ${{ github.ref }}
+  #       with:
+  #         imageName: ghcr.io/stuartleeks/devcontainer-build-run-devcontainer
+  #         runCmd: |
+  #           echo "Starting"
+  #           ./scripts/publish-azdo-task.sh
+  #         env: |
+  #           BUILD_NUMBER
+  #           IS_CI=1
+  #           IS_PR
+  #           BRANCH
+  #           AZDO_TOKEN
+  #           AZURE_DEVOPS_EXT_PAT
+  #           AZDO_ORG=https://dev.azure.com/stuartle
+  #           AZDO_PROJECT=AzDODevContainerBuildRunTest
+  #           AZDO_BUILD=AzDODevContainerBuildRunTest
+
+  # #
+  # # Jobs to test
+  # # (ensure that any new tests are added to the `needs` section for the release job)
+  # #
+
+  # test-azdo:
+  #   name: Run AzDO test
+  #   runs-on: ubuntu-latest
+  #   needs: build
+  #   steps:
+  #     - name: Checkout
+  #       uses: actions/checkout@v2
+
+  #     - name: Show version
+  #       env:
+  #         VERSION: ${{ needs.build.outputs.version }}
+  #         VERSION_SHORT: ${{ needs.build.outputs.version_short }}
+  #       run: |
+  #         echo "VERSION: $VERSION"
+  #         echo "VERSION_SHORT: $VERSION_SHORT"
+
+  #     - name: Download workflow artifacts
+  #       uses: actions/download-artifact@v2
+  #       with:
+  #         path: output
+
+  #     - name: Download release VSIX
+  #       uses: actions/download-artifact@v2
+  #       with:
+  #         name: azdo-task-dev
+  #         path: output
+
+  #     - name: Login to GitHub Container Registry
+  #       uses: docker/login-action@v1 
+  #       if: github.ref == 'refs/heads/main' # only need this for push (on `main`)
+  #       with:
+  #         registry: ghcr.io
+  #         username: ${{ github.repository_owner }}
+  #         password: ${{ secrets.GITHUB_TOKEN }}
+
+  #     - name: Run AzDO test pipeline
+  #       uses: ./
+  #       env:
+  #         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  #         AZDO_TOKEN: ${{ secrets.AZDO_TOKEN }}
+  #         AZURE_DEVOPS_EXT_PAT: ${{ secrets.AZDO_TOKEN }}
+  #         AZDO_SERVICE_URL: ${{ secrets.AZDO_SERVICE_URL }}
+  #         BUILD_NUMBER: ${{ github.run_id }}
+  #         IS_PR: ${{ github.head_ref }}
+  #         BRANCH: ${{ github.ref }}
+  #       with:
+  #         imageName: ghcr.io/stuartleeks/devcontainer-build-run-devcontainer
+  #         runCmd: |
+  #           echo "Starting"
+  #           ./scripts/test-azdo.sh
+  #         env: |
+  #           BUILD_NUMBER
+  #           IS_CI=1
+  #           IS_PR
+  #           BRANCH
+  #           AZDO_TOKEN
+  #           AZURE_DEVOPS_EXT_PAT
+  #           AZDO_ORG=https://dev.azure.com/stuartle
+  #           AZDO_PROJECT=AzDODevContainerBuildRunTest
+  #           AZDO_BUILD=AzDODevContainerBuildRunTest
+
+  # test-gh-run-args:
+  #   name: Run GitHub run-args test
+  #   runs-on: ubuntu-latest
+  #   needs: build
+  #   steps:
+  #     - name: Checkout
+  #       uses: actions/checkout@v2
+
+  #     - name: Set up Docker Buildx
+  #       uses: docker/setup-buildx-action@v1
+
+  #     - name: Login to GitHub Container Registry
+  #       uses: docker/login-action@v1 
+  #       if: github.ref == 'refs/heads/main' # only need this for push (on `main`)
+  #       with:
+  #         registry: ghcr.io
+  #         username: ${{ github.repository_owner }}
+  #         password: ${{ secrets.GITHUB_TOKEN }}
+
+  #     - name: Run test
+  #       uses: ./
+  #       with:
+  #         subFolder: github-tests/run-args
+  #         imageName: ghcr.io/stuartleeks/devcontainer-build-run/tests/run-args
+  #         runCmd: echo $HOSTNAME && [[ $HOSTNAME == "my-host" ]]
+
+  # test-gh-build-args:
+  #   name: Run GitHub build-args test
+  #   runs-on: ubuntu-latest
+  #   needs: build
+  #   steps:
+  #     - name: Checkout
+  #       uses: actions/checkout@v2
+
+  #     - name: Set up Docker Buildx
+  #       uses: docker/setup-buildx-action@v1
+
+  #     - name: Login to GitHub Container Registry
+  #       uses: docker/login-action@v1
+  #       with:
+  #         registry: ghcr.io
+  #         username: ${{ github.repository_owner }}
+  #         password: ${{ secrets.GITHUB_TOKEN }}
+
+  #     - name: Run test
+  #       uses: ./
+  #       with:
+  #         subFolder: github-tests/build-args
+  #         imageName: ghcr.io/stuartleeks/devcontainer-build-run/tests/build-args
+  #         runCmd: echo $BUILD_ARG_TEST && [[ $BUILD_ARG_TEST == "Hello build-args!" ]]
+
+  # test-gh-dockerfile-context:
+  #   name: Run GitHub dockerfile-context test
+  #   runs-on: ubuntu-latest
+  #   needs: build
+  #   steps:
+  #     - name: Checkout
+  #       uses: actions/checkout@v2
+
+  #     - name: Set up Docker Buildx
+  #       uses: docker/setup-buildx-action@v1
+
+  #     - name: Login to GitHub Container Registry
+  #       uses: docker/login-action@v1
+  #       with:
+  #         registry: ghcr.io
+  #         username: ${{ github.repository_owner }}
+  #         password: ${{ secrets.GITHUB_TOKEN }}
+
+  #     - name: Run test
+  #       uses: ./
+  #       with:
+  #         subFolder: github-tests/dockerfile-context
+  #         imageName: ghcr.io/stuartleeks/devcontainer-build-run/tests/dockerfile-context
+  #         runCmd: /tmp/dummy.sh
+
+  # test-gh-docker-from-docker-non-root:
+  #   name: Run GitHub docker-from-docker-non-root test
+  #   runs-on: ubuntu-latest
+  #   needs: build
+  #   steps:
+  #     - name: Checkout
+  #       uses: actions/checkout@v2
+
+  #     - name: Set up Docker Buildx
+  #       uses: docker/setup-buildx-action@v1
+
+  #     - name: Login to GitHub Container Registry
+  #       uses: docker/login-action@v1
+  #       with:
+  #         registry: ghcr.io
+  #         username: ${{ github.repository_owner }}
+  #         password: ${{ secrets.GITHUB_TOKEN }}
+
+  #     - name: Run test
+  #       uses: ./
+  #       with:
+  #         subFolder: github-tests/docker-from-docker-non-root
+  #         imageName: ghcr.io/stuartleeks/devcontainer-build-run/tests/docker-from-docker-non-root
+  #         runCmd: make docker-build
+
+  # test-gh-docker-from-docker-root:
+  #   name: Run GitHub docker-from-docker-root test
+  #   runs-on: ubuntu-latest
+  #   needs: build
+  #   steps:
+  #     - name: Checkout
+  #       uses: actions/checkout@v2
+
+  #     - name: Set up Docker Buildx
+  #       uses: docker/setup-buildx-action@v1
+
+  #     - name: Login to GitHub Container Registry
+  #       uses: docker/login-action@v1
+  #       with:
+  #         registry: ghcr.io
+  #         username: ${{ github.repository_owner }}
+  #         password: ${{ secrets.GITHUB_TOKEN }}
+
+  #     - name: Run test
+  #       uses: ./
+  #       with:
+  #         subFolder: github-tests/docker-from-docker-root
+  #         imageName: ghcr.io/stuartleeks/devcontainer-build-run/tests/docker-from-docker-root
+  #         runCmd: make docker-build
+
+
+  # test-gh-image-tag:
+  #   name: Run GitHub image-tag test
+  #   runs-on: ubuntu-latest
+  #   needs: build
+  #   steps:
+  #     - name: Checkout
+  #       uses: actions/checkout@v2
+
+  #     - name: Set up Docker Buildx
+  #       uses: docker/setup-buildx-action@v1
+
+  #     - name: Login to GitHub Container Registry
+  #       uses: docker/login-action@v1 
+  #       if: github.ref == 'refs/heads/main' # only need this for push (on `main`)
+  #       with:
+  #         registry: ghcr.io
+  #         username: ${{ github.repository_owner }}
+  #         password: ${{ secrets.GITHUB_TOKEN }}
+
+  #     - name: Run test
+  #       uses: ./
+  #       with:
+  #         subFolder: github-tests/image-tag
+  #         imageName: ghcr.io/stuartleeks/devcontainer-build-run/tests/image-tag
+  #         imageTag: custom-tag
+  #         runCmd: |
+  #           echo "Get dev container..."
+  #           container_id=$(docker ps --latest --format "{{.ID}}" --no-trunc)
+  #           echo "Container ID: $container_id"
+  #           container_image=$(docker inspect $container_id --format "{{.Config.Image}}")
+  #           echo "Container Image: $container_image"
+  #           container_tag=$(echo $container_image | sed s/[^:].*://g)
+  #           echo "Container tag: $container_tag"
+  #           [[ $container_tag == "custom-tag" ]]
+
+  # test-gh-skip-user-update:
+  #   name: Run GitHub skipContainerUserIdUpdate test
+  #   runs-on: ubuntu-latest
+  #   needs: build
+  #   steps:
+  #     - name: Checkout
+  #       uses: actions/checkout@v2
+
+  #     - name: Set up Docker Buildx
+  #       uses: docker/setup-buildx-action@v1
+
+  #     - name: Login to GitHub Container Registry
+  #       uses: docker/login-action@v1 
+  #       if: github.ref == 'refs/heads/main' # only need this for push (on `main`)
+  #       with:
+  #         registry: ghcr.io
+  #         username: ${{ github.repository_owner }}
+  #         password: ${{ secrets.GITHUB_TOKEN }}
+
+  #     - name: Run test
+  #       uses: ./
+  #       with:
+  #         subFolder: github-tests/skip-user-update
+  #         imageName: ghcr.io/stuartleeks/devcontainer-build-run/tests/skip-user-update
+  #         skipContainerUserIdUpdate: true
+  #         runCmd: |
+  #           echo "Get user/group info ..."
+  #           user_id=$(id -u $(whoami))
+  #           echo "User ID: $user_id"
+  #           group_id=$(id -g $(whoami))
+  #           echo "Group ID: $group_id"
+  #           [[ $user_id == 1000 ]] && [[ $group_id == 1000 ]]
+
+  #     # - name: fail
+  #     #   run: |
+  #     #     echo "::error file=app.js,line=10,col=15::Something went wrong"
+  #     #     exit 1

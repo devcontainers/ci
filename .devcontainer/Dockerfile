@@ -42,7 +42,7 @@ ENV DEVCONTAINER=true
 
 # node
 COPY scripts/node.sh /tmp/
-RUN /tmp/node.sh 12.x
+RUN /tmp/node.sh 16.x
 
 # docker-client
 COPY scripts/docker-client.sh /tmp/

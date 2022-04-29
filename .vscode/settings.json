@@ -5,5 +5,5 @@
     "typescript.format.enable": true,
     "typescript.format.insertSpaceAfterCommaDelimiter": true,
     "typescript.format.insertSpaceAfterConstructor": false,
-
+    "typescript.format.semicolons": "insert",
 }
