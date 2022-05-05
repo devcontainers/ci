@@ -40,14 +40,14 @@ jobs:
           npm install -g
           dev-containers-cli --version
 
-      # - name: Run test
-      #   uses: ./
-      #   with:
-      #     subFolder: github-tests/run-args
-      #     imageName: ghcr.io/stuartleeks/devcontainer-build-run/tests/run-args
-      #     runCmd: echo $HOSTNAME && [[ $HOSTNAME == "my-host" ]]
+      - name: Run test
+        uses: ./
+        with:
+          subFolder: github-tests/run-args
+          imageName: ghcr.io/stuartleeks/devcontainer-build-run/tests/run-args
+          runCmd: echo $HOSTNAME && [[ $HOSTNAME == "my-host" ]]
 
-
+# TODO - reinstate tests!
 
   # build: # run build using the github action!
   #   runs-on: ubuntu-latest

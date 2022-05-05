@@ -1,11 +1,12 @@
 import * as core from '@actions/core'
-
 import {
-	isDockerBuildXInstalled,
-	buildImage,
-	runContainer,
-	pushImage
-} from './docker'
+	devcontainer,
+	DevContainerCliBuildArgs,
+	DevContainerCliExecArgs,
+	DevContainerCliUpArgs
+} from '../../common/src/dev-container-cli'
+
+import {isDockerBuildXInstalled, pushImage} from './docker'
 
 async function run(): Promise<void> {
 	const hasRunMain = core.getState('hasRunMain')
@@ -29,38 +30,58 @@ async function runMain(): Promise<void> {
 		const checkoutPath: string = core.getInput('checkoutPath')
 		const imageName: string = core.getInput('imageName', {required: true})
 		const imageTag = emptyStringAsUndefined(core.getInput('imageTag'))
-		const subFolder: string = core.getInput('subFolder')
+		// const subFolder: string = core.getInput('subFolder') // TODO - handle this
 		const runCommand: string = core.getInput('runCmd', {required: true})
-		const envs: string[] = core.getMultilineInput('env')
-		const cacheFrom: string[] = core.getMultilineInput('cacheFrom')
-		const skipContainerUserIdUpdate = core.getBooleanInput(
-			'skipContainerUserIdUpdate'
-		)
+		// const envs: string[] = core.getMultilineInput('env') // TODO - handle this
+		// const cacheFrom: string[] = core.getMultilineInput('cacheFrom') // TODO - handle this
+		// const skipContainerUserIdUpdate = core.getBooleanInput(
+		// 	'skipContainerUserIdUpdate'
+		// ) // TODO - handle this
 
-		const buildImageName = await buildImage(
-			imageName,
-			imageTag,
-			checkoutPath,
-			subFolder,
-			skipContainerUserIdUpdate,
-			cacheFrom
-		)
-		if (buildImageName === '') {
+		// TODO - nocache
+		// TODO - support additional cacheFrom
+		const log = (message: string): void => core.info(message)
+		const fullImageName = `${imageName}:${imageTag ?? 'latest'}`
+		const buildArgs: DevContainerCliBuildArgs = {
+			workspaceFolder: checkoutPath,
+			imageName: fullImageName
+		}
+		const buildResult = await devcontainer.build(buildArgs, log)
+
+		if (buildResult.outcome !== 'success') {
+			core.error(
+				`Dev container build failed: ${buildResult.message} (exit code: ${buildResult.code})\n${buildResult.description}`
+			)
+			core.setFailed(buildResult.message)
 			return
 		}
 
-		if (
-			!(await runContainer(
-				buildImageName,
-				imageTag,
-				checkoutPath,
-				subFolder,
-				runCommand,
-				envs
-			))
-		) {
+		const upArgs: DevContainerCliUpArgs = {
+			workspaceFolder: checkoutPath
+		}
+		const upResult = await devcontainer.up(upArgs, log)
+		if (upResult.outcome !== 'success') {
+			core.error(
+				`Dev container up failed: ${upResult.message} (exit code: ${upResult.code})\n${upResult.description}`
+			)
+			core.setFailed(upResult.message)
 			return
 		}
+
+		const execArgs: DevContainerCliExecArgs = {
+			workspaceFolder: checkoutPath,
+			command: ['bash', '-c', runCommand]
+		}
+		const execResult = await devcontainer.exec(execArgs, log)
+		if (execResult.outcome !== 'success') {
+			core.error(
+				`Dev container exec: ${execResult.message} (exit code: ${execResult.code})\n${execResult.description}`
+			)
+			core.setFailed(execResult.message)
+			return
+		}
+
+		// TODO - should we stop the container?
 	} catch (error) {
 		core.setFailed(error.message)
 	}

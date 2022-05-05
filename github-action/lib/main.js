@@ -29,6 +29,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const core = __importStar(require("@actions/core"));
+const dev_container_cli_1 = require("../../common/src/dev-container-cli");
 const docker_1 = require("./docker");
 function run() {
     return __awaiter(this, void 0, void 0, function* () {
@@ -53,18 +54,47 @@ function runMain() {
             const checkoutPath = core.getInput('checkoutPath');
             const imageName = core.getInput('imageName', { required: true });
             const imageTag = emptyStringAsUndefined(core.getInput('imageTag'));
-            const subFolder = core.getInput('subFolder');
+            // const subFolder: string = core.getInput('subFolder') // TODO - handle this
             const runCommand = core.getInput('runCmd', { required: true });
-            const envs = core.getMultilineInput('env');
-            const cacheFrom = core.getMultilineInput('cacheFrom');
-            const skipContainerUserIdUpdate = core.getBooleanInput('skipContainerUserIdUpdate');
-            const buildImageName = yield docker_1.buildImage(imageName, imageTag, checkoutPath, subFolder, skipContainerUserIdUpdate, cacheFrom);
-            if (buildImageName === '') {
+            // const envs: string[] = core.getMultilineInput('env') // TODO - handle this
+            // const cacheFrom: string[] = core.getMultilineInput('cacheFrom') // TODO - handle this
+            // const skipContainerUserIdUpdate = core.getBooleanInput(
+            // 	'skipContainerUserIdUpdate'
+            // ) // TODO - handle this
+            // TODO - nocache
+            // TODO - support additional cacheFrom
+            const log = (message) => core.info(message);
+            const fullImageName = `${imageName}:${imageTag !== null && imageTag !== void 0 ? imageTag : 'latest'}`;
+            const buildArgs = {
+                workspaceFolder: checkoutPath,
+                imageName: fullImageName
+            };
+            const buildResult = yield dev_container_cli_1.devcontainer.build(buildArgs, log);
+            if (buildResult.outcome !== 'success') {
+                core.error(`Dev container build failed: ${buildResult.message} (exit code: ${buildResult.code})\n${buildResult.description}`);
+                core.setFailed(buildResult.message);
                 return;
             }
-            if (!(yield docker_1.runContainer(buildImageName, imageTag, checkoutPath, subFolder, runCommand, envs))) {
+            const upArgs = {
+                workspaceFolder: checkoutPath
+            };
+            const upResult = yield dev_container_cli_1.devcontainer.up(upArgs, log);
+            if (upResult.outcome !== 'success') {
+                core.error(`Dev container up failed: ${upResult.message} (exit code: ${upResult.code})\n${upResult.description}`);
+                core.setFailed(upResult.message);
                 return;
             }
+            const execArgs = {
+                workspaceFolder: checkoutPath,
+                command: ['bash', '-c', runCommand]
+            };
+            const execResult = yield dev_container_cli_1.devcontainer.exec(execArgs, log);
+            if (execResult.outcome !== 'success') {
+                core.error(`Dev container exec: ${execResult.message} (exit code: ${execResult.code})\n${execResult.description}`);
+                core.setFailed(execResult.message);
+                return;
+            }
+            // TODO - should we stop the container?
         }
         catch (error) {
             core.setFailed(error.message);
@@ -85,7 +115,7 @@ function runPost() {
             const ref = process.env.GITHUB_REF;
             if (refFilterForPush.length !== 0 && // empty filter allows all
                 !refFilterForPush.some(s => s === ref)) {
-                core.info(`Image push skipped because GITHUB_REF (${ref}) is not in refFilterForPush`);
+                core.info(`Immage push skipped because GITHUB_REF (${ref}) is not in refFilterForPush`);
                 return;
             }
             const eventName = process.env.GITHUB_EVENT_NAME;

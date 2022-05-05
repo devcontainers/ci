@@ -1798,6 +1798,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 const core = __importStar(__nccwpck_require__(186));
+const dev_container_cli_1 = __nccwpck_require__(331);
 const docker_1 = __nccwpck_require__(758);
 function run() {
     return __awaiter(this, void 0, void 0, function* () {
@@ -1822,18 +1823,47 @@ function runMain() {
             const checkoutPath = core.getInput('checkoutPath');
             const imageName = core.getInput('imageName', { required: true });
             const imageTag = emptyStringAsUndefined(core.getInput('imageTag'));
-            const subFolder = core.getInput('subFolder');
+            // const subFolder: string = core.getInput('subFolder') // TODO - handle this
             const runCommand = core.getInput('runCmd', { required: true });
-            const envs = core.getMultilineInput('env');
-            const cacheFrom = core.getMultilineInput('cacheFrom');
-            const skipContainerUserIdUpdate = core.getBooleanInput('skipContainerUserIdUpdate');
-            const buildImageName = yield docker_1.buildImage(imageName, imageTag, checkoutPath, subFolder, skipContainerUserIdUpdate, cacheFrom);
-            if (buildImageName === '') {
+            // const envs: string[] = core.getMultilineInput('env') // TODO - handle this
+            // const cacheFrom: string[] = core.getMultilineInput('cacheFrom') // TODO - handle this
+            // const skipContainerUserIdUpdate = core.getBooleanInput(
+            // 	'skipContainerUserIdUpdate'
+            // ) // TODO - handle this
+            // TODO - nocache
+            // TODO - support additional cacheFrom
+            const log = (message) => core.info(message);
+            const fullImageName = `${imageName}:${imageTag !== null && imageTag !== void 0 ? imageTag : 'latest'}`;
+            const buildArgs = {
+                workspaceFolder: checkoutPath,
+                imageName: fullImageName
+            };
+            const buildResult = yield dev_container_cli_1.devcontainer.build(buildArgs, log);
+            if (buildResult.outcome !== 'success') {
+                core.error(`Dev container build failed: ${buildResult.message} (exit code: ${buildResult.code})\n${buildResult.description}`);
+                core.setFailed(buildResult.message);
                 return;
             }
-            if (!(yield docker_1.runContainer(buildImageName, imageTag, checkoutPath, subFolder, runCommand, envs))) {
+            const upArgs = {
+                workspaceFolder: checkoutPath
+            };
+            const upResult = yield dev_container_cli_1.devcontainer.up(upArgs, log);
+            if (upResult.outcome !== 'success') {
+                core.error(`Dev container up failed: ${upResult.message} (exit code: ${upResult.code})\n${upResult.description}`);
+                core.setFailed(upResult.message);
                 return;
             }
+            const execArgs = {
+                workspaceFolder: checkoutPath,
+                command: ['bash', '-c', runCommand]
+            };
+            const execResult = yield dev_container_cli_1.devcontainer.exec(execArgs, log);
+            if (execResult.outcome !== 'success') {
+                core.error(`Dev container exec: ${execResult.message} (exit code: ${execResult.code})\n${execResult.description}`);
+                core.setFailed(execResult.message);
+                return;
+            }
+            // TODO - should we stop the container?
         }
         catch (error) {
             core.setFailed(error.message);
@@ -1854,7 +1884,7 @@ function runPost() {
             const ref = process.env.GITHUB_REF;
             if (refFilterForPush.length !== 0 && // empty filter allows all
                 !refFilterForPush.some(s => s === ref)) {
-                core.info(`Image push skipped because GITHUB_REF (${ref}) is not in refFilterForPush`);
+                core.info(`Immage push skipped because GITHUB_REF (${ref}) is not in refFilterForPush`);
                 return;
             }
             const eventName = process.env.GITHUB_EVENT_NAME;
@@ -3627,6 +3657,110 @@ function copyFile(srcFile, destFile, force) {
     });
 }
 //# sourceMappingURL=io.js.map
+
+/***/ }),
+
+/***/ 331:
+/***/ ((__unused_webpack_module, __webpack_exports__, __nccwpck_require__) => {
+
+"use strict";
+__nccwpck_require__.r(__webpack_exports__);
+/* harmony export */ __nccwpck_require__.d(__webpack_exports__, {
+/* harmony export */   "devcontainer": () => (/* binding */ devcontainer)
+/* harmony export */ });
+/* harmony import */ var child_process__WEBPACK_IMPORTED_MODULE_0__ = __nccwpck_require__(129);
+/* harmony import */ var child_process__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__nccwpck_require__.n(child_process__WEBPACK_IMPORTED_MODULE_0__);
+var __awaiter = (undefined && undefined.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+
+function getSpecCliInfo() {
+    // // TODO - this is temporary until the CLI is installed via npm
+    // // TODO - ^ could consider an `npm install` from the folder
+    // const specCLIPath = path.resolve(__dirname, "..", "cli", "cli.js");
+    // return {
+    //   command: `node ${specCLIPath}`,
+    // };
+    return {
+        command: "dev-containers-cli"
+    };
+}
+function spawn(command, args, options) {
+    return new Promise((resolve, reject) => {
+        const proc = (0,child_process__WEBPACK_IMPORTED_MODULE_0__.spawn)(command, args, { env: process.env });
+        // const env = params.env ? { ...process.env, ...params.env } : process.env;
+        proc.stdout.on("data", data => options.log(data.toString()));
+        proc.stderr.on("data", data => options.err(data.toString()));
+        proc.on("error", err => {
+            reject(err);
+        });
+        proc.on("close", code => {
+            resolve({
+                code: code
+            });
+        });
+    });
+}
+function parseCliOutput(value) {
+    if (value === "") {
+        // TODO - revisit this
+        throw new Error("Unexpected empty output from CLI");
+    }
+    try {
+        return JSON.parse(value);
+    }
+    catch (error) {
+        return {
+            code: -1,
+            outcome: "error",
+            message: "Failed to parse CLI output",
+            description: `Failed to parse CLI output as JSON: ${value}\nError: ${error}`
+        };
+    }
+}
+function runSpecCli(args, log) {
+    return __awaiter(this, void 0, void 0, function* () {
+        let stdout = "";
+        const options = {
+            log: data => stdout += data,
+            err: data => log(data),
+            env: process.env,
+        };
+        const result = yield spawn(getSpecCliInfo().command, args, options);
+        return parseCliOutput(stdout);
+    });
+}
+function devContainerBuild(args, log) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const commandArgs = ["build", "--workspace-folder", args.workspaceFolder];
+        if (args.imageName) {
+            commandArgs.push("--image-name", args.imageName);
+        }
+        return yield runSpecCli(commandArgs, log);
+    });
+}
+function devContainerUp(args, log) {
+    return __awaiter(this, void 0, void 0, function* () {
+        return yield runSpecCli(["up", "--workspace-folder", args.workspaceFolder], log);
+    });
+}
+function devContainerExec(args, log) {
+    return __awaiter(this, void 0, void 0, function* () {
+        return yield runSpecCli(["exec", "--workspace-folder", args.workspaceFolder, ...args.command], log);
+    });
+}
+const devcontainer = {
+    build: devContainerBuild,
+    up: devContainerUp,
+    exec: devContainerExec,
+};
+
 
 /***/ }),
 
