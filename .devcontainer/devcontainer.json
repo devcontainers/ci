@@ -15,10 +15,6 @@
 		"source=devcontainer-build-run-bashhistory,target=/home/vscode/commandhistory",
 		// Mount host docker socket
 		"type=bind,source=/var/run/docker.sock,target=/var/run/docker.sock",
-		// Mounts the .config/gh host folder into the dev container to pick up host gh CLI login details
-		// NOTE that mounting directly to ~/.config/gh makes ~/.config only root-writable
-		// Instead monut to another location and symlink in Dockerfile
-		"type=bind,source=${env:HOME}${env:USERPROFILE}/.config/gh,target=/config/gh",
 	],
 	// Set *default* container specific settings.json values on container create.
 	"settings": {
@@ -39,5 +35,8 @@
 		"heaths.vscode-guid",
 		"esbenp.prettier-vscode",
 		"meganrogge.template-string-converter"
-	]
+	],
+	"features": {
+		"github-cli": "latest",
+	}
 }

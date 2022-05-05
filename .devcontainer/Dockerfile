@@ -55,16 +55,7 @@ RUN sudo groupadd docker && sudo usermod -aG docker $USERNAME && newgrp docker
 COPY scripts/act.sh /tmp/
 RUN /tmp/act.sh 0.2.21
 
-# gh
-COPY scripts/gh.sh /tmp/
-RUN /tmp/gh.sh
-
-# symlink gh config folder
-RUN echo 'if [[ ! -d /home/vscode/.config/gh ]]; then mkdir -p /home/vscode/.config;ln -s /config/gh /home/vscode/.config/gh; fi ' >> ~/.bashrc
-
-
 RUN sudo npm install -g tfx-cli
-
 
 # azure-cli-no-mount
 COPY scripts/azure-cli.sh /tmp/
