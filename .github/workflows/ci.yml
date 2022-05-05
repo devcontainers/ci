@@ -65,7 +65,7 @@ jobs:
         with:
           subFolder: github-tests/run-args
           imageName: ghcr.io/stuartleeks/devcontainer-build-run/tests/run-args
-          runCmd: echo $HOSTNAME && [[ $HOSTNAME == "my-host" ]]
+          runCmd: echo "Hello from the dev container!"
 
 # TODO - reinstate tests!
 
