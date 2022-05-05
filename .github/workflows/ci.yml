@@ -40,6 +40,26 @@ jobs:
           npm install -g
           dev-containers-cli --version
 
+          echo "PWD: ${PWD}"
+          echo "ls"
+          ls -al .
+
+          echo ""
+          echo "ls dist"
+          ls -al ./dist
+
+          echo ""
+          echo "ls dist/node_modules"
+          ls -al ./dist/node_modules
+
+          echo ""
+          echo "ls dist/node_modules/vscode-dev-containers"
+          ls -al ./dist/node_modules/vscode-dev-containers
+
+          echo ""
+          echo "ls dist/node_modules/vscode-dev-containers/container-features"
+          ls -al ./dist/node_modules/vscode-dev-containers/container-features
+
       - name: Run test
         uses: ./
         with:

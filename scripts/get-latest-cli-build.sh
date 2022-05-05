@@ -39,4 +39,4 @@ cli_dir="$script_dir/../cli"
 rm -rf "$cli_dir"
 mkdir -p "$cli_dir"
 
-mv "$tmp_dir/cli/package" "$cli_dir"
+mv "$tmp_dir/cli/package/"* "$cli_dir"

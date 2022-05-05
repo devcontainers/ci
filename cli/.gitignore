@@ -1,0 +1,2 @@
+# Override root-level .gitignore to ensure that the temp CLI dependencies are all included
+!dist/node_modules

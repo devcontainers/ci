@@ -214,7 +214,14 @@ function buildOptions(y) {
 function buildHandler(args) {
     (async () => build(args))().catch(console.error);
 }
-async function build({ 'user-data-folder': persistedFolder, 'docker-path': dockerPath, 'docker-compose-path': dockerComposePath, 'workspace-folder': workspaceFolderArg, 'log-level': logLevel, 'log-format': logFormat, 'no-cache': buildNoCache, 'image-name': argImageName, }) {
+async function build(args) {
+    const result = await doBuild(args);
+    const exitCode = result.outcome === 'error' ? 1 : 0;
+    console.log(JSON.stringify(result));
+    await result.dispose();
+    process.exit(exitCode);
+}
+async function doBuild({ 'user-data-folder': persistedFolder, 'docker-path': dockerPath, 'docker-compose-path': dockerComposePath, 'workspace-folder': workspaceFolderArg, 'log-level': logLevel, 'log-format': logFormat, 'no-cache': buildNoCache, 'image-name': argImageName, }) {
     const disposables = [];
     const dispose = async () => {
         await Promise.all(disposables.map(d => d()));
@@ -302,9 +309,26 @@ async function build({ 'user-data-folder': persistedFolder, 'docker-path': docke
                 await (0, dockerUtils_1.dockerPtyCLI)(params, 'tag', updatedImageName, argImageName);
             }
         }
+        return {
+            outcome: 'success',
+            dispose,
+        };
     }
-    finally {
-        await dispose();
+    catch (originalError) {
+        const originalStack = originalError === null || originalError === void 0 ? void 0 : originalError.stack;
+        const err = originalError instanceof errors_1.ContainerError ? originalError : new errors_1.ContainerError({
+            description: 'An error occurred building the container.',
+            originalError
+        });
+        if (originalStack) {
+            console.error(originalStack);
+        }
+        return {
+            outcome: 'error',
+            message: err.message,
+            description: err.description,
+            dispose,
+        };
     }
 }
 function runUserCommandsOptions(y) {
@@ -345,7 +369,14 @@ function runUserCommandsOptions(y) {
 function runUserCommandsHandler(args) {
     (async () => runUserCommands(args))().catch(console.error);
 }
-async function runUserCommands({ 'user-data-folder': persistedFolder, 'docker-path': dockerPath, 'docker-compose-path': dockerComposePath, 'container-data-folder': containerDataFolder, 'container-system-data-folder': containerSystemDataFolder, 'workspace-folder': workspaceFolderArg, 'mount-workspace-git-root': mountWorkspaceGitRoot, 'container-id': containerId, 'id-label': idLabel, config: configParam, 'override-config': overrideConfig, 'log-level': logLevel, 'log-format': logFormat, 'terminal-rows': terminalRows, 'terminal-columns': terminalColumns, 'default-user-env-probe': defaultUserEnvProbe, 'skip-non-blocking-commands': skipNonBlocking, prebuild, 'stop-for-personalization': stopForPersonalization, 'remote-env': addRemoteEnv, }) {
+async function runUserCommands(args) {
+    const result = await doRunUserCommands(args);
+    const exitCode = result.outcome === 'error' ? 1 : 0;
+    console.log(JSON.stringify(result));
+    await result.dispose();
+    process.exit(exitCode);
+}
+async function doRunUserCommands({ 'user-data-folder': persistedFolder, 'docker-path': dockerPath, 'docker-compose-path': dockerComposePath, 'container-data-folder': containerDataFolder, 'container-system-data-folder': containerSystemDataFolder, 'workspace-folder': workspaceFolderArg, 'mount-workspace-git-root': mountWorkspaceGitRoot, 'container-id': containerId, 'id-label': idLabel, config: configParam, 'override-config': overrideConfig, 'log-level': logLevel, 'log-format': logFormat, 'terminal-rows': terminalRows, 'terminal-columns': terminalColumns, 'default-user-env-probe': defaultUserEnvProbe, 'skip-non-blocking-commands': skipNonBlocking, prebuild, 'stop-for-personalization': stopForPersonalization, 'remote-env': addRemoteEnv, }) {
     const disposables = [];
     const dispose = async () => {
         await Promise.all(disposables.map(d => d()));
@@ -401,18 +432,28 @@ async function runUserCommands({ 'user-data-folder': persistedFolder, 'docker-pa
         const containerProperties = await (0, utils_1.createContainerProperties)(params, container.Id, workspaceConfig.workspaceFolder, config.remoteUser);
         const remoteEnv = (0, injectHeadless_1.probeRemoteEnv)(common, containerProperties, config);
         const result = await (0, injectHeadless_1.runPostCreateCommands)(common, containerProperties, config, remoteEnv, stopForPersonalization);
-        console.log(JSON.stringify({
+        return {
             outcome: 'success',
             result,
-        }));
+            dispose,
+        };
     }
-    catch (err) {
-        console.error(err);
-        await dispose();
-        process.exit(1);
+    catch (originalError) {
+        const originalStack = originalError === null || originalError === void 0 ? void 0 : originalError.stack;
+        const err = originalError instanceof errors_1.ContainerError ? originalError : new errors_1.ContainerError({
+            description: 'An error occurred running user commands in the container.',
+            originalError
+        });
+        if (originalStack) {
+            console.error(originalStack);
+        }
+        return {
+            outcome: 'error',
+            message: err.message,
+            description: err.description,
+            dispose,
+        };
     }
-    await dispose();
-    process.exit(0);
 }
 function readConfigurationOptions(y) {
     return y.options({
@@ -530,7 +571,14 @@ function execOptions(y) {
 function execHandler(args) {
     (async () => exec(args))().catch(console.error);
 }
-async function exec({ 'user-data-folder': persistedFolder, 'docker-path': dockerPath, 'docker-compose-path': dockerComposePath, 'container-data-folder': containerDataFolder, 'container-system-data-folder': containerSystemDataFolder, 'workspace-folder': workspaceFolderArg, 'mount-workspace-git-root': mountWorkspaceGitRoot, 'container-id': containerId, 'id-label': idLabel, config: configParam, 'override-config': overrideConfig, 'log-level': logLevel, 'log-format': logFormat, 'terminal-rows': terminalRows, 'terminal-columns': terminalColumns, 'default-user-env-probe': defaultUserEnvProbe, 'remote-env': addRemoteEnv, _: restArgs, }) {
+async function exec(args) {
+    const result = await doExec(args);
+    const exitCode = result.outcome === 'error' ? 1 : 0;
+    console.log(JSON.stringify(result));
+    await result.dispose();
+    process.exit(exitCode);
+}
+async function doExec({ 'user-data-folder': persistedFolder, 'docker-path': dockerPath, 'docker-compose-path': dockerComposePath, 'container-data-folder': containerDataFolder, 'container-system-data-folder': containerSystemDataFolder, 'workspace-folder': workspaceFolderArg, 'mount-workspace-git-root': mountWorkspaceGitRoot, 'container-id': containerId, 'id-label': idLabel, config: configParam, 'override-config': overrideConfig, 'log-level': logLevel, 'log-format': logFormat, 'terminal-rows': terminalRows, 'terminal-columns': terminalColumns, 'default-user-env-probe': defaultUserEnvProbe, 'remote-env': addRemoteEnv, _: restArgs, }) {
     const disposables = [];
     const dispose = async () => {
         await Promise.all(disposables.map(d => d()));
@@ -588,16 +636,28 @@ async function exec({ 'user-data-folder': persistedFolder, 'docker-path': docker
         const remoteCwd = containerProperties.remoteWorkspaceFolder || containerProperties.homeFolder;
         const infoOutput = (0, log_1.makeLog)(output, log_1.LogLevel.Info);
         await (0, injectHeadless_1.runRemoteCommand)({ ...common, output: infoOutput }, containerProperties, restArgs || [], remoteCwd, { remoteEnv: await remoteEnv, print: 'continuous' });
+        return {
+            outcome: 'success',
+            dispose,
+        };
     }
-    catch (err) {
-        if (!(err === null || err === void 0 ? void 0 : err.code)) {
-            console.error(err);
+    catch (originalError) {
+        const originalStack = originalError === null || originalError === void 0 ? void 0 : originalError.stack;
+        const err = originalError instanceof errors_1.ContainerError ? originalError : new errors_1.ContainerError({
+            description: 'An error occurred running a command in the container.',
+            originalError
+        });
+        if (originalStack) {
+            console.error(originalStack);
         }
-        await dispose();
-        process.exit((err === null || err === void 0 ? void 0 : err.code) || 1);
+        return {
+            outcome: 'error',
+            message: err.message,
+            description: err.description,
+            containerId: err.containerId,
+            dispose,
+        };
     }
-    await dispose();
-    process.exit(0);
 }
 function keyValuesToRecord(keyValues) {
     return keyValues.reduce((envs, env) => {
