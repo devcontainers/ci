@@ -64,8 +64,12 @@ jobs:
         uses: ./
         with:
           subFolder: github-tests/run-args
-          imageName: ghcr.io/stuartleeks/devcontainer-build-run/tests/run-args
+          imageName: ghcr.io/stuartleeks/devcontainer-build-run/temp-test
           runCmd: echo "Hello from the dev container!"
+
+      - name: temp post-execution debug  - TODO REMOVE THIS!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        run: |
+          docker images
 
 # TODO - reinstate tests!
 

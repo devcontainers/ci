@@ -1,4 +1,6 @@
 import * as core from '@actions/core'
+import path from 'path';
+import {check} from 'prettier';
 import {
 	devcontainer,
 	DevContainerCliBuildArgs,
@@ -30,7 +32,7 @@ async function runMain(): Promise<void> {
 		const checkoutPath: string = core.getInput('checkoutPath')
 		const imageName: string = core.getInput('imageName', {required: true})
 		const imageTag = emptyStringAsUndefined(core.getInput('imageTag'))
-		// const subFolder: string = core.getInput('subFolder') // TODO - handle this
+		const subFolder: string = core.getInput('subFolder') // TODO - handle this
 		const runCommand: string = core.getInput('runCmd', {required: true})
 		// const envs: string[] = core.getMultilineInput('env') // TODO - handle this
 		// const cacheFrom: string[] = core.getMultilineInput('cacheFrom') // TODO - handle this
@@ -42,10 +44,11 @@ async function runMain(): Promise<void> {
 		// TODO - support additional cacheFrom
 
 		const log = (message: string): void => core.info(message)
+		const workspaceFolder = path.resolve(checkoutPath, subFolder)
 		const fullImageName = `${imageName}:${imageTag ?? 'latest'}`
 		const buildResult = await core.group('build container', async () => {
 			const args: DevContainerCliBuildArgs = {
-				workspaceFolder: checkoutPath,
+				workspaceFolder: workspaceFolder,
 				imageName: fullImageName
 			}
 			const result = await devcontainer.build(args, log)
@@ -64,7 +67,7 @@ async function runMain(): Promise<void> {
 
 		const upResult = await core.group('start container', async () => {
 			const args: DevContainerCliUpArgs = {
-				workspaceFolder: checkoutPath
+				workspaceFolder: workspaceFolder
 			}
 			const result = await devcontainer.up(args, log)
 			if (result.outcome !== 'success') {
@@ -83,7 +86,7 @@ async function runMain(): Promise<void> {
 			'Run command in container',
 			async () => {
 				const args: DevContainerCliExecArgs = {
-					workspaceFolder: checkoutPath,
+					workspaceFolder: workspaceFolder,
 					command: ['bash', '-c', runCommand]
 				}
 				const result = await devcontainer.exec(args, log)
