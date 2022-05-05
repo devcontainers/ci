@@ -1834,33 +1834,48 @@ function runMain() {
             // TODO - support additional cacheFrom
             const log = (message) => core.info(message);
             const fullImageName = `${imageName}:${imageTag !== null && imageTag !== void 0 ? imageTag : 'latest'}`;
-            const buildArgs = {
-                workspaceFolder: checkoutPath,
-                imageName: fullImageName
-            };
-            const buildResult = yield dev_container_cli_1.devcontainer.build(buildArgs, log);
-            if (buildResult.outcome !== 'success') {
-                core.error(`Dev container build failed: ${buildResult.message} (exit code: ${buildResult.code})\n${buildResult.description}`);
-                core.setFailed(buildResult.message);
+            const buildResult = yield core.group("build container", () => __awaiter(this, void 0, void 0, function* () {
+                const args = {
+                    workspaceFolder: checkoutPath,
+                    imageName: fullImageName
+                };
+                const result = yield dev_container_cli_1.devcontainer.build(args, log);
+                if (result.outcome !== 'success') {
+                    core.error(`Dev container build failed: ${result.message} (exit code: ${result.code})\n${result.description}`);
+                    core.setFailed(result.message);
+                }
+                return result;
+            }));
+            if (buildResult.outcome !== "success") {
                 return;
             }
-            const upArgs = {
-                workspaceFolder: checkoutPath
-            };
-            const upResult = yield dev_container_cli_1.devcontainer.up(upArgs, log);
-            if (upResult.outcome !== 'success') {
-                core.error(`Dev container up failed: ${upResult.message} (exit code: ${upResult.code})\n${upResult.description}`);
-                core.setFailed(upResult.message);
+            const upResult = yield core.group("start container", () => __awaiter(this, void 0, void 0, function* () {
+                const args = {
+                    workspaceFolder: checkoutPath
+                };
+                const result = yield dev_container_cli_1.devcontainer.up(args, log);
+                if (result.outcome !== 'success') {
+                    core.error(`Dev container up failed: ${result.message} (exit code: ${result.code})\n${result.description}`);
+                    core.setFailed(result.message);
+                }
+                return result;
+            }));
+            if (upResult.outcome !== "success") {
                 return;
             }
-            const execArgs = {
-                workspaceFolder: checkoutPath,
-                command: ['bash', '-c', runCommand]
-            };
-            const execResult = yield dev_container_cli_1.devcontainer.exec(execArgs, log);
-            if (execResult.outcome !== 'success') {
-                core.error(`Dev container exec: ${execResult.message} (exit code: ${execResult.code})\n${execResult.description}`);
-                core.setFailed(execResult.message);
+            const execResult = yield core.group("Run command in container", () => __awaiter(this, void 0, void 0, function* () {
+                const args = {
+                    workspaceFolder: checkoutPath,
+                    command: ['bash', '-c', runCommand]
+                };
+                const result = yield dev_container_cli_1.devcontainer.exec(args, log);
+                if (result.outcome !== 'success') {
+                    core.error(`Dev container exec: ${result.message} (exit code: ${result.code})\n${result.description}`);
+                    core.setFailed(result.message);
+                }
+                return result;
+            }));
+            if (execResult.outcome !== "success") {
                 return;
             }
             // TODO - should we stop the container?

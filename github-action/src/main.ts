@@ -40,44 +40,63 @@ async function runMain(): Promise<void> {
 
 		// TODO - nocache
 		// TODO - support additional cacheFrom
+
 		const log = (message: string): void => core.info(message)
 		const fullImageName = `${imageName}:${imageTag ?? 'latest'}`
-		const buildArgs: DevContainerCliBuildArgs = {
-			workspaceFolder: checkoutPath,
-			imageName: fullImageName
-		}
-		const buildResult = await devcontainer.build(buildArgs, log)
+		const buildResult = await core.group('build container', async () => {
+			const args: DevContainerCliBuildArgs = {
+				workspaceFolder: checkoutPath,
+				imageName: fullImageName
+			}
+			const result = await devcontainer.build(args, log)
 
+			if (result.outcome !== 'success') {
+				core.error(
+					`Dev container build failed: ${result.message} (exit code: ${result.code})\n${result.description}`
+				)
+				core.setFailed(result.message)
+			}
+			return result
+		})
 		if (buildResult.outcome !== 'success') {
-			core.error(
-				`Dev container build failed: ${buildResult.message} (exit code: ${buildResult.code})\n${buildResult.description}`
-			)
-			core.setFailed(buildResult.message)
 			return
 		}
 
-		const upArgs: DevContainerCliUpArgs = {
-			workspaceFolder: checkoutPath
-		}
-		const upResult = await devcontainer.up(upArgs, log)
+		const upResult = await core.group('start container', async () => {
+			const args: DevContainerCliUpArgs = {
+				workspaceFolder: checkoutPath
+			}
+			const result = await devcontainer.up(args, log)
+			if (result.outcome !== 'success') {
+				core.error(
+					`Dev container up failed: ${result.message} (exit code: ${result.code})\n${result.description}`
+				)
+				core.setFailed(result.message)
+			}
+			return result
+		})
 		if (upResult.outcome !== 'success') {
-			core.error(
-				`Dev container up failed: ${upResult.message} (exit code: ${upResult.code})\n${upResult.description}`
-			)
-			core.setFailed(upResult.message)
 			return
 		}
 
-		const execArgs: DevContainerCliExecArgs = {
-			workspaceFolder: checkoutPath,
-			command: ['bash', '-c', runCommand]
-		}
-		const execResult = await devcontainer.exec(execArgs, log)
+		const execResult = await core.group(
+			'Run command in container',
+			async () => {
+				const args: DevContainerCliExecArgs = {
+					workspaceFolder: checkoutPath,
+					command: ['bash', '-c', runCommand]
+				}
+				const result = await devcontainer.exec(args, log)
+				if (result.outcome !== 'success') {
+					core.error(
+						`Dev container exec: ${result.message} (exit code: ${result.code})\n${result.description}`
+					)
+					core.setFailed(result.message)
+				}
+				return result
+			}
+		)
 		if (execResult.outcome !== 'success') {
-			core.error(
-				`Dev container exec: ${execResult.message} (exit code: ${execResult.code})\n${execResult.description}`
-			)
-			core.setFailed(execResult.message)
 			return
 		}
 
