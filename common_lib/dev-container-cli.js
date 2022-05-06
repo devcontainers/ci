@@ -55,15 +55,15 @@ function parseCliOutput(value) {
         };
     }
 }
-function runSpecCli(args, log) {
+function runSpecCli(options) {
     return __awaiter(this, void 0, void 0, function* () {
         let stdout = "";
-        const options = {
+        const spawnOptions = {
             log: data => stdout += data,
-            err: data => log(data),
-            env: process.env,
+            err: data => options.log(data),
+            env: options.env ? Object.assign(Object.assign({}, process.env), options.env) : process.env,
         };
-        const result = yield spawn(getSpecCliInfo().command, args, options);
+        yield spawn(getSpecCliInfo().command, options.args, spawnOptions);
         return parseCliOutput(stdout);
     });
 }
@@ -73,17 +73,29 @@ function devContainerBuild(args, log) {
         if (args.imageName) {
             commandArgs.push("--image-name", args.imageName);
         }
-        return yield runSpecCli(commandArgs, log);
+        return yield runSpecCli({
+            args: commandArgs,
+            log,
+            env: { DOCKER_BUILDKIT: "1" },
+        });
     });
 }
 function devContainerUp(args, log) {
     return __awaiter(this, void 0, void 0, function* () {
-        return yield runSpecCli(["up", "--workspace-folder", args.workspaceFolder], log);
+        return yield runSpecCli({
+            args: ["up", "--workspace-folder", args.workspaceFolder],
+            log,
+            env: { DOCKER_BUILDKIT: "1" },
+        });
     });
 }
 function devContainerExec(args, log) {
     return __awaiter(this, void 0, void 0, function* () {
-        return yield runSpecCli(["exec", "--workspace-folder", args.workspaceFolder, ...args.command], log);
+        return yield runSpecCli({
+            args: ["exec", "--workspace-folder", args.workspaceFolder, ...args.command],
+            log,
+            env: { DOCKER_BUILDKIT: "1" },
+        });
     });
 }
 exports.devcontainer = {

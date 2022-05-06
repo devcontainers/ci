@@ -87,7 +87,7 @@ function runMain() {
             }
             const upResult = yield core.group('start container', () => __awaiter(this, void 0, void 0, function* () {
                 const args = {
-                    workspaceFolder,
+                    workspaceFolder
                 };
                 const result = yield dev_container_cli_1.devcontainer.up(args, log);
                 if (result.outcome !== 'success') {
