@@ -14,41 +14,41 @@ on: # rebuild any PRs and main branch changes
   workflow_dispatch:
   
 jobs:
-  test-gh-temp:
-    name: Run GitHub temp test (spec-cli)
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v2
+  # test-gh-temp:
+  #   name: Run GitHub temp test (spec-cli)
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Checkout
+  #       uses: actions/checkout@v2
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v1
+  #     - name: Set up Docker Buildx
+  #       uses: docker/setup-buildx-action@v1
 
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@v1 
-        if: github.ref == 'refs/heads/main' # only need this for push (on `main`)
-        with:
-          registry: ghcr.io
-          username: ${{ github.repository_owner }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+  #     - name: Login to GitHub Container Registry
+  #       uses: docker/login-action@v1 
+  #       if: github.ref == 'refs/heads/main' # only need this for push (on `main`)
+  #       with:
+  #         registry: ghcr.io
+  #         username: ${{ github.repository_owner }}
+  #         password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: temp npm install (speccli) - TODO REMOVE THIS!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        run: |
-          cd cli
-          npm install
-          npm install -g
-          dev-containers-cli --version
+  #     - name: temp npm install (speccli) - TODO REMOVE THIS!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  #       run: |
+  #         cd cli
+  #         npm install
+  #         npm install -g
+  #         dev-containers-cli --version
 
-      - name: Run test
-        uses: ./
-        with:
-          subFolder: github-tests/run-args
-          imageName: ghcr.io/stuartleeks/devcontainer-build-run/temp-test
-          runCmd: echo "Hello from the dev container!"
+  #     - name: Run test
+  #       uses: ./
+  #       with:
+  #         subFolder: github-tests/run-args
+  #         imageName: ghcr.io/stuartleeks/devcontainer-build-run/temp-test
+  #         runCmd: echo "Hello from the dev container!"
 
-      - name: temp post-execution debug  - TODO REMOVE THIS!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        run: |
-          docker images
+  #     - name: temp post-execution debug  - TODO REMOVE THIS!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  #       run: |
+  #         docker images
 
 # TODO - reinstate tests!
 
@@ -283,7 +283,7 @@ jobs:
   test-gh-run-args:
     name: Run GitHub run-args test
     runs-on: ubuntu-latest
-    # needs: build TODO - reinstate dependency
+    needs: build
     steps:
       - name: Checkout
         uses: actions/checkout@v2
