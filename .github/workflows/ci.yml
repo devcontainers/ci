@@ -99,19 +99,20 @@ jobs:
             IS_PR
             BRANCH
 
-      - uses: actions/upload-artifact@v2
-        name: Create dev AzDO VSIX artifact
-        with:
-          name: azdo-task-dev
-          path: ./output/stuartleeks-dev.devcontainer-build-run-${{ steps.build.outputs.version }}.vsix
-          if-no-files-found: error 
+      # TODO - reinstate VSIX artifacts once env vars are being handled (BUILD_NUMBER in build step)
+      # - uses: actions/upload-artifact@v2
+      #   name: Create dev AzDO VSIX artifact
+      #   with:
+      #     name: azdo-task-dev
+      #     path: ./output/stuartleeks-dev.devcontainer-build-run-${{ steps.build.outputs.version }}.vsix
+      #     if-no-files-found: error 
 
-      - uses: actions/upload-artifact@v2
-        name: Create release AzDO VSIX artifact
-        with:
-          name: azdo-task
-          path: ./output/stuartleeks.devcontainer-build-run-${{ steps.build.outputs.version }}.vsix
-          if-no-files-found: error 
+      # - uses: actions/upload-artifact@v2
+      #   name: Create release AzDO VSIX artifact
+      #   with:
+      #     name: azdo-task
+      #     path: ./output/stuartleeks.devcontainer-build-run-${{ steps.build.outputs.version }}.vsix
+      #     if-no-files-found: error 
 
   # release:
   #   name: Create release
