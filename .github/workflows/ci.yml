@@ -32,7 +32,6 @@ jobs:
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-
       - name: temp npm install (speccli) - TODO REMOVE THIS!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         run: |
           cd cli
@@ -53,59 +52,66 @@ jobs:
 
 # TODO - reinstate tests!
 
-  # build: # run build using the github action!
-  #   runs-on: ubuntu-latest
-  #   name: build, test, package
-  #   outputs:
-  #     version_short: ${{ steps.build.outputs.version_short }}
-  #     version: ${{ steps.build.outputs.version }}
-  #   steps:
-  #     - name: Checkout
-  #       uses: actions/checkout@v2
+  build: # run build using the github action!
+    runs-on: ubuntu-latest
+    name: build, test, package
+    outputs:
+      version_short: ${{ steps.build.outputs.version_short }}
+      version: ${{ steps.build.outputs.version }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
 
-  #     - name: Set up Docker Buildx
-  #       uses: docker/setup-buildx-action@v1
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
 
-  #     - name: Login to GitHub Container Registry
-  #       uses: docker/login-action@v1 
-  #       if: github.ref == 'refs/heads/main' # only need this for push (on `main`)
-  #       with:
-  #         registry: ghcr.io
-  #         username: ${{ github.repository_owner }}
-  #         password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v1 
+        if: github.ref == 'refs/heads/main' # only need this for push (on `main`)
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-  #     - name: Build in dev container
-  #       uses: ./
-  #       id: build
-  #       env:
-  #         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-  #         BUILD_NUMBER: ${{ github.run_id }}
-  #         IS_PR: ${{ github.head_ref }}
-  #         BRANCH: ${{ github.ref }}
-  #       with:
-  #         imageName: ghcr.io/stuartleeks/devcontainer-build-run-devcontainer
-  #         runCmd: |
-  #           echo "Starting"
-  #           ./scripts/build-test-package.sh
-  #         env: |
-  #           BUILD_NUMBER
-  #           IS_CI=1
-  #           IS_PR
-  #           BRANCH
+      - name: temp npm install (speccli) - TODO REMOVE THIS!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        run: |
+          cd cli
+          npm install
+          npm install -g
+          dev-containers-cli --version
+      
+      - name: Build in dev container
+        uses: ./
+        id: build
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BUILD_NUMBER: ${{ github.run_id }}
+          IS_PR: ${{ github.head_ref }}
+          BRANCH: ${{ github.ref }}
+        with:
+          imageName: ghcr.io/stuartleeks/devcontainer-build-run-devcontainer
+          runCmd: |
+            echo "Starting"
+            ./scripts/build-test-package.sh
+          env: |
+            BUILD_NUMBER
+            IS_CI=1
+            IS_PR
+            BRANCH
 
-  #     - uses: actions/upload-artifact@v2
-  #       name: Create dev AzDO VSIX artifact
-  #       with:
-  #         name: azdo-task-dev
-  #         path: ./output/stuartleeks-dev.devcontainer-build-run-${{ steps.build.outputs.version }}.vsix
-  #         if-no-files-found: error 
+      - uses: actions/upload-artifact@v2
+        name: Create dev AzDO VSIX artifact
+        with:
+          name: azdo-task-dev
+          path: ./output/stuartleeks-dev.devcontainer-build-run-${{ steps.build.outputs.version }}.vsix
+          if-no-files-found: error 
 
-  #     - uses: actions/upload-artifact@v2
-  #       name: Create release AzDO VSIX artifact
-  #       with:
-  #         name: azdo-task
-  #         path: ./output/stuartleeks.devcontainer-build-run-${{ steps.build.outputs.version }}.vsix
-  #         if-no-files-found: error 
+      - uses: actions/upload-artifact@v2
+        name: Create release AzDO VSIX artifact
+        with:
+          name: azdo-task
+          path: ./output/stuartleeks.devcontainer-build-run-${{ steps.build.outputs.version }}.vsix
+          if-no-files-found: error 
 
   # release:
   #   name: Create release
