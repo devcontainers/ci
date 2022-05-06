@@ -16896,6 +16896,28 @@ function getSubstitutionValue(regexMatch, placeholder) {
     // as having it present in any output will likely make issues more obvious
     return regexMatch;
 }
+// populateDefaults expects strings either "FOO=hello" or "BAR".
+// In the latter case, the corresponding returned item would be "BAR=hi"
+// where the value is taken from the matching process env var.
+// In the case of values not set in the process, they are omitted
+function populateDefaults(envs) {
+    const result = [];
+    for (let i = 0; i < envs.length; i++) {
+        const inputEnv = envs[i];
+        if (inputEnv.indexOf('=') >= 0) {
+            // pass straight through to result
+            result.push(inputEnv);
+        }
+        else {
+            // inputEnv is just the env var name
+            const processEnvValue = process.env[inputEnv];
+            if (processEnvValue) {
+                result.push(`${inputEnv}=${processEnvValue}`);
+            }
+        }
+    }
+    return result;
+}
 
 ;// CONCATENATED MODULE: ../../common/src/users.ts
 function parsePasswd(input) {

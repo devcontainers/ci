@@ -1645,7 +1645,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.pushImage = exports.runContainer = exports.buildImage = exports.isDockerBuildXInstalled = void 0;
 const core = __importStar(__nccwpck_require__(186));
-const docker = __importStar(__nccwpck_require__(726));
+const docker = __importStar(__nccwpck_require__(365));
 const exec_1 = __nccwpck_require__(757);
 function isDockerBuildXInstalled() {
     return __awaiter(this, void 0, void 0, function* () {
@@ -1805,6 +1805,7 @@ const path_1 = __importDefault(__nccwpck_require__(622));
 const exec_1 = __nccwpck_require__(757);
 const dev_container_cli_1 = __nccwpck_require__(331);
 const docker_1 = __nccwpck_require__(758);
+const envvars_1 = __nccwpck_require__(228);
 function run() {
     return __awaiter(this, void 0, void 0, function* () {
         const hasRunMain = core.getState('hasRunMain');
@@ -1820,6 +1821,7 @@ function run() {
 function runMain() {
     return __awaiter(this, void 0, void 0, function* () {
         try {
+            core.info('Starting...');
             const buildXInstalled = yield docker_1.isDockerBuildXInstalled();
             if (!buildXInstalled) {
                 core.setFailed('docker buildx not available: add a step to set up with docker/setup-buildx-action');
@@ -1837,9 +1839,10 @@ function runMain() {
             const checkoutPath = core.getInput('checkoutPath');
             const imageName = core.getInput('imageName', { required: true });
             const imageTag = emptyStringAsUndefined(core.getInput('imageTag'));
-            const subFolder = core.getInput('subFolder'); // TODO - handle this
+            const subFolder = core.getInput('subFolder');
             const runCommand = core.getInput('runCmd', { required: true });
-            // const envs: string[] = core.getMultilineInput('env') // TODO - handle this
+            const inputEnvs = core.getMultilineInput('env');
+            const inputEnvsWithDefaults = envvars_1.populateDefaults(inputEnvs);
             // const cacheFrom: string[] = core.getMultilineInput('cacheFrom') // TODO - handle this
             // const skipContainerUserIdUpdate = core.getBooleanInput(
             // 	'skipContainerUserIdUpdate'
@@ -1881,8 +1884,10 @@ function runMain() {
             const execResult = yield core.group('Run command in container', () => __awaiter(this, void 0, void 0, function* () {
                 const args = {
                     workspaceFolder,
-                    command: ['bash', '-c', runCommand]
+                    command: ['bash', '-c', runCommand],
+                    env: inputEnvsWithDefaults
                 };
+                core.info(`***env vars: ${JSON.stringify(inputEnvsWithDefaults)}}`);
                 const result = yield dev_container_cli_1.devcontainer.exec(args, log);
                 if (result.outcome !== 'success') {
                     core.error(`Dev container exec: ${result.message} (exit code: ${result.code})\n${result.description}`);
@@ -3723,14 +3728,19 @@ function getSpecCliInfo() {
 }
 function isCliInstalled(exec) {
     return __awaiter(this, void 0, void 0, function* () {
-        const { exitCode } = yield exec(getSpecCliInfo().command, ['--help'], { silent: true });
-        return exitCode === 0;
+        try {
+            const { exitCode } = yield exec(getSpecCliInfo().command, ['--help'], { silent: true });
+            return exitCode === 0;
+        }
+        catch (error) {
+            return false;
+        }
     });
 }
 function installCli(exec) {
     return __awaiter(this, void 0, void 0, function* () {
         // future, npm install from npmjs
-        const { exitCode } = yield exec('npm', ['install', '-g', './cli'], {});
+        const { exitCode } = yield exec('bash', ['-c', 'cd cli && npm install && npm install -g'], {});
         return exitCode === 0;
     });
 }
@@ -3803,12 +3813,25 @@ function devContainerUp(args, log) {
 }
 function devContainerExec(args, log) {
     return __awaiter(this, void 0, void 0, function* () {
+        // const remoteEnvArgs = args.env ? args.env.flatMap(e=> ["--remote-env", e]): [];
+        const remoteEnvArgs = getRemoteEnvArray(args.env);
         return yield runSpecCli({
-            args: ["exec", "--workspace-folder", args.workspaceFolder, ...args.command],
+            args: ["exec", "--workspace-folder", args.workspaceFolder, ...remoteEnvArgs, ...args.command],
             log,
-            env: { DOCKER_BUILDKIT: "1" },
+            env: { DOCKER_BUILDKIT: "1", },
         });
     });
+}
+function getRemoteEnvArray(env) {
+    if (!env) {
+        return [];
+    }
+    let result = [];
+    for (let i = 0; i < env.length; i++) {
+        const envItem = env[i];
+        result.push("--remote-env", envItem);
+    }
+    return result;
 }
 const devcontainer = {
     build: devContainerBuild,
@@ -3821,7 +3844,7 @@ const devcontainer = {
 
 /***/ }),
 
-/***/ 726:
+/***/ 365:
 /***/ ((__unused_webpack_module, __webpack_exports__, __nccwpck_require__) => {
 
 "use strict";
@@ -3901,32 +3924,8 @@ function getAbsolutePath(inputPath, referencePath) {
     return external_path_default().join(referencePath, inputPath);
 }
 
-;// CONCATENATED MODULE: ../common/src/envvars.ts
-function substituteValues(input) {
-    // Find all `${...}` entries and substitute
-    // Note the non-greedy `.+?` match to avoid matching the start of
-    // one placeholder up to the end of another when multiple placeholders are present
-    return input.replace(/\$\{(.+?)\}/g, getSubstitutionValue);
-}
-function getSubstitutionValue(regexMatch, placeholder) {
-    // Substitution values are in TYPE:KEY form
-    // e.g. env:MY_ENV
-    var _a;
-    const parts = placeholder.split(':');
-    if (parts.length === 2) {
-        const type = parts[0];
-        const key = parts[1];
-        switch (type.toLowerCase()) {
-            case 'env':
-            case 'localenv':
-                return (_a = process.env[key]) !== null && _a !== void 0 ? _a : '';
-        }
-    }
-    // if we can't process the format then return the original string
-    // as having it present in any output will likely make issues more obvious
-    return regexMatch;
-}
-
+// EXTERNAL MODULE: ../common/src/envvars.ts
+var envvars = __nccwpck_require__(228);
 ;// CONCATENATED MODULE: ../common/src/users.ts
 function parsePasswd(input) {
     const result = [];
@@ -4021,7 +4020,7 @@ function buildImageBase(exec, imageName, imageTag, folder, devcontainerConfig, c
         args.push('--output=type=docker');
         const buildArgs = (_c = devcontainerConfig.build) === null || _c === void 0 ? void 0 : _c.args;
         for (const argName in buildArgs) {
-            const argValue = substituteValues(buildArgs[argName]);
+            const argValue = (0,envvars.substituteValues)(buildArgs[argName]);
             args.push('--build-arg', `${argName}=${argValue}`);
         }
         args.push('-f', dockerfilePath);
@@ -4110,7 +4109,7 @@ function runContainer(exec, imageName, imageTag, checkoutPath, subFolder, comman
         args.push('--mount', `type=bind,src=${checkoutPathAbsolute},dst=${workspaceFolder}`);
         if (devcontainerConfig.mounts) {
             devcontainerConfig.mounts
-                .map(m => substituteValues(m))
+                .map(m => (0,envvars.substituteValues)(m))
                 .forEach(m => {
                 const mount = parseMount(m);
                 if (mount.type === "bind") {
@@ -4126,7 +4125,7 @@ function runContainer(exec, imageName, imageTag, checkoutPath, subFolder, comman
         args.push('--workdir', workdir);
         args.push('--user', remoteUser);
         if (devcontainerConfig.runArgs) {
-            const substitutedRunArgs = devcontainerConfig.runArgs.map(a => substituteValues(a));
+            const substitutedRunArgs = devcontainerConfig.runArgs.map(a => (0,envvars.substituteValues)(a));
             args.push(...substitutedRunArgs);
         }
         if (envs) {
@@ -4185,6 +4184,65 @@ function parseMount(mountString) {
         }
     }
     return { type, source, target };
+}
+
+
+/***/ }),
+
+/***/ 228:
+/***/ ((__unused_webpack_module, __webpack_exports__, __nccwpck_require__) => {
+
+"use strict";
+__nccwpck_require__.r(__webpack_exports__);
+/* harmony export */ __nccwpck_require__.d(__webpack_exports__, {
+/* harmony export */   "substituteValues": () => (/* binding */ substituteValues),
+/* harmony export */   "populateDefaults": () => (/* binding */ populateDefaults)
+/* harmony export */ });
+function substituteValues(input) {
+    // Find all `${...}` entries and substitute
+    // Note the non-greedy `.+?` match to avoid matching the start of
+    // one placeholder up to the end of another when multiple placeholders are present
+    return input.replace(/\$\{(.+?)\}/g, getSubstitutionValue);
+}
+function getSubstitutionValue(regexMatch, placeholder) {
+    // Substitution values are in TYPE:KEY form
+    // e.g. env:MY_ENV
+    var _a;
+    const parts = placeholder.split(':');
+    if (parts.length === 2) {
+        const type = parts[0];
+        const key = parts[1];
+        switch (type.toLowerCase()) {
+            case 'env':
+            case 'localenv':
+                return (_a = process.env[key]) !== null && _a !== void 0 ? _a : '';
+        }
+    }
+    // if we can't process the format then return the original string
+    // as having it present in any output will likely make issues more obvious
+    return regexMatch;
+}
+// populateDefaults expects strings either "FOO=hello" or "BAR".
+// In the latter case, the corresponding returned item would be "BAR=hi"
+// where the value is taken from the matching process env var.
+// In the case of values not set in the process, they are omitted
+function populateDefaults(envs) {
+    const result = [];
+    for (let i = 0; i < envs.length; i++) {
+        const inputEnv = envs[i];
+        if (inputEnv.indexOf('=') >= 0) {
+            // pass straight through to result
+            result.push(inputEnv);
+        }
+        else {
+            // inputEnv is just the env var name
+            const processEnvValue = process.env[inputEnv];
+            if (processEnvValue) {
+                result.push(`${inputEnv}=${processEnvValue}`);
+            }
+        }
+    }
+    return result;
 }
 
 

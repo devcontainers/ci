@@ -9,6 +9,7 @@ import {
 } from '../../common/src/dev-container-cli'
 
 import {isDockerBuildXInstalled, pushImage} from './docker'
+import {populateDefaults} from '../../common/src/envvars'
 
 async function run(): Promise<void> {
 	const hasRunMain = core.getState('hasRunMain')
@@ -21,6 +22,7 @@ async function run(): Promise<void> {
 }
 async function runMain(): Promise<void> {
 	try {
+		core.info('Starting...')
 		const buildXInstalled = await isDockerBuildXInstalled()
 		if (!buildXInstalled) {
 			core.setFailed(
@@ -41,9 +43,10 @@ async function runMain(): Promise<void> {
 		const checkoutPath: string = core.getInput('checkoutPath')
 		const imageName: string = core.getInput('imageName', {required: true})
 		const imageTag = emptyStringAsUndefined(core.getInput('imageTag'))
-		const subFolder: string = core.getInput('subFolder') // TODO - handle this
+		const subFolder: string = core.getInput('subFolder')
 		const runCommand: string = core.getInput('runCmd', {required: true})
-		// const envs: string[] = core.getMultilineInput('env') // TODO - handle this
+		const inputEnvs: string[] = core.getMultilineInput('env')
+		const inputEnvsWithDefaults = populateDefaults(inputEnvs)
 		// const cacheFrom: string[] = core.getMultilineInput('cacheFrom') // TODO - handle this
 		// const skipContainerUserIdUpdate = core.getBooleanInput(
 		// 	'skipContainerUserIdUpdate'
@@ -96,8 +99,10 @@ async function runMain(): Promise<void> {
 			async () => {
 				const args: DevContainerCliExecArgs = {
 					workspaceFolder,
-					command: ['bash', '-c', runCommand]
+					command: ['bash', '-c', runCommand],
+					env: inputEnvsWithDefaults
 				}
+				core.info(`***env vars: ${JSON.stringify(inputEnvsWithDefaults)}}`)
 				const result = await devcontainer.exec(args, log)
 				if (result.outcome !== 'success') {
 					core.error(

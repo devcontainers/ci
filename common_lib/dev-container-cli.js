@@ -24,14 +24,19 @@ function getSpecCliInfo() {
 }
 function isCliInstalled(exec) {
     return __awaiter(this, void 0, void 0, function* () {
-        const { exitCode } = yield exec(getSpecCliInfo().command, ['--help'], { silent: true });
-        return exitCode === 0;
+        try {
+            const { exitCode } = yield exec(getSpecCliInfo().command, ['--help'], { silent: true });
+            return exitCode === 0;
+        }
+        catch (error) {
+            return false;
+        }
     });
 }
 function installCli(exec) {
     return __awaiter(this, void 0, void 0, function* () {
         // future, npm install from npmjs
-        const { exitCode } = yield exec('npm', ['install', '-g', './cli'], {});
+        const { exitCode } = yield exec('bash', ['-c', 'cd cli && npm install && npm install -g'], {});
         return exitCode === 0;
     });
 }
@@ -104,12 +109,25 @@ function devContainerUp(args, log) {
 }
 function devContainerExec(args, log) {
     return __awaiter(this, void 0, void 0, function* () {
+        // const remoteEnvArgs = args.env ? args.env.flatMap(e=> ["--remote-env", e]): [];
+        const remoteEnvArgs = getRemoteEnvArray(args.env);
         return yield runSpecCli({
-            args: ["exec", "--workspace-folder", args.workspaceFolder, ...args.command],
+            args: ["exec", "--workspace-folder", args.workspaceFolder, ...remoteEnvArgs, ...args.command],
             log,
-            env: { DOCKER_BUILDKIT: "1" },
+            env: { DOCKER_BUILDKIT: "1", },
         });
     });
+}
+function getRemoteEnvArray(env) {
+    if (!env) {
+        return [];
+    }
+    let result = [];
+    for (let i = 0; i < env.length; i++) {
+        const envItem = env[i];
+        result.push("--remote-env", envItem);
+    }
+    return result;
 }
 exports.devcontainer = {
     build: devContainerBuild,

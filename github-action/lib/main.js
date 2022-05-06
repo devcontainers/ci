@@ -36,6 +36,7 @@ const path_1 = __importDefault(require("path"));
 const exec_1 = require("./exec");
 const dev_container_cli_1 = require("../../common/src/dev-container-cli");
 const docker_1 = require("./docker");
+const envvars_1 = require("../../common/src/envvars");
 function run() {
     return __awaiter(this, void 0, void 0, function* () {
         const hasRunMain = core.getState('hasRunMain');
@@ -51,6 +52,7 @@ function run() {
 function runMain() {
     return __awaiter(this, void 0, void 0, function* () {
         try {
+            core.info('Starting...');
             const buildXInstalled = yield docker_1.isDockerBuildXInstalled();
             if (!buildXInstalled) {
                 core.setFailed('docker buildx not available: add a step to set up with docker/setup-buildx-action');
@@ -68,9 +70,10 @@ function runMain() {
             const checkoutPath = core.getInput('checkoutPath');
             const imageName = core.getInput('imageName', { required: true });
             const imageTag = emptyStringAsUndefined(core.getInput('imageTag'));
-            const subFolder = core.getInput('subFolder'); // TODO - handle this
+            const subFolder = core.getInput('subFolder');
             const runCommand = core.getInput('runCmd', { required: true });
-            // const envs: string[] = core.getMultilineInput('env') // TODO - handle this
+            const inputEnvs = core.getMultilineInput('env');
+            const inputEnvsWithDefaults = envvars_1.populateDefaults(inputEnvs);
             // const cacheFrom: string[] = core.getMultilineInput('cacheFrom') // TODO - handle this
             // const skipContainerUserIdUpdate = core.getBooleanInput(
             // 	'skipContainerUserIdUpdate'
@@ -112,8 +115,10 @@ function runMain() {
             const execResult = yield core.group('Run command in container', () => __awaiter(this, void 0, void 0, function* () {
                 const args = {
                     workspaceFolder,
-                    command: ['bash', '-c', runCommand]
+                    command: ['bash', '-c', runCommand],
+                    env: inputEnvsWithDefaults
                 };
+                core.info(`***env vars: ${JSON.stringify(inputEnvsWithDefaults)}}`);
                 const result = yield dev_container_cli_1.devcontainer.exec(args, log);
                 if (result.outcome !== 'success') {
                     core.error(`Dev container exec: ${result.message} (exit code: ${result.code})\n${result.description}`);

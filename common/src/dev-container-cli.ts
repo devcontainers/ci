@@ -1,4 +1,5 @@
 import {spawn as spawnRaw} from "child_process";
+import {env} from "process";
 import {ExecFunction} from "./exec";
 export interface DevContainerCliError {
   outcome: "error",
@@ -19,12 +20,16 @@ function getSpecCliInfo() {
 }
 
 async function isCliInstalled(exec: ExecFunction): Promise<boolean> {
-  const {exitCode} = await exec(getSpecCliInfo().command, ['--help'], {silent: true});
-  return exitCode === 0;
+  try {
+    const {exitCode} = await exec(getSpecCliInfo().command, ['--help'], {silent: true});
+    return exitCode === 0;
+  } catch (error) {
+    return false
+  }
 }
 async function installCli(exec: ExecFunction): Promise<boolean> {
   // future, npm install from npmjs
-  const {exitCode} = await exec('npm', ['install', '-g', './cli'], {});
+  const {exitCode} = await exec('bash', ['-c', 'cd cli && npm install && npm install -g'], {});
   return exitCode === 0;
 }
 
@@ -57,8 +62,6 @@ function spawn(command: string, args: string[], options: SpawnOptions): Promise<
     });
   });
 }
-
-
 
 function parseCliOutput<T>(value: string): T | DevContainerCliError {
   if (value === "") {
@@ -137,13 +140,28 @@ export interface DevContainerCliExecResult extends DevContainerCliSuccessResult 
 export interface DevContainerCliExecArgs {
   workspaceFolder: string;
   command: string[];
+  env?: string[];
 }
 async function devContainerExec(args: DevContainerCliExecArgs, log: (data: string) => void): Promise<DevContainerCliExecResult | DevContainerCliError> {
+  // const remoteEnvArgs = args.env ? args.env.flatMap(e=> ["--remote-env", e]): [];
+  const remoteEnvArgs = getRemoteEnvArray(args.env);
   return await runSpecCli<DevContainerCliExecResult>({
-    args: ["exec", "--workspace-folder", args.workspaceFolder, ...args.command],
+    args: ["exec", "--workspace-folder", args.workspaceFolder, ...remoteEnvArgs, ...args.command],
     log,
-    env: {DOCKER_BUILDKIT: "1"},
+    env: {DOCKER_BUILDKIT: "1",},
   });
+}
+
+function getRemoteEnvArray(env?: string[]) : string[] {
+  if (!env) {
+    return [];
+  }
+  let result = []
+  for (let i = 0; i < env.length; i++) {
+    const envItem = env[i];
+    result.push("--remote-env", envItem);
+  }
+  return result;
 }
 
 export const devcontainer = {

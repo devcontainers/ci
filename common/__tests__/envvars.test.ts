@@ -1,4 +1,4 @@
-import {substituteValues} from '../src/envvars'
+import {populateDefaults, substituteValues} from '../src/envvars'
 
 describe('substituteValues', () => {
 	test('returns original string with no substitution placeholders', async () => {
@@ -29,3 +29,27 @@ describe('substituteValues', () => {
 		expect(result).toBe(input)
 	})
 })
+
+
+describe('populateDefaults', () => {
+
+	test('returns original inputs when fully specified', () => {
+		const input = ["TEST_ENV1=value1", "TEST_ENV2=value2"];
+		const result = populateDefaults(input);
+		expect(result).toEqual(["TEST_ENV1=value1", "TEST_ENV2=value2"]);
+	});
+
+	test('adds process env value when set and input value not provided', () => {
+		const input = ["TEST_ENV1", "TEST_ENV2=value2"];
+		process.env.TEST_ENV1 = 'TestEnvValue1';
+		const result = populateDefaults(input);
+		expect(result).toEqual(["TEST_ENV1=TestEnvValue1", "TEST_ENV2=value2"]);
+	});
+
+	test('skips value when process env value not set and input value not provided', () => {
+		const input = ["TEST_ENV1", "TEST_ENV2=value2"];
+		delete process.env.TEST_ENV1
+		const result = populateDefaults(input);
+		expect(result).toEqual(["TEST_ENV2=value2"]);
+	});
+});

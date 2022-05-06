@@ -31,6 +31,7 @@ export interface DevContainerCliExecResult extends DevContainerCliSuccessResult 
 export interface DevContainerCliExecArgs {
     workspaceFolder: string;
     command: string[];
+    env?: string[];
 }
 declare function devContainerExec(args: DevContainerCliExecArgs, log: (data: string) => void): Promise<DevContainerCliExecResult | DevContainerCliError>;
 export declare const devcontainer: {
