@@ -48,6 +48,10 @@ VERSION_MAJOR=$(cat DevContainerBuildRun/task.json   |jq .version.Major)
 VERSION_MINOR=$(cat DevContainerBuildRun/task.json   |jq .version.Minor)
 VERSION_PATCH=$(cat DevContainerBuildRun/task.json   |jq .version.Patch)
 
+echo "VERSION_MAJOR=${VERSION_MAJOR}"
+echo "VERSION_MINOR=${VERSION_MINOR}"
+echo "VERSION_PATCH=${VERSION_PATCH}"
+
 echo "::set-output name=version::$VERSION_MAJOR.$VERSION_MINOR.$VERSION_PATCH"
 echo "::set-output name=version_short::$VERSION_MAJOR.$VERSION_MINOR"
 
