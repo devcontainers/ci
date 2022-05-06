@@ -1,4 +1,5 @@
 import {spawn as spawnRaw} from "child_process";
+import {ExecFunction} from "./exec";
 export interface DevContainerCliError {
   outcome: "error",
   code: number,
@@ -17,6 +18,15 @@ function getSpecCliInfo() {
   };
 }
 
+async function isCliInstalled(exec: ExecFunction): Promise<boolean> {
+  const {exitCode} = await exec(getSpecCliInfo().command, ['--help'], {silent: true});
+  return exitCode === 0;
+}
+async function installCli(exec: ExecFunction): Promise<boolean> {
+  // future, npm install from npmjs
+  const {exitCode} = await exec('npm', ['install', '-g', './cli'], {});
+  return exitCode === 0;
+}
 
 interface SpawnResult {
   code: number | null;
@@ -140,4 +150,6 @@ export const devcontainer = {
   build: devContainerBuild,
   up: devContainerUp,
   exec: devContainerExec,
+  isCliInstalled,
+  installCli,
 };

@@ -33,6 +33,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const core = __importStar(require("@actions/core"));
 const path_1 = __importDefault(require("path"));
+const exec_1 = require("./exec");
 const dev_container_cli_1 = require("../../common/src/dev-container-cli");
 const docker_1 = require("./docker");
 function run() {
@@ -54,6 +55,15 @@ function runMain() {
             if (!buildXInstalled) {
                 core.setFailed('docker buildx not available: add a step to set up with docker/setup-buildx-action');
                 return;
+            }
+            const devContainerCliInstalled = yield dev_container_cli_1.devcontainer.isCliInstalled(exec_1.exec);
+            if (!devContainerCliInstalled) {
+                core.info('Installing dev-containers-cli...');
+                const success = yield dev_container_cli_1.devcontainer.installCli(exec_1.exec);
+                if (!success) {
+                    core.setFailed('dev-containers-cli install failed!');
+                    return;
+                }
             }
             const checkoutPath = core.getInput('checkoutPath');
             const imageName = core.getInput('imageName', { required: true });

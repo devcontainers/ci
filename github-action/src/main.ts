@@ -1,5 +1,6 @@
 import * as core from '@actions/core'
 import path from 'path'
+import {exec} from './exec'
 import {
 	devcontainer,
 	DevContainerCliBuildArgs,
@@ -26,6 +27,15 @@ async function runMain(): Promise<void> {
 				'docker buildx not available: add a step to set up with docker/setup-buildx-action'
 			)
 			return
+		}
+		const devContainerCliInstalled = await devcontainer.isCliInstalled(exec)
+		if (!devContainerCliInstalled) {
+			core.info('Installing dev-containers-cli...')
+			const success = await devcontainer.installCli(exec)
+			if (!success) {
+				core.setFailed('dev-containers-cli install failed!')
+				return
+			}
 		}
 
 		const checkoutPath: string = core.getInput('checkoutPath')

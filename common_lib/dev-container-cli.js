@@ -22,6 +22,19 @@ function getSpecCliInfo() {
         command: "dev-containers-cli"
     };
 }
+function isCliInstalled(exec) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const { exitCode } = yield exec(getSpecCliInfo().command, ['--help'], { silent: true });
+        return exitCode === 0;
+    });
+}
+function installCli(exec) {
+    return __awaiter(this, void 0, void 0, function* () {
+        // future, npm install from npmjs
+        const { exitCode } = yield exec('npm', ['install', '-g', './cli'], {});
+        return exitCode === 0;
+    });
+}
 function spawn(command, args, options) {
     return new Promise((resolve, reject) => {
         const proc = child_process_1.spawn(command, args, { env: process.env });
@@ -102,4 +115,6 @@ exports.devcontainer = {
     build: devContainerBuild,
     up: devContainerUp,
     exec: devContainerExec,
+    isCliInstalled,
+    installCli,
 };

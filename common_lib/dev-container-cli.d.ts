@@ -1,9 +1,12 @@
+import { ExecFunction } from "./exec";
 export interface DevContainerCliError {
     outcome: "error";
     code: number;
     message: string;
     description: string;
 }
+declare function isCliInstalled(exec: ExecFunction): Promise<boolean>;
+declare function installCli(exec: ExecFunction): Promise<boolean>;
 export interface DevContainerCliSuccessResult {
     outcome: "success";
 }
@@ -34,5 +37,7 @@ export declare const devcontainer: {
     build: typeof devContainerBuild;
     up: typeof devContainerUp;
     exec: typeof devContainerExec;
+    isCliInstalled: typeof isCliInstalled;
+    installCli: typeof installCli;
 };
 export {};

@@ -73,12 +73,12 @@ jobs:
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: temp npm install (speccli) - TODO REMOVE THIS!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        run: |
-          cd cli
-          npm install
-          npm install -g
-          dev-containers-cli --version
+      # - name: temp npm install (speccli) - TODO REMOVE THIS!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+      #   run: |
+      #     cd cli
+      #     npm install
+      #     npm install -g
+      #     dev-containers-cli --version
       
       - name: Build in dev container
         uses: ./
@@ -300,12 +300,12 @@ jobs:
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: temp npm install (speccli) - TODO REMOVE THIS!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        run: |
-          cd cli
-          npm install
-          npm install -g
-          dev-containers-cli --version
+      # - name: temp npm install (speccli) - TODO REMOVE THIS!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+      #   run: |
+      #     cd cli
+      #     npm install
+      #     npm install -g
+      #     dev-containers-cli --version
 
       - name: Run test
         uses: ./

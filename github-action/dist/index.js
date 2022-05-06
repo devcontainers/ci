@@ -1802,6 +1802,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 const core = __importStar(__nccwpck_require__(186));
 const path_1 = __importDefault(__nccwpck_require__(622));
+const exec_1 = __nccwpck_require__(757);
 const dev_container_cli_1 = __nccwpck_require__(331);
 const docker_1 = __nccwpck_require__(758);
 function run() {
@@ -1823,6 +1824,15 @@ function runMain() {
             if (!buildXInstalled) {
                 core.setFailed('docker buildx not available: add a step to set up with docker/setup-buildx-action');
                 return;
+            }
+            const devContainerCliInstalled = yield dev_container_cli_1.devcontainer.isCliInstalled(exec_1.exec);
+            if (!devContainerCliInstalled) {
+                core.info('Installing dev-containers-cli...');
+                const success = yield dev_container_cli_1.devcontainer.installCli(exec_1.exec);
+                if (!success) {
+                    core.setFailed('dev-containers-cli install failed!');
+                    return;
+                }
             }
             const checkoutPath = core.getInput('checkoutPath');
             const imageName = core.getInput('imageName', { required: true });
@@ -3711,6 +3721,19 @@ function getSpecCliInfo() {
         command: "dev-containers-cli"
     };
 }
+function isCliInstalled(exec) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const { exitCode } = yield exec(getSpecCliInfo().command, ['--help'], { silent: true });
+        return exitCode === 0;
+    });
+}
+function installCli(exec) {
+    return __awaiter(this, void 0, void 0, function* () {
+        // future, npm install from npmjs
+        const { exitCode } = yield exec('npm', ['install', '-g', './cli'], {});
+        return exitCode === 0;
+    });
+}
 function spawn(command, args, options) {
     return new Promise((resolve, reject) => {
         const proc = (0,child_process__WEBPACK_IMPORTED_MODULE_0__.spawn)(command, args, { env: process.env });
@@ -3791,6 +3814,8 @@ const devcontainer = {
     build: devContainerBuild,
     up: devContainerUp,
     exec: devContainerExec,
+    isCliInstalled,
+    installCli,
 };
 
 
