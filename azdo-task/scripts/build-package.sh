@@ -42,6 +42,8 @@ figlet Version
 if [[ -n $set_patch_version ]]; then
     echo "--set-patch-version specified. Setting task patch version to $set_patch_version"
     sed -i "s/\"Patch\": 0/\"Patch\": $set_patch_version/g" DevContainerBuildRun/task.json
+else
+    echo "--set-patch-version not set"
 fi
 
 VERSION_MAJOR=$(cat DevContainerBuildRun/task.json   |jq .version.Major)

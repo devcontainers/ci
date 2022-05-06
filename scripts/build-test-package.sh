@@ -26,6 +26,7 @@ cd "$script_dir/../azdo-task"
 if [[ -n "$SKIP_VSIX" ]]; then
     echo "SKIP_VSIX set - skipping VSIX creation"
 else
+    echo "Creating VSIX (BUILD_NUMBER=${BUILD_NUMBER})"
     ./scripts/build-package.sh --set-patch-version $BUILD_NUMBER
 
     mkdir -p "$script_dir/../output"
