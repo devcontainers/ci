@@ -1,6 +1,5 @@
 import * as core from '@actions/core'
-import path from 'path';
-import {check} from 'prettier';
+import path from 'path'
 import {
 	devcontainer,
 	DevContainerCliBuildArgs,
@@ -48,7 +47,7 @@ async function runMain(): Promise<void> {
 		const fullImageName = `${imageName}:${imageTag ?? 'latest'}`
 		const buildResult = await core.group('build container', async () => {
 			const args: DevContainerCliBuildArgs = {
-				workspaceFolder: workspaceFolder,
+				workspaceFolder,
 				imageName: fullImageName
 			}
 			const result = await devcontainer.build(args, log)
@@ -67,7 +66,7 @@ async function runMain(): Promise<void> {
 
 		const upResult = await core.group('start container', async () => {
 			const args: DevContainerCliUpArgs = {
-				workspaceFolder: workspaceFolder
+				workspaceFolder
 			}
 			const result = await devcontainer.up(args, log)
 			if (result.outcome !== 'success') {
@@ -86,7 +85,7 @@ async function runMain(): Promise<void> {
 			'Run command in container',
 			async () => {
 				const args: DevContainerCliExecArgs = {
-					workspaceFolder: workspaceFolder,
+					workspaceFolder,
 					command: ['bash', '-c', runCommand]
 				}
 				const result = await devcontainer.exec(args, log)

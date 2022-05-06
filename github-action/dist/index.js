@@ -1796,8 +1796,12 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 const core = __importStar(__nccwpck_require__(186));
+const path_1 = __importDefault(__nccwpck_require__(622));
 const dev_container_cli_1 = __nccwpck_require__(331);
 const docker_1 = __nccwpck_require__(758);
 function run() {
@@ -1823,7 +1827,7 @@ function runMain() {
             const checkoutPath = core.getInput('checkoutPath');
             const imageName = core.getInput('imageName', { required: true });
             const imageTag = emptyStringAsUndefined(core.getInput('imageTag'));
-            // const subFolder: string = core.getInput('subFolder') // TODO - handle this
+            const subFolder = core.getInput('subFolder'); // TODO - handle this
             const runCommand = core.getInput('runCmd', { required: true });
             // const envs: string[] = core.getMultilineInput('env') // TODO - handle this
             // const cacheFrom: string[] = core.getMultilineInput('cacheFrom') // TODO - handle this
@@ -1833,10 +1837,11 @@ function runMain() {
             // TODO - nocache
             // TODO - support additional cacheFrom
             const log = (message) => core.info(message);
+            const workspaceFolder = path_1.default.resolve(checkoutPath, subFolder);
             const fullImageName = `${imageName}:${imageTag !== null && imageTag !== void 0 ? imageTag : 'latest'}`;
-            const buildResult = yield core.group("build container", () => __awaiter(this, void 0, void 0, function* () {
+            const buildResult = yield core.group('build container', () => __awaiter(this, void 0, void 0, function* () {
                 const args = {
-                    workspaceFolder: checkoutPath,
+                    workspaceFolder,
                     imageName: fullImageName
                 };
                 const result = yield dev_container_cli_1.devcontainer.build(args, log);
@@ -1846,12 +1851,12 @@ function runMain() {
                 }
                 return result;
             }));
-            if (buildResult.outcome !== "success") {
+            if (buildResult.outcome !== 'success') {
                 return;
             }
-            const upResult = yield core.group("start container", () => __awaiter(this, void 0, void 0, function* () {
+            const upResult = yield core.group('start container', () => __awaiter(this, void 0, void 0, function* () {
                 const args = {
-                    workspaceFolder: checkoutPath
+                    workspaceFolder,
                 };
                 const result = yield dev_container_cli_1.devcontainer.up(args, log);
                 if (result.outcome !== 'success') {
@@ -1860,12 +1865,12 @@ function runMain() {
                 }
                 return result;
             }));
-            if (upResult.outcome !== "success") {
+            if (upResult.outcome !== 'success') {
                 return;
             }
-            const execResult = yield core.group("Run command in container", () => __awaiter(this, void 0, void 0, function* () {
+            const execResult = yield core.group('Run command in container', () => __awaiter(this, void 0, void 0, function* () {
                 const args = {
-                    workspaceFolder: checkoutPath,
+                    workspaceFolder,
                     command: ['bash', '-c', runCommand]
                 };
                 const result = yield dev_container_cli_1.devcontainer.exec(args, log);
@@ -1875,7 +1880,7 @@ function runMain() {
                 }
                 return result;
             }));
-            if (execResult.outcome !== "success") {
+            if (execResult.outcome !== 'success') {
                 return;
             }
             // TODO - should we stop the container?
