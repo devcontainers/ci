@@ -102,7 +102,6 @@ async function runMain(): Promise<void> {
 					command: ['bash', '-c', runCommand],
 					env: inputEnvsWithDefaults
 				}
-				core.info(`***env vars: ${JSON.stringify(inputEnvsWithDefaults)}}`)
 				const result = await devcontainer.exec(args, log)
 				if (result.outcome !== 'success') {
 					core.error(

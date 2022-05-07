@@ -143,7 +143,7 @@ export interface DevContainerCliExecArgs {
   env?: string[];
 }
 async function devContainerExec(args: DevContainerCliExecArgs, log: (data: string) => void): Promise<DevContainerCliExecResult | DevContainerCliError> {
-  // const remoteEnvArgs = args.env ? args.env.flatMap(e=> ["--remote-env", e]): [];
+  // const remoteEnvArgs = args.env ? args.env.flatMap(e=> ["--remote-env", e]): []; // TODO - test flatMap again
   const remoteEnvArgs = getRemoteEnvArray(args.env);
   return await runSpecCli<DevContainerCliExecResult>({
     args: ["exec", "--workspace-folder", args.workspaceFolder, ...remoteEnvArgs, ...args.command],

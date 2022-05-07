@@ -1887,7 +1887,6 @@ function runMain() {
                     command: ['bash', '-c', runCommand],
                     env: inputEnvsWithDefaults
                 };
-                core.info(`***env vars: ${JSON.stringify(inputEnvsWithDefaults)}}`);
                 const result = yield dev_container_cli_1.devcontainer.exec(args, log);
                 if (result.outcome !== 'success') {
                     core.error(`Dev container exec: ${result.message} (exit code: ${result.code})\n${result.description}`);
@@ -3813,7 +3812,7 @@ function devContainerUp(args, log) {
 }
 function devContainerExec(args, log) {
     return __awaiter(this, void 0, void 0, function* () {
-        // const remoteEnvArgs = args.env ? args.env.flatMap(e=> ["--remote-env", e]): [];
+        // const remoteEnvArgs = args.env ? args.env.flatMap(e=> ["--remote-env", e]): []; // TODO - test flatMap again
         const remoteEnvArgs = getRemoteEnvArray(args.env);
         return yield runSpecCli({
             args: ["exec", "--workspace-folder", args.workspaceFolder, ...remoteEnvArgs, ...args.command],

@@ -118,7 +118,6 @@ function runMain() {
                     command: ['bash', '-c', runCommand],
                     env: inputEnvsWithDefaults
                 };
-                core.info(`***env vars: ${JSON.stringify(inputEnvsWithDefaults)}}`);
                 const result = yield dev_container_cli_1.devcontainer.exec(args, log);
                 if (result.outcome !== 'success') {
                     core.error(`Dev container exec: ${result.message} (exit code: ${result.code})\n${result.description}`);

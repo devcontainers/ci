@@ -109,7 +109,7 @@ function devContainerUp(args, log) {
 }
 function devContainerExec(args, log) {
     return __awaiter(this, void 0, void 0, function* () {
-        // const remoteEnvArgs = args.env ? args.env.flatMap(e=> ["--remote-env", e]): [];
+        // const remoteEnvArgs = args.env ? args.env.flatMap(e=> ["--remote-env", e]): []; // TODO - test flatMap again
         const remoteEnvArgs = getRemoteEnvArray(args.env);
         return yield runSpecCli({
             args: ["exec", "--workspace-folder", args.workspaceFolder, ...remoteEnvArgs, ...args.command],
