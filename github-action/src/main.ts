@@ -62,7 +62,7 @@ async function runMain(): Promise<void> {
 			// This ensures that when building a PR where the image specified in the action
 			// isn't included in devcontainer.json (or docker-compose.yml), the action still
 			// resolves a previous image for the tag as a layer cache (if pushed to a registry)
-			cacheFrom.push(fullImageName)
+			cacheFrom.splice(0, 0, fullImageName)
 		}
 		const buildResult = await core.group('build container', async () => {
 			const args: DevContainerCliBuildArgs = {

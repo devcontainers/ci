@@ -1856,7 +1856,7 @@ function runMain() {
                 // This ensures that when building a PR where the image specified in the action
                 // isn't included in devcontainer.json (or docker-compose.yml), the action still
                 // resolves a previous image for the tag as a layer cache (if pushed to a registry)
-                cacheFrom.push(fullImageName);
+                cacheFrom.splice(0, 0, fullImageName);
             }
             const buildResult = yield core.group('build container', () => __awaiter(this, void 0, void 0, function* () {
                 const args = {
