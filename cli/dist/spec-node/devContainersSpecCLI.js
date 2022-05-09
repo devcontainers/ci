@@ -95,6 +95,7 @@ function provisionOptions(y) {
         'user-data-folder': { type: 'string', description: 'Host path to a directory that is intended to be persisted and share state between sessions.' },
         'mount': { type: 'string', description: 'Additional mount point(s). Format: type=<bind|volume>,source=<source>,target=<target>[,external=<true|false>]' },
         'remote-env': { type: 'string', description: 'Remote environment variables of the format name=value. These will be added when executing the user commands.' },
+        'cache-from': { type: 'string', description: 'Additional image to use as potential layer cache during image building' },
     })
         .check(argv => {
         const idLabels = (argv['id-label'] && (Array.isArray(argv['id-label']) ? argv['id-label'] : [argv['id-label']]));
@@ -121,9 +122,10 @@ function provisionOptions(y) {
 function provisionHandler(args) {
     (async () => provision(args))().catch(console.error);
 }
-async function provision({ 'user-data-folder': persistedFolder, 'docker-path': dockerPath, 'docker-compose-path': dockerComposePath, 'container-data-folder': containerDataFolder, 'container-system-data-folder': containerSystemDataFolder, 'workspace-folder': workspaceFolderArg, 'workspace-mount-consistency': workspaceMountConsistency, 'mount-workspace-git-root': mountWorkspaceGitRoot, 'id-label': idLabel, config, 'override-config': overrideConfig, 'log-level': logLevel, 'log-format': logFormat, 'terminal-rows': terminalRows, 'terminal-columns': terminalColumns, 'default-user-env-probe': defaultUserEnvProbe, 'update-remote-user-uid-default': updateRemoteUserUIDDefault, 'remove-existing-container': removeExistingContainer, 'build-no-cache': buildNoCache, 'expect-existing-container': expectExistingContainer, 'skip-post-create': skipPostCreate, 'skip-non-blocking-commands': skipNonBlocking, prebuild, mount, 'remote-env': addRemoteEnv, }) {
+async function provision({ 'user-data-folder': persistedFolder, 'docker-path': dockerPath, 'docker-compose-path': dockerComposePath, 'container-data-folder': containerDataFolder, 'container-system-data-folder': containerSystemDataFolder, 'workspace-folder': workspaceFolderArg, 'workspace-mount-consistency': workspaceMountConsistency, 'mount-workspace-git-root': mountWorkspaceGitRoot, 'id-label': idLabel, config, 'override-config': overrideConfig, 'log-level': logLevel, 'log-format': logFormat, 'terminal-rows': terminalRows, 'terminal-columns': terminalColumns, 'default-user-env-probe': defaultUserEnvProbe, 'update-remote-user-uid-default': updateRemoteUserUIDDefault, 'remove-existing-container': removeExistingContainer, 'build-no-cache': buildNoCache, 'expect-existing-container': expectExistingContainer, 'skip-post-create': skipPostCreate, 'skip-non-blocking-commands': skipNonBlocking, prebuild, mount, 'remote-env': addRemoteEnv, 'cache-from': addCacheFrom, }) {
     const workspaceFolder = workspaceFolderArg ? path.resolve(process.cwd(), workspaceFolderArg) : undefined;
     const addRemoteEnvs = addRemoteEnv ? (Array.isArray(addRemoteEnv) ? addRemoteEnv : [addRemoteEnv]) : [];
+    const addCacheFroms = addCacheFrom ? (Array.isArray(addCacheFrom) ? addCacheFrom : [addCacheFrom]) : [];
     const options = {
         dockerPath,
         dockerComposePath,
@@ -158,6 +160,7 @@ async function provision({ 'user-data-folder': persistedFolder, 'docker-path': d
         }) : [],
         updateRemoteUserUIDDefault,
         remoteEnv: keyValuesToRecord(addRemoteEnvs),
+        additionalCacheFroms: addCacheFroms,
     };
     const result = await doProvision(options);
     const exitCode = result.outcome === 'error' ? 1 : 0;
@@ -209,6 +212,7 @@ function buildOptions(y) {
         'log-format': { choices: ['text', 'json'], default: 'text', description: 'Log format.' },
         'no-cache': { type: 'boolean', default: false, description: 'Builds the image with `--no-cache`.' },
         'image-name': { type: 'string', description: 'Image name.' },
+        'cache-from': { type: 'string', description: 'Additional image to use as potential layer cache' },
     });
 }
 function buildHandler(args) {
@@ -221,7 +225,7 @@ async function build(args) {
     await result.dispose();
     process.exit(exitCode);
 }
-async function doBuild({ 'user-data-folder': persistedFolder, 'docker-path': dockerPath, 'docker-compose-path': dockerComposePath, 'workspace-folder': workspaceFolderArg, 'log-level': logLevel, 'log-format': logFormat, 'no-cache': buildNoCache, 'image-name': argImageName, }) {
+async function doBuild({ 'user-data-folder': persistedFolder, 'docker-path': dockerPath, 'docker-compose-path': dockerComposePath, 'workspace-folder': workspaceFolderArg, 'log-level': logLevel, 'log-format': logFormat, 'no-cache': buildNoCache, 'image-name': argImageName, 'cache-from': addCacheFrom, }) {
     const disposables = [];
     const dispose = async () => {
         await Promise.all(disposables.map(d => d()));
@@ -230,6 +234,7 @@ async function doBuild({ 'user-data-folder': persistedFolder, 'docker-path': doc
         const workspaceFolder = path.resolve(process.cwd(), workspaceFolderArg);
         const configFile = undefined; // TODO
         const overrideConfigFile = undefined;
+        const addCacheFroms = addCacheFrom ? (Array.isArray(addCacheFrom) ? addCacheFrom : [addCacheFrom]) : [];
         const params = await (0, devContainers_1.createDockerParams)({
             dockerPath,
             dockerComposePath,
@@ -255,6 +260,7 @@ async function doBuild({ 'user-data-folder': persistedFolder, 'docker-path': doc
             additionalMounts: [],
             updateRemoteUserUIDDefault: 'never',
             remoteEnv: {},
+            additionalCacheFroms: addCacheFroms,
         }, disposables);
         const { common, dockerCLI, dockerComposeCLI } = params;
         const { cliHost, env, output } = common;
@@ -294,7 +300,7 @@ async function doBuild({ 'user-data-folder': persistedFolder, 'docker-path': doc
             if (services.indexOf(config.service) === -1) {
                 throw new Error(`Service '${config.service}' configured in devcontainer.json not found in Docker Compose configuration.`);
             }
-            await (0, dockerCompose_1.buildDockerCompose)(config, projectName, buildParams, composeFiles, composeGlobalArgs, [config.service], params.buildNoCache || false, undefined);
+            await (0, dockerCompose_1.buildDockerCompose)(config, projectName, buildParams, composeFiles, composeGlobalArgs, [config.service], params.buildNoCache || false, undefined, addCacheFroms);
             const service = composeConfig.services[config.service];
             const originalImageName = service.image || `${projectName}_${config.service}`;
             const { updatedImageName } = await (0, containerFeatures_1.extendImage)(params, config, originalImageName, !service.build, service.user);
@@ -412,6 +418,7 @@ async function doRunUserCommands({ 'user-data-folder': persistedFolder, 'docker-
             additionalMounts: [],
             updateRemoteUserUIDDefault: 'never',
             remoteEnv: keyValuesToRecord(addRemoteEnvs),
+            additionalCacheFroms: [],
         }, disposables);
         const { common } = params;
         const { cliHost, output } = common;
@@ -614,6 +621,7 @@ async function doExec({ 'user-data-folder': persistedFolder, 'docker-path': dock
             additionalMounts: [],
             updateRemoteUserUIDDefault: 'never',
             remoteEnv: keyValuesToRecord(addRemoteEnvs),
+            additionalCacheFroms: [],
         }, disposables);
         const { common } = params;
         const { cliHost, output } = common;

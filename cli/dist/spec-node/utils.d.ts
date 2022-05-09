@@ -34,6 +34,7 @@ export interface DockerResolverParameters {
     userRepositoryConfigurationPaths: string[];
     additionalMounts: Mount[];
     updateRemoteUserUIDDefault: UpdateRemoteUserUIDDefault;
+    additionalCacheFroms: string[];
 }
 export interface ResolverResult {
     params: ResolverParameters;

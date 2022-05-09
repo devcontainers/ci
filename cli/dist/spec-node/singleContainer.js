@@ -150,7 +150,7 @@ async function findDevContainer(params, labels) {
 exports.findDevContainer = findDevContainer;
 async function buildImage(buildParams, config, baseImageName, noCache) {
     var _a, _b;
-    const { cliHost, output } = 'cliHost' in buildParams ? buildParams : buildParams.common;
+    const { cliHost, output } = buildParams.common;
     const dockerfileUri = (0, utils_1.getDockerfilePath)(cliHost, config);
     const dockerfilePath = await (0, utils_1.uriToWSLFsPath)(dockerfileUri, cliHost);
     if (!cliHost.isFile(dockerfilePath)) {
@@ -175,6 +175,7 @@ async function buildImage(buildParams, config, baseImageName, noCache) {
             }
         }
     }
+    buildParams.additionalCacheFroms.forEach(cacheFrom => args.push('--cache-from', cacheFrom));
     const buildArgs = (_b = config.build) === null || _b === void 0 ? void 0 : _b.args;
     if (buildArgs) {
         for (const key in buildArgs) {

@@ -30,6 +30,7 @@ export interface ProvisionOptions {
     additionalMounts: Mount[];
     updateRemoteUserUIDDefault: UpdateRemoteUserUIDDefault;
     remoteEnv: Record<string, string>;
+    additionalCacheFroms: string[];
 }
 export declare function launch(options: ProvisionOptions, disposables: (() => Promise<unknown> | undefined)[]): Promise<{
     containerId: string;

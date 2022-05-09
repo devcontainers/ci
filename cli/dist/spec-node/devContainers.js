@@ -119,6 +119,7 @@ async function createDockerParams(options, disposables) {
         additionalMounts,
         userRepositoryConfigurationPaths: [],
         updateRemoteUserUIDDefault,
+        additionalCacheFroms: options.additionalCacheFroms,
     };
 }
 exports.createDockerParams = createDockerParams;

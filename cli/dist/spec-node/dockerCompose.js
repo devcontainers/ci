@@ -112,14 +112,17 @@ function getRemoteWorkspaceFolder(config) {
     return config.workspaceFolder || '/';
 }
 exports.getRemoteWorkspaceFolder = getRemoteWorkspaceFolder;
-async function buildDockerCompose(config, projectName, buildParams, localComposeFiles, composeGlobalArgs, runServices, noCache, imageNameOverride) {
+async function buildDockerCompose(config, projectName, buildParams, localComposeFiles, composeGlobalArgs, runServices, noCache, imageNameOverride, additionalCacheFroms) {
     const { cliHost } = buildParams;
     const args = ['--project-name', projectName, ...composeGlobalArgs];
-    if (imageNameOverride) {
+    if (imageNameOverride || (additionalCacheFroms && additionalCacheFroms.length > 0)) {
         const composeOverrideFile = cliHost.path.join(await cliHost.tmpdir(), `docker-compose.devcontainer.build-${Date.now()}.yml`);
+        const imageNameOverrideContent = imageNameOverride ? `    image: ${imageNameOverride}` : '';
+        const cacheFromOverrideContent = (additionalCacheFroms && additionalCacheFroms.length > 0) ? `    cache_from: ${additionalCacheFroms.forEach(cacheFrom => `      - ${cacheFrom}`)}` : '';
         const composeOverrideContent = `services:
   ${config.service}:
-    image: ${imageNameOverride}
+${imageNameOverrideContent}
+${cacheFromOverrideContent}
 `;
         await cliHost.writeFile(composeOverrideFile, Buffer.from(composeOverrideContent));
         args.push('-f', composeOverrideFile);
@@ -166,7 +169,7 @@ async function startContainer(params, buildParams, config, projectName, composeF
     const canceled = new Promise((_, reject) => cancel = reject);
     const { started } = await (0, utils_1.startEventSeen)(params, { [projectLabel]: projectName, [serviceLabel]: config.service }, canceled, common.output, common.getLogLevel() === log_1.LogLevel.Trace); // await getEvents, but only assign started.
     if (build) {
-        await buildDockerCompose(config, projectName, { ...buildParams, output: infoOutput }, localComposeFiles, composeGlobalArgs, (_a = config.runServices) !== null && _a !== void 0 ? _a : [], (_b = params.buildNoCache) !== null && _b !== void 0 ? _b : false, undefined);
+        await buildDockerCompose(config, projectName, { ...buildParams, output: infoOutput }, localComposeFiles, composeGlobalArgs, (_a = config.runServices) !== null && _a !== void 0 ? _a : [], (_b = params.buildNoCache) !== null && _b !== void 0 ? _b : false, undefined, params.additionalCacheFroms);
     }
     const service = composeConfig.services[config.service];
     const originalImageName = service.image || `${projectName}_${config.service}`;

@@ -8,6 +8,6 @@ export declare function openDockerfileDevContainer(params: DockerResolverParamet
 export declare function findUserArg(runArgs?: string[]): string | undefined;
 export declare function findExistingContainer(params: DockerResolverParameters, labels: string[]): Promise<ContainerDetails | undefined>;
 export declare function findDevContainer(params: DockerCLIParameters | DockerResolverParameters, labels: string[]): Promise<ContainerDetails | undefined>;
-export declare function buildImage(buildParams: DockerResolverParameters | DockerCLIParameters, config: DevContainerFromDockerfileConfig, baseImageName: string, noCache: boolean): Promise<void>;
+export declare function buildImage(buildParams: DockerResolverParameters, config: DevContainerFromDockerfileConfig, baseImageName: string, noCache: boolean): Promise<void>;
 export declare function spawnDevContainer(params: DockerResolverParameters, config: DevContainerFromDockerfileConfig | DevContainerFromImageConfig, collapsedFeaturesConfig: CollapsedFeaturesConfig | undefined, imageName: string, labels: string[], workspaceMount: string | undefined, imageDetails: (() => Promise<ImageDetails>) | undefined): Promise<void>;
 export declare function bailOut(output: Log, message: string): never;

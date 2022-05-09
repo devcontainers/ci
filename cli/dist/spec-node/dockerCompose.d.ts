@@ -4,7 +4,7 @@ import { DockerCLIParameters, PartialExecParameters, DockerComposeCLI } from '..
 import { DevContainerFromDockerComposeConfig } from '../spec-configuration/configuration';
 export declare function openDockerComposeDevContainer(params: DockerResolverParameters, workspace: Workspace, config: DevContainerFromDockerComposeConfig, idLabels: string[]): Promise<ResolverResult>;
 export declare function getRemoteWorkspaceFolder(config: DevContainerFromDockerComposeConfig): string;
-export declare function buildDockerCompose(config: DevContainerFromDockerComposeConfig, projectName: string, buildParams: DockerCLIParameters, localComposeFiles: string[], composeGlobalArgs: string[], runServices: string[], noCache: boolean, imageNameOverride?: string): Promise<void>;
+export declare function buildDockerCompose(config: DevContainerFromDockerComposeConfig, projectName: string, buildParams: DockerCLIParameters, localComposeFiles: string[], composeGlobalArgs: string[], runServices: string[], noCache: boolean, imageNameOverride?: string, additionalCacheFroms?: string[]): Promise<void>;
 export declare function readDockerComposeConfig(params: DockerCLIParameters, composeFiles: string[], envFile: string | undefined): Promise<any>;
 export declare function findComposeContainer(params: DockerCLIParameters | DockerResolverParameters, projectName: string, serviceName: string): Promise<string | undefined>;
 export declare function getProjectName(params: DockerCLIParameters | DockerResolverParameters, workspace: Workspace, composeFiles: string[]): Promise<string>;
