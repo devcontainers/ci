@@ -1862,7 +1862,7 @@ function runMain() {
                 const args = {
                     workspaceFolder,
                     imageName: fullImageName,
-                    additionalCacheFroms: cacheFrom
+                    additionalCacheFroms: cacheFrom,
                 };
                 const result = yield dev_container_cli_1.devcontainer.build(args, log);
                 if (result.outcome !== 'success') {
@@ -1876,7 +1876,8 @@ function runMain() {
             }
             const upResult = yield core.group('start container', () => __awaiter(this, void 0, void 0, function* () {
                 const args = {
-                    workspaceFolder
+                    workspaceFolder,
+                    additionalCacheFroms: cacheFrom,
                 };
                 const result = yield dev_container_cli_1.devcontainer.up(args, log);
                 if (result.outcome !== 'success') {

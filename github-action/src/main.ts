@@ -86,7 +86,8 @@ async function runMain(): Promise<void> {
 
 		const upResult = await core.group('start container', async () => {
 			const args: DevContainerCliUpArgs = {
-				workspaceFolder
+				workspaceFolder,
+				additionalCacheFroms: cacheFrom
 			}
 			const result = await devcontainer.up(args, log)
 			if (result.outcome !== 'success') {
