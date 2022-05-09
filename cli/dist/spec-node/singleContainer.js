@@ -157,6 +157,8 @@ async function buildImage(buildParams, config, baseImageName, noCache) {
         throw new errors_1.ContainerError({ description: `Dockerfile (${dockerfilePath}) not found.` });
     }
     const args = ['build', '-f', dockerfilePath, '-t', baseImageName];
+    // TODO - add options if this works:
+    args.push('--build-arg', 'BUILDKIT_INLINE_CACHE=1'); // enable image as layer cache: https://docs.docker.com/engine/reference/commandline/build/#specifying-external-cache-sources
     const target = (_a = config.build) === null || _a === void 0 ? void 0 : _a.target;
     if (target) {
         args.push('--target', target);
