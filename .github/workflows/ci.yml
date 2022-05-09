@@ -32,11 +32,29 @@ jobs:
 
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v1 
-        if: github.ref == 'refs/heads/main' # only need this for push (on `main`)
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
+
+      - id: set_image_tag
+        name: Set image_tag...
+        uses: actions/github-script@v6
+        with:
+          script: |
+            if (context.eventName === "push" && context.ref === "refs/heads/main") {
+              console.log("Setting image_tag=latest for push to main");
+              core.setOutput("image_tag", "latest");
+              return;
+            }
+            if (context.eventName === "pull_request") {
+              const prTag = `pr-${context.payload.pull_request.number}`;
+              console.log("Setting image_tag=latest for push to main");
+              core.setOutput("image_tag", prTag);
+              return;
+            }
+            core.error('Failed to set image_tag');
+            console.log(context);
 
       - name: Build in dev container
         uses: ./
@@ -47,10 +65,14 @@ jobs:
           IS_PR: ${{ github.head_ref }}
           BRANCH: ${{ github.ref }}
         with:
-          imageName: ghcr.io/stuartleeks/devcontainer-build-run-devcontainer
+          imageName: ghcr.io/stuartleeks/dev-container-build-run-devcontainer
+          imageTag: ${{ steps.set_image_tag.outputs.image_tag }} 
           runCmd: |
             echo "Starting"
             ./scripts/build-test-package.sh
+          eventFilterForPush: | # allow image push on pull_request
+            push
+            pull_request
           env: |
             BUILD_NUMBER
             IS_CI=1
