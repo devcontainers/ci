@@ -156,9 +156,11 @@ async function buildImage(buildParams, config, baseImageName, noCache) {
     if (!cliHost.isFile(dockerfilePath)) {
         throw new errors_1.ContainerError({ description: `Dockerfile (${dockerfilePath}) not found.` });
     }
-    const args = ['build', '-f', dockerfilePath, '-t', baseImageName];
+    // BUILDKIT - testing
+    // const args = ['build', '-f', dockerfilePath, '-t', baseImageName];
+    const args = ['buildx', 'build', '-f', dockerfilePath, '-t', baseImageName];
     // TODO - add options if this works:
-    args.push('--build-arg', 'BUILDKIT_INLINE_CACHE=1'); // enable image as layer cache: https://docs.docker.com/engine/reference/commandline/build/#specifying-external-cache-sources
+    // args.push('--build-arg', 'BUILDKIT_INLINE_CACHE=1'); // enable image as layer cache: https://docs.docker.com/engine/reference/commandline/build/#specifying-external-cache-sources
     const target = (_a = config.build) === null || _a === void 0 ? void 0 : _a.target;
     if (target) {
         args.push('--target', target);
@@ -167,6 +169,7 @@ async function buildImage(buildParams, config, baseImageName, noCache) {
         args.push('--no-cache', '--pull');
     }
     else {
+        args.push('--cache-from', 'type=registry,ref=latest', '--cache-to');
         buildParams.additionalCacheFroms.forEach(cacheFrom => args.push('--cache-from', cacheFrom));
         if (config.build && config.build.cacheFrom) {
             if (typeof config.build.cacheFrom === 'string') {
@@ -179,6 +182,7 @@ async function buildImage(buildParams, config, baseImageName, noCache) {
                 }
             }
         }
+        args.push('--cache-to', 'type=inline', '--output=type=docker');
     }
     const buildArgs = (_b = config.build) === null || _b === void 0 ? void 0 : _b.args;
     if (buildArgs) {
