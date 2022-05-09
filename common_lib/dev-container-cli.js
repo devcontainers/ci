@@ -91,6 +91,9 @@ function devContainerBuild(args, log) {
         if (args.imageName) {
             commandArgs.push("--image-name", args.imageName);
         }
+        if (args.additionalCacheFroms) {
+            args.additionalCacheFroms.forEach(cacheFrom => commandArgs.push('--cache-from', cacheFrom));
+        }
         return yield runSpecCli({
             args: commandArgs,
             log,
@@ -100,8 +103,12 @@ function devContainerBuild(args, log) {
 }
 function devContainerUp(args, log) {
     return __awaiter(this, void 0, void 0, function* () {
+        const commandArgs = ["up", "--workspace-folder", args.workspaceFolder];
+        if (args.additionalCacheFroms) {
+            args.additionalCacheFroms.forEach(cacheFrom => commandArgs.push('--cache-from', cacheFrom));
+        }
         return yield runSpecCli({
-            args: ["up", "--workspace-folder", args.workspaceFolder],
+            args: commandArgs,
             log,
             env: { DOCKER_BUILDKIT: "1" },
         });

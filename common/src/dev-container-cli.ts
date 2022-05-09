@@ -106,11 +106,15 @@ export interface DevContainerCliBuildResult extends DevContainerCliSuccessResult
 export interface DevContainerCliBuildArgs {
   workspaceFolder: string;
   imageName?: string;
+  additionalCacheFroms?: string[];
 }
 async function devContainerBuild(args: DevContainerCliBuildArgs, log: (data: string) => void): Promise<DevContainerCliBuildResult | DevContainerCliError> {
   const commandArgs: string[] = ["build", "--workspace-folder", args.workspaceFolder];
   if (args.imageName) {
     commandArgs.push("--image-name", args.imageName);
+  }
+  if (args.additionalCacheFroms) {
+    args.additionalCacheFroms.forEach(cacheFrom => commandArgs.push('--cache-from', cacheFrom));
   }
   return await runSpecCli<DevContainerCliBuildResult>({
     args: commandArgs,
@@ -127,10 +131,15 @@ export interface DevContainerCliUpResult extends DevContainerCliSuccessResult {
 }
 export interface DevContainerCliUpArgs {
   workspaceFolder: string;
+  additionalCacheFroms?: string[];
 }
 async function devContainerUp(args: DevContainerCliUpArgs, log: (data: string) => void): Promise<DevContainerCliUpResult | DevContainerCliError> {
+  const commandArgs: string[] = ["up", "--workspace-folder", args.workspaceFolder];
+  if (args.additionalCacheFroms) {
+    args.additionalCacheFroms.forEach(cacheFrom => commandArgs.push('--cache-from', cacheFrom));
+  }
   return await runSpecCli<DevContainerCliUpResult>({
-    args: ["up", "--workspace-folder", args.workspaceFolder],
+    args: commandArgs,
     log,
     env: {DOCKER_BUILDKIT: "1"},
   });

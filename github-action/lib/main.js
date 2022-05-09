@@ -74,19 +74,26 @@ function runMain() {
             const runCommand = core.getInput('runCmd', { required: true });
             const inputEnvs = core.getMultilineInput('env');
             const inputEnvsWithDefaults = envvars_1.populateDefaults(inputEnvs);
-            // const cacheFrom: string[] = core.getMultilineInput('cacheFrom') // TODO - handle this
+            const cacheFrom = core.getMultilineInput('cacheFrom'); // TODO - handle this
             // const skipContainerUserIdUpdate = core.getBooleanInput(
             // 	'skipContainerUserIdUpdate'
             // ) // TODO - handle this
             // TODO - nocache
-            // TODO - support additional cacheFrom
             const log = (message) => core.info(message);
             const workspaceFolder = path_1.default.resolve(checkoutPath, subFolder);
             const fullImageName = `${imageName}:${imageTag !== null && imageTag !== void 0 ? imageTag : 'latest'}`;
+            if (!cacheFrom.includes(fullImageName)) {
+                // If the cacheFrom options don't include the fullImageName, add it here
+                // This ensures that when building a PR where the image specified in the action
+                // isn't included in devcontainer.json (or docker-compose.yml), the action still
+                // resolves a previous image for the tag as a layer cache (if pushed to a registry)
+                cacheFrom.push(fullImageName);
+            }
             const buildResult = yield core.group('build container', () => __awaiter(this, void 0, void 0, function* () {
                 const args = {
                     workspaceFolder,
-                    imageName: fullImageName
+                    imageName: fullImageName,
+                    additionalCacheFroms: cacheFrom
                 };
                 const result = yield dev_container_cli_1.devcontainer.build(args, log);
                 if (result.outcome !== 'success') {
