@@ -204,7 +204,8 @@ async function startContainer(params, buildParams, config, projectName, composeF
     // If features/override docker-compose file hasn't been created yet or a cached version could not be found, generate the file now.
     if (!didRestoreFromPersistedShare) {
         output.write('Generating composeOverrideFile...');
-        const { updatedImageName, collapsedFeaturesConfig, imageDetails } = await (0, containerFeatures_1.extendImage)(params, config, originalImageName, !service.build, service.user);
+        const { updatedImageName: updatedImageName0, collapsedFeaturesConfig, imageDetails } = await (0, containerFeatures_1.extendImage)(params, config, originalImageName, !service.build);
+        const updatedImageName = await (0, containerFeatures_1.updateRemoteUserUID)(params, config, updatedImageName0, imageDetails, service.user);
         const composeOverrideContent = await generateFeaturesComposeOverrideContent(updatedImageName, originalImageName, collapsedFeaturesConfig, config, buildParams, composeFiles, imageDetails, service, idLabels, params.additionalMounts);
         const overrideFileHasContents = !!composeOverrideContent && composeOverrideContent.length > 0 && composeOverrideContent.trim() !== '';
         if (overrideFileHasContents) {

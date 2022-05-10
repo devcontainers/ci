@@ -1,5 +1,8 @@
 import {spawn as spawnRaw} from "child_process";
+import fs, {fstatSync} from "fs";
+import path from "path";
 import {env} from "process";
+import {promisify} from "util";
 import {ExecFunction} from "./exec";
 export interface DevContainerCliError {
   outcome: "error",
@@ -15,7 +18,7 @@ function getSpecCliInfo() {
   //   command: `node ${specCLIPath}`,
   // };
   return {
-    command: "dev-containers-cli"
+    command: "devcontainer"
   };
 }
 
@@ -24,13 +27,20 @@ async function isCliInstalled(exec: ExecFunction): Promise<boolean> {
     const {exitCode} = await exec(getSpecCliInfo().command, ['--help'], {silent: true});
     return exitCode === 0;
   } catch (error) {
-    return false
+    return false;
   }
 }
+const fstat = promisify(fs.stat);
 async function installCli(exec: ExecFunction): Promise<boolean> {
-  // future, npm install from npmjs
-  const {exitCode} = await exec('bash', ['-c', 'cd cli && npm install && npm install -g'], {});
+  // if we have a local 'cli' folder, then use that as we're testing a private cli build
+  const cliStat = await fstat('./cli');
+  if (cliStat && cliStat.isDirectory()){
+    const {exitCode} = await exec('bash', ['-c', 'cd cli && npm install && npm install -g'], {});
+    return exitCode === 0;
+  }
+  const {exitCode} = await exec('bash', ['-c', 'npm install -g @devcontainers/cli'], {});
   return exitCode === 0;
+
 }
 
 interface SpawnResult {
@@ -109,7 +119,7 @@ export interface DevContainerCliBuildArgs {
   additionalCacheFroms?: string[];
 }
 async function devContainerBuild(args: DevContainerCliBuildArgs, log: (data: string) => void): Promise<DevContainerCliBuildResult | DevContainerCliError> {
-  const commandArgs: string[] = ["build", "--workspace-folder", args.workspaceFolder];
+  const commandArgs: string[] = ["build", "--workspace-folder", args.workspaceFolder, '--use-buildkit'];
   if (args.imageName) {
     commandArgs.push("--image-name", args.imageName);
   }
@@ -132,11 +142,15 @@ export interface DevContainerCliUpResult extends DevContainerCliSuccessResult {
 export interface DevContainerCliUpArgs {
   workspaceFolder: string;
   additionalCacheFroms?: string[];
+  skipContainerUserIdUpdate?: boolean;
 }
 async function devContainerUp(args: DevContainerCliUpArgs, log: (data: string) => void): Promise<DevContainerCliUpResult | DevContainerCliError> {
   const commandArgs: string[] = ["up", "--workspace-folder", args.workspaceFolder];
   if (args.additionalCacheFroms) {
     args.additionalCacheFroms.forEach(cacheFrom => commandArgs.push('--cache-from', cacheFrom));
+  }
+  if (args.skipContainerUserIdUpdate) {
+    commandArgs.push('--update-remote-user-uid-default', 'off');
   }
   return await runSpecCli<DevContainerCliUpResult>({
     args: commandArgs,
@@ -157,15 +171,15 @@ async function devContainerExec(args: DevContainerCliExecArgs, log: (data: strin
   return await runSpecCli<DevContainerCliExecResult>({
     args: ["exec", "--workspace-folder", args.workspaceFolder, ...remoteEnvArgs, ...args.command],
     log,
-    env: {DOCKER_BUILDKIT: "1",},
+    env: {DOCKER_BUILDKIT: "1", },
   });
 }
 
-function getRemoteEnvArray(env?: string[]) : string[] {
+function getRemoteEnvArray(env?: string[]): string[] {
   if (!env) {
     return [];
   }
-  let result = []
+  let result = [];
   for (let i = 0; i < env.length; i++) {
     const envItem = env[i];
     result.push("--remote-env", envItem);

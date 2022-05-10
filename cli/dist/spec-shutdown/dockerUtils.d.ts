@@ -49,7 +49,7 @@ export interface PartialExecParameters {
     args?: string[];
     env: NodeJS.ProcessEnv;
     output: Log;
-    print?: boolean;
+    print?: boolean | 'continuous';
 }
 export interface PartialPtyExecParameters {
     ptyExec: PtyExecFunction;
@@ -97,6 +97,7 @@ export declare function listContainers(params: DockerCLIParameters | PartialExec
 export declare function listVolumes(params: DockerCLIParameters | PartialExecParameters | DockerResolverParameters, labels?: string[]): Promise<string[]>;
 export declare function createVolume(params: DockerCLIParameters | PartialExecParameters | DockerResolverParameters, name: string, labels: string[]): Promise<void>;
 export declare function getEvents(params: DockerCLIParameters | DockerResolverParameters, filters?: Record<string, string[]>): Promise<Exec>;
+export declare function dockerHasBuildKit(params: DockerCLIParameters | PartialExecParameters | DockerResolverParameters): Promise<boolean>;
 export declare function dockerCLI(params: DockerCLIParameters | PartialExecParameters | DockerResolverParameters, ...args: string[]): Promise<{
     stdout: Buffer;
     stderr: Buffer;

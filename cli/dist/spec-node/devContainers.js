@@ -33,6 +33,7 @@ const configContainer_1 = require("./configContainer");
 const util_1 = require("util");
 const log_1 = require("../spec-utils/log");
 const dockerCompose_1 = require("./dockerCompose");
+const dockerUtils_1 = require("../spec-shutdown/dockerUtils");
 async function launch(options, disposables) {
     const params = await createDockerParams(options, disposables);
     const output = params.common.output;
@@ -99,15 +100,23 @@ async function createDockerParams(options, disposables) {
     };
     const dockerPath = options.dockerPath || 'docker';
     const dockerComposePath = options.dockerComposePath || 'docker-compose';
+    const dockerComposeCLI = (0, dockerCompose_1.dockerComposeCLIConfig)({
+        exec: cliHost.exec,
+        env: cliHost.env,
+        output: common.output,
+    }, dockerPath, dockerComposePath);
+    const useBuildKit = options.useBuildKit === 'never' ? false : (await (0, dockerUtils_1.dockerHasBuildKit)({
+        cliHost,
+        dockerCLI: dockerPath,
+        dockerComposeCLI,
+        env: cliHost.env,
+        output
+    }));
     return {
         common,
         parsedAuthority,
         dockerCLI: dockerPath,
-        dockerComposeCLI: (0, dockerCompose_1.dockerComposeCLIConfig)({
-            exec: cliHost.exec,
-            env: cliHost.env,
-            output: common.output,
-        }, dockerPath, dockerComposePath),
+        dockerComposeCLI: dockerComposeCLI,
         dockerEnv: cliHost.env,
         workspaceMountConsistencyDefault: workspaceMountConsistency,
         mountWorkspaceGitRoot,
@@ -120,6 +129,7 @@ async function createDockerParams(options, disposables) {
         userRepositoryConfigurationPaths: [],
         updateRemoteUserUIDDefault,
         additionalCacheFroms: options.additionalCacheFroms,
+        useBuildKit,
     };
 }
 exports.createDockerParams = createDockerParams;

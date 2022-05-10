@@ -31,6 +31,7 @@ export interface ProvisionOptions {
     updateRemoteUserUIDDefault: UpdateRemoteUserUIDDefault;
     remoteEnv: Record<string, string>;
     additionalCacheFroms: string[];
+    useBuildKit: 'auto' | 'never';
 }
 export declare function launch(options: ProvisionOptions, disposables: (() => Promise<unknown> | undefined)[]): Promise<{
     containerId: string;

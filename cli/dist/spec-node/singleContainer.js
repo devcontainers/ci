@@ -3,8 +3,27 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    Object.defineProperty(o, k2, { enumerable: true, get: function() { return m[k]; } });
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.bailOut = exports.spawnDevContainer = exports.buildImage = exports.findDevContainer = exports.findExistingContainer = exports.findUserArg = exports.openDockerfileDevContainer = exports.hostFolderLabel = void 0;
+exports.bailOut = exports.spawnDevContainer = exports.findDevContainer = exports.findExistingContainer = exports.findUserArg = exports.ensureDockerfileHasFinalStageName = exports.buildNamedImageAndExtend = exports.openDockerfileDevContainer = exports.hostFolderLabel = void 0;
 const utils_1 = require("./utils");
 const injectHeadless_1 = require("../spec-common/injectHeadless");
 const errors_1 = require("../spec-common/errors");
@@ -12,6 +31,7 @@ const dockerUtils_1 = require("../spec-shutdown/dockerUtils");
 const log_1 = require("../spec-utils/log");
 const containerFeatures_1 = require("./containerFeatures");
 const product_1 = require("../spec-utils/product");
+const path = __importStar(require("path"));
 exports.hostFolderLabel = 'devcontainer.local_folder'; // used to label containers created from a workspace/folder
 async function openDockerfileDevContainer(params, config, workspaceConfig, idLabels) {
     const { common } = params;
@@ -32,11 +52,11 @@ async function openDockerfileDevContainer(params, config, workspaceConfig, idLab
             await startExistingContainer(params, idLabels, container);
         }
         else {
-            const imageName = await buildNamedImage(params, config);
-            const res = await (0, containerFeatures_1.extendImage)(params, config, imageName, 'image' in config, findUserArg(config.runArgs) || config.containerUser);
+            const res = await buildNamedImageAndExtend(params, config);
+            const updatedImageName = await (0, containerFeatures_1.updateRemoteUserUID)(params, config, res.updatedImageName, res.imageDetails, findUserArg(config.runArgs) || config.containerUser);
             // collapsedFeaturesConfig = async () => res.collapsedFeaturesConfig;
             try {
-                await spawnDevContainer(params, config, res.collapsedFeaturesConfig, res.updatedImageName, idLabels, workspaceConfig.workspaceMount, res.imageDetails);
+                await spawnDevContainer(params, config, res.collapsedFeaturesConfig, updatedImageName, idLabels, workspaceConfig.workspaceMount, res.imageDetails);
             }
             finally {
                 // In 'finally' because 'docker run' can fail after creating the container.
@@ -89,15 +109,148 @@ async function setupContainer(container, params, containerProperties, config) {
         dockerContainerId: container.Id,
     };
 }
-async function buildNamedImage(params, config) {
+async function buildNamedImageAndExtend(params, config) {
     var _a;
     const imageName = 'image' in config ? config.image : (0, utils_1.getFolderImageName)(params.common);
+    params.common.progress(injectHeadless_1.ResolverProgress.BuildingImage);
     if ((0, utils_1.isDockerFileConfig)(config)) {
-        params.common.progress(injectHeadless_1.ResolverProgress.BuildingImage);
-        await buildImage(params, config, imageName, (_a = params.buildNoCache) !== null && _a !== void 0 ? _a : false);
+        return await buildAndExtendImage(params, config, imageName, (_a = params.buildNoCache) !== null && _a !== void 0 ? _a : false);
     }
-    return imageName;
+    // image-based dev container - extend
+    return await (0, containerFeatures_1.extendImage)(params, config, imageName, 'image' in config);
 }
+exports.buildNamedImageAndExtend = buildNamedImageAndExtend;
+async function buildAndExtendImage(buildParams, config, baseImageName, noCache) {
+    var _a, _b, _c, _d;
+    const { cliHost, output } = buildParams.common;
+    const dockerfileUri = (0, utils_1.getDockerfilePath)(cliHost, config);
+    const dockerfilePath = await (0, utils_1.uriToWSLFsPath)(dockerfileUri, cliHost);
+    if (!cliHost.isFile(dockerfilePath)) {
+        throw new errors_1.ContainerError({ description: `Dockerfile (${dockerfilePath}) not found.` });
+    }
+    let dockerfile = (await cliHost.readFile(dockerfilePath)).toString();
+    let baseName = 'dev_container_auto_added_stage_label';
+    if ((_a = config.build) === null || _a === void 0 ? void 0 : _a.target) {
+        // Explictly set build target for the dev container build features on that
+        baseName = config.build.target;
+    }
+    else {
+        // Use the last stage in the Dockerfile
+        // Find the last line that starts with "FROM" (possibly preceeded by white-space)
+        const { lastStageName, modifiedDockerfile } = ensureDockerfileHasFinalStageName(dockerfile, baseImageName);
+        baseName = lastStageName;
+        if (modifiedDockerfile) {
+            dockerfile = modifiedDockerfile;
+        }
+    }
+    const labelDetails = async () => { return { definition: undefined, version: undefined }; };
+    const extendImageBuildInfo = await (0, containerFeatures_1.getExtendImageBuildInfo)(buildParams, config, baseName, (_b = config.remoteUser) !== null && _b !== void 0 ? _b : 'root', labelDetails);
+    let finalDockerfilePath = dockerfilePath;
+    const additionalBuildArgs = [];
+    if (extendImageBuildInfo) {
+        const { featureBuildInfo } = extendImageBuildInfo;
+        // We add a '# syntax' line at the start, so strip out any existing line
+        const syntaxMatch = dockerfile.match(/^\s*#\s*syntax\s*=.*[\r\n]/g);
+        if (syntaxMatch) {
+            dockerfile = dockerfile.slice(syntaxMatch[0].length);
+        }
+        let finalDockerfileContent = `${featureBuildInfo.dockerfilePrefixContent}${dockerfile}\n${featureBuildInfo === null || featureBuildInfo === void 0 ? void 0 : featureBuildInfo.dockerfileContent}`;
+        finalDockerfilePath = path.posix.join(featureBuildInfo === null || featureBuildInfo === void 0 ? void 0 : featureBuildInfo.dstFolder, 'Dockerfile-with-features');
+        await cliHost.writeFile(finalDockerfilePath, Buffer.from(finalDockerfileContent));
+        // track additional build args to include below
+        for (const buildContext in featureBuildInfo.buildKitContexts) {
+            additionalBuildArgs.push('--build-context', `${buildContext}=${featureBuildInfo.buildKitContexts[buildContext]}`);
+        }
+        for (const buildArg in featureBuildInfo.buildArgs) {
+            additionalBuildArgs.push('--build-arg', `${buildArg}=${featureBuildInfo.buildArgs[buildArg]}`);
+        }
+    }
+    const args = [];
+    if (buildParams.useBuildKit) {
+        args.push('buildx', 'build', '--load', // (short for --output=docker, i.e. load into normal 'docker images' collection)
+        '--build-arg', 'BUILDKIT_INLINE_CACHE=1');
+    }
+    else {
+        args.push('build');
+    }
+    args.push('-f', finalDockerfilePath, '-t', baseImageName);
+    const target = (_c = config.build) === null || _c === void 0 ? void 0 : _c.target;
+    if (target) {
+        args.push('--target', target);
+    }
+    if (noCache) {
+        args.push('--no-cache', '--pull');
+    }
+    else if (config.build && config.build.cacheFrom) {
+        buildParams.additionalCacheFroms.forEach(cacheFrom => args.push('--cache-from', cacheFrom));
+        if (typeof config.build.cacheFrom === 'string') {
+            args.push('--cache-from', config.build.cacheFrom);
+        }
+        else {
+            for (let index = 0; index < config.build.cacheFrom.length; index++) {
+                const cacheFrom = config.build.cacheFrom[index];
+                args.push('--cache-from', cacheFrom);
+            }
+        }
+    }
+    const buildArgs = (_d = config.build) === null || _d === void 0 ? void 0 : _d.args;
+    if (buildArgs) {
+        for (const key in buildArgs) {
+            args.push('--build-arg', `${key}=${buildArgs[key]}`);
+        }
+    }
+    args.push(...additionalBuildArgs);
+    args.push(await (0, utils_1.uriToWSLFsPath)((0, utils_1.getDockerContextPath)(cliHost, config), cliHost));
+    try {
+        if (process.stdin.isTTY) {
+            const infoParams = { ...(0, dockerUtils_1.toPtyExecParameters)(buildParams), output: (0, log_1.makeLog)(output, log_1.LogLevel.Info) };
+            await (0, dockerUtils_1.dockerPtyCLI)(infoParams, ...args);
+        }
+        else {
+            const infoParams = { ...(0, dockerUtils_1.toExecParameters)(buildParams), output: (0, log_1.makeLog)(output, log_1.LogLevel.Info), print: 'continuous' };
+            await (0, dockerUtils_1.dockerCLI)(infoParams, ...args);
+        }
+    }
+    catch (err) {
+        throw new errors_1.ContainerError({ description: 'An error occurred building the image.', originalError: err, data: { fileWithError: dockerfilePath } });
+    }
+    const imageDetails = () => (0, utils_1.inspectDockerImage)(buildParams, baseImageName, false);
+    return {
+        updatedImageName: baseImageName,
+        collapsedFeaturesConfig: extendImageBuildInfo === null || extendImageBuildInfo === void 0 ? void 0 : extendImageBuildInfo.collapsedFeaturesConfig,
+        imageDetails
+    };
+}
+// not expected to be called externally (exposed for testing)
+function ensureDockerfileHasFinalStageName(dockerfile, defaultLastStageName) {
+    var _a, _b;
+    // Find the last line that starts with "FROM" (possibly preceeded by white-space)
+    const fromLines = [...dockerfile.matchAll(new RegExp(/^(?<line>\s*FROM.*)/, 'gm'))];
+    const lastFromLineMatch = fromLines[fromLines.length - 1];
+    const lastFromLine = (_a = lastFromLineMatch.groups) === null || _a === void 0 ? void 0 : _a.line;
+    // Test for "FROM [--platform=someplat] base [as label]"
+    // That is, match against optional platform and label
+    const fromMatch = lastFromLine.match(/FROM\s+(?<platform>--platform=\S+\s+)?\S+(\s+[Aa][Ss]\s+(?<label>[^\s]+))?/);
+    if (!fromMatch) {
+        throw new Error('Error parsing Dockerfile: failed to parse final FROM line');
+    }
+    if ((_b = fromMatch.groups) === null || _b === void 0 ? void 0 : _b.label) {
+        return {
+            lastStageName: fromMatch.groups.label,
+            modifiedDockerfile: undefined,
+        };
+    }
+    // Last stage doesn't have a name, so modify the Dockerfile to set the name to defaultLastStageName
+    const lastLineStartIndex = lastFromLineMatch.index + fromMatch.index;
+    const lastLineEndIndex = lastLineStartIndex + lastFromLine.length;
+    const matchedFromText = fromMatch[0];
+    let modifiedDockerfile = dockerfile.slice(0, lastLineStartIndex + matchedFromText.length);
+    modifiedDockerfile += ` AS ${defaultLastStageName}`;
+    const remainingFromLineLength = lastFromLine.length - matchedFromText.length;
+    modifiedDockerfile += dockerfile.slice(lastLineEndIndex - remainingFromLineLength);
+    return { lastStageName: defaultLastStageName, modifiedDockerfile: modifiedDockerfile };
+}
+exports.ensureDockerfileHasFinalStageName = ensureDockerfileHasFinalStageName;
 function findUserArg(runArgs = []) {
     for (let i = runArgs.length - 1; i >= 0; i--) {
         const runArg = runArgs[i];
@@ -148,58 +301,6 @@ async function findDevContainer(params, labels) {
     return details.filter(container => container.State.Status !== 'removing')[0];
 }
 exports.findDevContainer = findDevContainer;
-async function buildImage(buildParams, config, baseImageName, noCache) {
-    var _a, _b;
-    const { cliHost, output } = buildParams.common;
-    const dockerfileUri = (0, utils_1.getDockerfilePath)(cliHost, config);
-    const dockerfilePath = await (0, utils_1.uriToWSLFsPath)(dockerfileUri, cliHost);
-    if (!cliHost.isFile(dockerfilePath)) {
-        throw new errors_1.ContainerError({ description: `Dockerfile (${dockerfilePath}) not found.` });
-    }
-    // BUILDKIT - testing
-    // const args = ['build', '-f', dockerfilePath, '-t', baseImageName];
-    const args = ['buildx', 'build', '-f', dockerfilePath, '-t', baseImageName];
-    // TODO - add options if this works:
-    // args.push('--build-arg', 'BUILDKIT_INLINE_CACHE=1'); // enable image as layer cache: https://docs.docker.com/engine/reference/commandline/build/#specifying-external-cache-sources
-    const target = (_a = config.build) === null || _a === void 0 ? void 0 : _a.target;
-    if (target) {
-        args.push('--target', target);
-    }
-    if (noCache) {
-        args.push('--no-cache', '--pull');
-    }
-    else {
-        args.push('--cache-from', 'type=registry,ref=latest', '--cache-to');
-        buildParams.additionalCacheFroms.forEach(cacheFrom => args.push('--cache-from', cacheFrom));
-        if (config.build && config.build.cacheFrom) {
-            if (typeof config.build.cacheFrom === 'string') {
-                args.push('--cache-from', config.build.cacheFrom);
-            }
-            else {
-                for (let index = 0; index < config.build.cacheFrom.length; index++) {
-                    const cacheFrom = config.build.cacheFrom[index];
-                    args.push('--cache-from', cacheFrom);
-                }
-            }
-        }
-        args.push('--cache-to', 'type=inline', '--output=type=docker');
-    }
-    const buildArgs = (_b = config.build) === null || _b === void 0 ? void 0 : _b.args;
-    if (buildArgs) {
-        for (const key in buildArgs) {
-            args.push('--build-arg', `${key}=${buildArgs[key]}`);
-        }
-    }
-    args.push(await (0, utils_1.uriToWSLFsPath)((0, utils_1.getDockerContextPath)(cliHost, config), cliHost));
-    try {
-        const infoParams = { ...(0, dockerUtils_1.toPtyExecParameters)(buildParams), output: (0, log_1.makeLog)(output, log_1.LogLevel.Info) };
-        await (0, dockerUtils_1.dockerPtyCLI)(infoParams, ...args);
-    }
-    catch (err) {
-        throw new errors_1.ContainerError({ description: 'An error occurred building the image.', originalError: err, data: { fileWithError: dockerfilePath } });
-    }
-}
-exports.buildImage = buildImage;
 async function spawnDevContainer(params, config, collapsedFeaturesConfig, imageName, labels, workspaceMount, imageDetails) {
     const { common } = params;
     common.progress(injectHeadless_1.ResolverProgress.StartingContainer);

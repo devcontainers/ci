@@ -79,6 +79,7 @@ function runMain() {
             // 	'skipContainerUserIdUpdate'
             // ) // TODO - handle this
             // TODO - nocache
+            // TODO - detect buildkit (override param??), add info/warning on no buildkit??
             const log = (message) => core.info(message);
             const workspaceFolder = path_1.default.resolve(checkoutPath, subFolder);
             const fullImageName = `${imageName}:${imageTag !== null && imageTag !== void 0 ? imageTag : 'latest'}`;

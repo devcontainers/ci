@@ -4,7 +4,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.toDockerImageName = exports.toPtyExecParameters = exports.toExecParameters = exports.dockerPtyExecFunction = exports.dockerExecFunction = exports.dockerComposePtyCLI = exports.dockerComposeCLI = exports.dockerPtyCLI = exports.isPodman = exports.dockerContext = exports.dockerCLI = exports.getEvents = exports.createVolume = exports.listVolumes = exports.listContainers = exports.inspectVolumes = exports.inspectVolume = exports.inspectImage = exports.inspectContainers = exports.inspectContainer = void 0;
+exports.toDockerImageName = exports.toPtyExecParameters = exports.toExecParameters = exports.dockerPtyExecFunction = exports.dockerExecFunction = exports.dockerComposePtyCLI = exports.dockerComposeCLI = exports.dockerPtyCLI = exports.isPodman = exports.dockerContext = exports.dockerCLI = exports.dockerHasBuildKit = exports.getEvents = exports.createVolume = exports.listVolumes = exports.listContainers = exports.inspectVolumes = exports.inspectVolume = exports.inspectImage = exports.inspectContainers = exports.inspectContainer = void 0;
 const commonUtils_1 = require("../spec-common/commonUtils");
 const errors_1 = require("../spec-common/errors");
 const log_1 = require("../spec-utils/log");
@@ -131,6 +131,16 @@ async function getEvents(params, filters) {
     return p;
 }
 exports.getEvents = getEvents;
+async function dockerHasBuildKit(params) {
+    try {
+        await dockerCLI(params, 'buildx', 'version');
+        return true;
+    }
+    catch {
+        return false;
+    }
+}
+exports.dockerHasBuildKit = dockerHasBuildKit;
 async function dockerCLI(params, ...args) {
     const partial = toExecParameters(params);
     return (0, commonUtils_1.runCommandNoPty)({

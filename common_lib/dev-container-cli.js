@@ -19,7 +19,7 @@ function getSpecCliInfo() {
     //   command: `node ${specCLIPath}`,
     // };
     return {
-        command: "dev-containers-cli"
+        command: "devcontainer"
     };
 }
 function isCliInstalled(exec) {
@@ -87,7 +87,7 @@ function runSpecCli(options) {
 }
 function devContainerBuild(args, log) {
     return __awaiter(this, void 0, void 0, function* () {
-        const commandArgs = ["build", "--workspace-folder", args.workspaceFolder];
+        const commandArgs = ["build", "--workspace-folder", args.workspaceFolder, '--use-buildkit'];
         if (args.imageName) {
             commandArgs.push("--image-name", args.imageName);
         }

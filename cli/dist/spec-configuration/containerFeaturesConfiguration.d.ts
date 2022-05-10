@@ -98,7 +98,7 @@ export interface GithubApiReleaseAsset {
 export interface CollapsedFeaturesConfig {
     allFeatures: Feature[];
 }
-export declare function collapseFeaturesConfig(original: FeaturesConfig | undefined): CollapsedFeaturesConfig | undefined;
+export declare function collapseFeaturesConfig(original: FeaturesConfig): CollapsedFeaturesConfig;
 export declare const multiStageBuildExploration = false;
 export declare function getContainerFeaturesFolder(_extensionPath: string | {
     distFolder: string;
@@ -117,10 +117,16 @@ export declare function generateFeaturesConfig(params: {
     extensionPath: string;
     output: Log;
     env: NodeJS.ProcessEnv;
-}, dstFolder: string, config: DevContainerConfig, imageLabels: () => Promise<Record<string, string | undefined>>, getLocalFolder: (d: string) => string): Promise<FeaturesConfig | undefined>;
+}, dstFolder: string, config: DevContainerConfig, imageLabelDetails: () => Promise<{
+    definition?: string;
+    version?: string;
+}>, getLocalFolder: (d: string) => string): Promise<FeaturesConfig | undefined>;
 export declare function doReadUserDeclaredFeatures(params: {
     output: Log;
-}, config: DevContainerConfig, featuresConfig: FeaturesConfig, imageLabels: () => Promise<Record<string, string | undefined>>): Promise<FeaturesConfig>;
+}, config: DevContainerConfig, featuresConfig: FeaturesConfig, imageLabelDetails: () => Promise<{
+    definition?: string;
+    version?: string;
+}>): Promise<FeaturesConfig>;
 export declare function getFeatureMainProperty(feature: Feature): "version" | undefined;
 export declare function getFeatureMainValue(feature: Feature): string | boolean | undefined;
 export declare function getFeatureValueObject(feature: Feature): Record<string, string | boolean | undefined>;

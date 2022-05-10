@@ -34,9 +34,6 @@ const log_1 = require("../spec-utils/log");
 const httpRequest_1 = require("../spec-utils/httpRequest");
 const ASSET_NAME = 'devcontainer-features.tgz';
 function collapseFeaturesConfig(original) {
-    if (!original) {
-        return undefined;
-    }
     const collapsed = {
         allFeatures: original.featureSets
             .map(fSet => fSet.features)
@@ -74,15 +71,15 @@ exports.getSourceInfoString = getSourceInfoString;
 // TODO: Move to node layer.
 function getContainerFeaturesBaseDockerFile() {
     return `
-ARG BASE_IMAGE=mcr.microsoft.com/vscode/devcontainers/base:buster
-
 #{featureBuildStages}
 
-FROM $BASE_IMAGE
+#{nonBuildKitFeatureContentFallback}
+
+FROM $_DEV_CONTAINERS_BASE_IMAGE
 
 USER root
 
-COPY . /tmp/build-features/
+COPY --from=dev_containers_feature_content_source {contentSourceRootPath} /tmp/build-features/
 
 #{featureLayer}
 
@@ -90,8 +87,8 @@ COPY . /tmp/build-features/
 
 #{containerEnv}
 
-ARG IMAGE_USER=root
-USER $IMAGE_USER
+ARG _DEV_CONTAINERS_IMAGE_USER=root
+USER $_DEV_CONTAINERS_IMAGE_USER
 `;
 }
 exports.getContainerFeaturesBaseDockerFile = getContainerFeaturesBaseDockerFile;
@@ -500,7 +497,7 @@ function updateFromOldProperties(original) {
 }
 // Generate a base featuresConfig object with the set of locally-cached features, 
 // as well as downloading and merging in remote feature definitions.
-async function generateFeaturesConfig(params, dstFolder, config, imageLabels, getLocalFolder) {
+async function generateFeaturesConfig(params, dstFolder, config, imageLabelDetails, getLocalFolder) {
     var _a;
     const { output } = params;
     const userDeclaredFeatures = config.features;
@@ -529,7 +526,7 @@ async function generateFeaturesConfig(params, dstFolder, config, imageLabels, ge
     // TODO: right now if anything fails in this method and we return `undefined`, we fallback to just the prior state of featureConfig (locally cached only). Is that what we want??
     featuresConfig = (_a = await fetchAndMergeRemoteFeaturesAsync(params, featuresConfig, config)) !== null && _a !== void 0 ? _a : featuresConfig;
     // Run filtering and include user options into config.
-    featuresConfig = await doReadUserDeclaredFeatures(params, config, featuresConfig, imageLabels);
+    featuresConfig = await doReadUserDeclaredFeatures(params, config, featuresConfig, imageLabelDetails);
     if (featuresConfig.featureSets.every(set => set.features.every(feature => feature.value === false))) {
         return undefined;
     }
@@ -538,12 +535,10 @@ async function generateFeaturesConfig(params, dstFolder, config, imageLabels, ge
 exports.generateFeaturesConfig = generateFeaturesConfig;
 const getUniqueFeatureId = (id, srcInfo) => `${id}-${getSourceInfoString(srcInfo)}`;
 // Given an existing featuresConfig, parse the user's features as they declared them in their devcontainer.
-async function doReadUserDeclaredFeatures(params, config, featuresConfig, imageLabels) {
+async function doReadUserDeclaredFeatures(params, config, featuresConfig, imageLabelDetails) {
     var _a;
     const { output } = params;
-    const labels = await imageLabels();
-    const definition = labels['com.visualstudio.code.devcontainers.id'];
-    const version = labels['version'];
+    const { definition, version } = await imageLabelDetails();
     // Map user's declared features to its appropriate feature-set feature.
     let configFeatures = config.features || {};
     let userValues = {};
