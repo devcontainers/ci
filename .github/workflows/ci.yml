@@ -24,6 +24,7 @@ jobs:
       version_short: ${{ steps.build.outputs.version_short }}
       version: ${{ steps.build.outputs.version }}
       image_tag: ${{ steps.build.set_image_tag.image_tag }}
+      build_number: ${{ steps.build_number.outputs.build_number }}
     steps:
       - name: Checkout
         uses: actions/checkout@v2
@@ -37,6 +38,14 @@ jobs:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Previously, run_id was used as the patch number (BUILD_NUMBER)
+      # but this got outside the limit for AzDO extensions (0 to 2147483647)
+      - name: Generate build number
+        id: build_number
+        uses: einaregilsson/build-number@v3 
+        with:
+          token: ${{ secrets.github_token }}
 
       - id: set_image_tag
         name: Set image_tag...
@@ -62,7 +71,7 @@ jobs:
         id: build
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          BUILD_NUMBER: ${{ github.run_id }}
+          BUILD_NUMBER: ${{ steps.build_number.outputs.build_number }}
           IS_PR: ${{ github.head_ref }}
           BRANCH: ${{ github.ref }}
         with:
