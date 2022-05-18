@@ -25,17 +25,17 @@ async function runMain(): Promise<void> {
 		core.info('Starting...');
 		const buildXInstalled = await isDockerBuildXInstalled();
 		if (!buildXInstalled) {
-			core.setFailed(
-				'docker buildx not available: add a step to set up with docker/setup-buildx-action'
+			core.warning(
+				'docker buildx not available: add a step to set up with docker/setup-buildx-action - see https://github.com/stuartleeks/devcontainer-build-run/blob/main/docs/github-action.md'
 			);
 			return;
 		}
 		const devContainerCliInstalled = await devcontainer.isCliInstalled(exec);
 		if (!devContainerCliInstalled) {
-			core.info('Installing dev-containers-cli...');
+			core.info('Installing @devcontainers/cli...');
 			const success = await devcontainer.installCli(exec);
 			if (!success) {
-				core.setFailed('dev-containers-cli install failed!');
+				core.setFailed('@devcontainers/cli install failed!');
 				return;
 			}
 		}
@@ -51,7 +51,6 @@ async function runMain(): Promise<void> {
 		const skipContainerUserIdUpdate = core.getBooleanInput('skipContainerUserIdUpdate');
 
 		// TODO - nocache
-		// TODO - detect buildkit (override param??), add info/warning on no buildkit??
 
 		const log = (message: string): void => core.info(message);
 		const workspaceFolder = path.resolve(checkoutPath, subFolder);
