@@ -33,7 +33,11 @@ async function isCliInstalled(exec: ExecFunction): Promise<boolean> {
 const fstat = promisify(fs.stat);
 async function installCli(exec: ExecFunction): Promise<boolean> {
   // if we have a local 'cli' folder, then use that as we're testing a private cli build
-  const cliStat = await fstat('./cli');
+  let cliStat = null;
+  try {
+    cliStat = await fstat('./cli');
+  } catch {
+  }
   if (cliStat && cliStat.isDirectory()) {
     const {exitCode} = await exec('bash', ['-c', 'cd cli && npm install && npm install -g'], {});
     return exitCode === 0;

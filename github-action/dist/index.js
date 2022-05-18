@@ -3753,7 +3753,12 @@ const fstat = (0,util__WEBPACK_IMPORTED_MODULE_2__.promisify)((fs__WEBPACK_IMPOR
 function installCli(exec) {
     return __awaiter(this, void 0, void 0, function* () {
         // if we have a local 'cli' folder, then use that as we're testing a private cli build
-        const cliStat = yield fstat('./cli');
+        let cliStat = null;
+        try {
+            cliStat = yield fstat('./cli');
+        }
+        catch (_a) {
+        }
         if (cliStat && cliStat.isDirectory()) {
             const { exitCode } = yield exec('bash', ['-c', 'cd cli && npm install && npm install -g'], {});
             return exitCode === 0;

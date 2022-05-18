@@ -42,7 +42,12 @@ const fstat = util_1.promisify(fs_1.default.stat);
 function installCli(exec) {
     return __awaiter(this, void 0, void 0, function* () {
         // if we have a local 'cli' folder, then use that as we're testing a private cli build
-        const cliStat = yield fstat('./cli');
+        let cliStat = null;
+        try {
+            cliStat = yield fstat('./cli');
+        }
+        catch (_a) {
+        }
         if (cliStat && cliStat.isDirectory()) {
             const { exitCode } = yield exec('bash', ['-c', 'cd cli && npm install && npm install -g'], {});
             return exitCode === 0;
