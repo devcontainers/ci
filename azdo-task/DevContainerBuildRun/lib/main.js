@@ -27,9 +27,17 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 const task = __importStar(require("azure-pipelines-task-lib/task"));
+const task_1 = require("azure-pipelines-task-lib/task");
+const path_1 = __importDefault(require("path"));
+const envvars_1 = require("../../../common/src/envvars");
+const dev_container_cli_1 = require("../dist/dev-container-cli");
 const docker_1 = require("./docker");
+const exec_1 = require("./exec");
 function run() {
     return __awaiter(this, void 0, void 0, function* () {
         console.log('DevContainerBuildRun starting...');
@@ -51,8 +59,17 @@ function runMain() {
         try {
             const buildXInstalled = yield docker_1.isDockerBuildXInstalled();
             if (!buildXInstalled) {
-                task.setResult(task.TaskResult.Failed, 'docker buildx not available: add a step to set up with docker/setup-buildx-action');
+                console.log('### WARNING: docker buildx not available: add a step to set up with docker/setup-buildx-action - see https://github.com/stuartleeks/devcontainer-build-run/blob/main/docs/azure-devops-task.md');
                 return;
+            }
+            const devContainerCliInstalled = yield dev_container_cli_1.devcontainer.isCliInstalled(exec_1.exec);
+            if (!devContainerCliInstalled) {
+                console.log('Installing @devcontainers/cli...');
+                const success = yield dev_container_cli_1.devcontainer.installCli(exec_1.exec);
+                if (!success) {
+                    task.setResult(task.TaskResult.Failed, '@devcontainers/cli install failed!');
+                    return;
+                }
             }
             const checkoutPath = (_a = task.getInput('checkoutPath')) !== null && _a !== void 0 ? _a : '';
             const imageName = task.getInput('imageName', true);
@@ -68,15 +85,71 @@ function runMain() {
                 return;
             }
             const envs = (_d = (_c = task.getInput('env')) === null || _c === void 0 ? void 0 : _c.split('\n')) !== null && _d !== void 0 ? _d : [];
+            const inputEnvsWithDefaults = envvars_1.populateDefaults(envs);
             const cacheFrom = (_f = (_e = task.getInput('cacheFrom')) === null || _e === void 0 ? void 0 : _e.split('\n')) !== null && _f !== void 0 ? _f : [];
             const skipContainerUserIdUpdate = ((_g = task.getInput('skipContainerUserIdUpdate')) !== null && _g !== void 0 ? _g : 'false') === 'true';
-            const buildImageName = yield docker_1.buildImage(imageName, imageTag, checkoutPath, subFolder, skipContainerUserIdUpdate, cacheFrom);
-            if (buildImageName === '') {
+            const log = (message) => console.log(message);
+            const workspaceFolder = path_1.default.resolve(checkoutPath, subFolder);
+            const fullImageName = `${imageName}:${imageTag !== null && imageTag !== void 0 ? imageTag : 'latest'}`;
+            if (!cacheFrom.includes(fullImageName)) {
+                // If the cacheFrom options don't include the fullImageName, add it here
+                // This ensures that when building a PR where the image specified in the action
+                // isn't included in devcontainer.json (or docker-compose.yml), the action still
+                // resolves a previous image for the tag as a layer cache (if pushed to a registry)
+                cacheFrom.splice(0, 0, fullImageName);
+            }
+            const buildArgs = {
+                workspaceFolder,
+                imageName: fullImageName,
+                additionalCacheFroms: cacheFrom
+            };
+            console.log('\n\n');
+            console.log('***');
+            console.log('*** Building the dev container');
+            console.log('***');
+            const buildResult = yield dev_container_cli_1.devcontainer.build(buildArgs, log);
+            if (buildResult.outcome !== 'success') {
+                console.log(`### ERROR: Dev container build failed: ${buildResult.message} (exit code: ${buildResult.code})\n${buildResult.description}`);
+                task.setResult(task_1.TaskResult.Failed, buildResult.message);
+            }
+            if (buildResult.outcome !== 'success') {
                 return;
             }
-            if (!(yield docker_1.runContainer(buildImageName, imageTag, checkoutPath, subFolder, runCommand, envs))) {
+            console.log('\n\n');
+            console.log('***');
+            console.log('*** Starting the dev container');
+            console.log('***');
+            const upArgs = {
+                workspaceFolder,
+                additionalCacheFroms: cacheFrom,
+                skipContainerUserIdUpdate
+            };
+            const upResult = yield dev_container_cli_1.devcontainer.up(upArgs, log);
+            if (upResult.outcome !== 'success') {
+                console.log(`### ERROR: Dev container up failed: ${upResult.message} (exit code: ${upResult.code})\n${upResult.description}`);
+                task.setResult(task_1.TaskResult.Failed, upResult.message);
+            }
+            if (upResult.outcome !== 'success') {
                 return;
             }
+            console.log('\n\n');
+            console.log('***');
+            console.log('*** Running command in the dev container');
+            console.log('***');
+            const execArgs = {
+                workspaceFolder,
+                command: ['bash', '-c', runCommand],
+                env: inputEnvsWithDefaults
+            };
+            const execResult = yield dev_container_cli_1.devcontainer.exec(execArgs, log);
+            if (execResult.outcome !== 'success') {
+                console.log(`### ERROR: Dev container exec: ${execResult.message} (exit code: ${execResult.code})\n${execResult.description}`);
+                task.setResult(task_1.TaskResult.Failed, execResult.message);
+            }
+            if (execResult.outcome !== 'success') {
+                return;
+            }
+            // TODO - should we stop the container?
         }
         catch (err) {
             task.setResult(task.TaskResult.Failed, err.message);

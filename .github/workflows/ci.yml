@@ -97,7 +97,7 @@ jobs:
   # release:
   #   name: Create release
   #   runs-on: ubuntu-latest
-  #   needs:
+  #   needs: # TODO - check what jobs need adding here
   #     - test-azdo
   #     - build
   #     - test-gh-run-args
@@ -200,66 +200,66 @@ jobs:
   # # (ensure that any new tests are added to the `needs` section for the release job)
   # #
 
-  # test-azdo:
-  #   name: Run AzDO test
-  #   runs-on: ubuntu-latest
-  #   needs: build
-  #   steps:
-  #     - name: Checkout
-  #       uses: actions/checkout@v2
+  test-azdo:
+    name: Run AzDO test
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
 
-  #     - name: Show version
-  #       env:
-  #         VERSION: ${{ needs.build.outputs.version }}
-  #         VERSION_SHORT: ${{ needs.build.outputs.version_short }}
-  #       run: |
-  #         echo "VERSION: $VERSION"
-  #         echo "VERSION_SHORT: $VERSION_SHORT"
+      - name: Show version
+        env:
+          VERSION: ${{ needs.build.outputs.version }}
+          VERSION_SHORT: ${{ needs.build.outputs.version_short }}
+        run: |
+          echo "VERSION: $VERSION"
+          echo "VERSION_SHORT: $VERSION_SHORT"
 
-  #     - name: Download workflow artifacts
-  #       uses: actions/download-artifact@v2
-  #       with:
-  #         path: output
+      - name: Download workflow artifacts
+        uses: actions/download-artifact@v2
+        with:
+          path: output
 
-  #     - name: Download release VSIX
-  #       uses: actions/download-artifact@v2
-  #       with:
-  #         name: azdo-task-dev
-  #         path: output
+      - name: Download release VSIX
+        uses: actions/download-artifact@v2
+        with:
+          name: azdo-task-dev
+          path: output
 
-  #     - name: Login to GitHub Container Registry
-  #       uses: docker/login-action@v1 
-  #       if: github.ref == 'refs/heads/main' # only need this for push (on `main`)
-  #       with:
-  #         registry: ghcr.io
-  #         username: ${{ github.repository_owner }}
-  #         password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v1 
+        if: github.ref == 'refs/heads/main' # only need this for push (on `main`)
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-  #     - name: Run AzDO test pipeline
-  #       uses: ./
-  #       env:
-  #         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-  #         AZDO_TOKEN: ${{ secrets.AZDO_TOKEN }}
-  #         AZURE_DEVOPS_EXT_PAT: ${{ secrets.AZDO_TOKEN }}
-  #         AZDO_SERVICE_URL: ${{ secrets.AZDO_SERVICE_URL }}
-  #         BUILD_NUMBER: ${{ github.run_id }}
-  #         IS_PR: ${{ github.head_ref }}
-  #         BRANCH: ${{ github.ref }}
-  #       with:
-  #         imageName: ghcr.io/stuartleeks/devcontainer-build-run-devcontainer
-  #         runCmd: |
-  #           echo "Starting"
-  #           ./scripts/test-azdo.sh
-  #         env: |
-  #           BUILD_NUMBER
-  #           IS_CI=1
-  #           IS_PR
-  #           BRANCH
-  #           AZDO_TOKEN
-  #           AZURE_DEVOPS_EXT_PAT
-  #           AZDO_ORG=https://dev.azure.com/stuartle
-  #           AZDO_PROJECT=AzDODevContainerBuildRunTest
-  #           AZDO_BUILD=AzDODevContainerBuildRunTest
+      - name: Run AzDO test pipeline
+        uses: ./
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          AZDO_TOKEN: ${{ secrets.AZDO_TOKEN }}
+          AZURE_DEVOPS_EXT_PAT: ${{ secrets.AZDO_TOKEN }}
+          AZDO_SERVICE_URL: ${{ secrets.AZDO_SERVICE_URL }}
+          BUILD_NUMBER: ${{ github.run_id }}
+          IS_PR: ${{ github.head_ref }}
+          BRANCH: ${{ github.ref }}
+        with:
+          imageName: ghcr.io/stuartleeks/devcontainer-build-run-devcontainer
+          runCmd: |
+            echo "Starting"
+            ./scripts/test-azdo.sh
+          env: |
+            BUILD_NUMBER
+            IS_CI=1
+            IS_PR
+            BRANCH
+            AZDO_TOKEN
+            AZURE_DEVOPS_EXT_PAT
+            AZDO_ORG=https://dev.azure.com/stuartle
+            AZDO_PROJECT=AzDODevContainerBuildRunTest
+            AZDO_BUILD=AzDODevContainerBuildRunTest
 
   test-gh-run-args:
     name: Run GitHub run-args test
