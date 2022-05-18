@@ -44,6 +44,8 @@ cd "$script_dir/.."
 # reset these before checking for changes
 git checkout azdo-task/vss-extension.json
 git checkout azdo-task/DevContainerBuildRun/task.json
+# The GH action to generate the build number leaves a BUILD_NUMBER file behind
+rm BUILD_NUMBER
 if [[ -n $(git status --short) ]]; then
     echo "*** There are unexpected changes in the working directory (see git status output below)"
     echo "*** Ensure you have run scripts/build-local.sh"
