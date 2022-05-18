@@ -224,7 +224,7 @@ const task = __importStar(__nccwpck_require__(347));
 const task_1 = __nccwpck_require__(347);
 const path_1 = __importDefault(__nccwpck_require__(5622));
 const envvars_1 = __nccwpck_require__(9243);
-const dev_container_cli_1 = __nccwpck_require__(8292);
+const dev_container_cli_1 = __nccwpck_require__(4624);
 const docker_1 = __nccwpck_require__(3758);
 const exec_1 = __nccwpck_require__(7757);
 function run() {
@@ -16864,6 +16864,182 @@ function wrappy (fn, cb) {
 
 /***/ }),
 
+/***/ 4624:
+/***/ ((__unused_webpack_module, __webpack_exports__, __nccwpck_require__) => {
+
+"use strict";
+__nccwpck_require__.r(__webpack_exports__);
+/* harmony export */ __nccwpck_require__.d(__webpack_exports__, {
+/* harmony export */   "devcontainer": () => (/* binding */ devcontainer)
+/* harmony export */ });
+/* harmony import */ var child_process__WEBPACK_IMPORTED_MODULE_0__ = __nccwpck_require__(3129);
+/* harmony import */ var child_process__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__nccwpck_require__.n(child_process__WEBPACK_IMPORTED_MODULE_0__);
+/* harmony import */ var fs__WEBPACK_IMPORTED_MODULE_1__ = __nccwpck_require__(5747);
+/* harmony import */ var fs__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__nccwpck_require__.n(fs__WEBPACK_IMPORTED_MODULE_1__);
+/* harmony import */ var util__WEBPACK_IMPORTED_MODULE_2__ = __nccwpck_require__(1669);
+/* harmony import */ var util__WEBPACK_IMPORTED_MODULE_2___default = /*#__PURE__*/__nccwpck_require__.n(util__WEBPACK_IMPORTED_MODULE_2__);
+var __awaiter = (undefined && undefined.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+
+
+
+function getSpecCliInfo() {
+    // // TODO - this is temporary until the CLI is installed via npm
+    // // TODO - ^ could consider an `npm install` from the folder
+    // const specCLIPath = path.resolve(__dirname, "..", "cli", "cli.js");
+    // return {
+    //   command: `node ${specCLIPath}`,
+    // };
+    return {
+        command: "devcontainer"
+    };
+}
+function isCliInstalled(exec) {
+    return __awaiter(this, void 0, void 0, function* () {
+        try {
+            const { exitCode } = yield exec(getSpecCliInfo().command, ['--help'], { silent: true });
+            return exitCode === 0;
+        }
+        catch (error) {
+            return false;
+        }
+    });
+}
+const fstat = (0,util__WEBPACK_IMPORTED_MODULE_2__.promisify)((fs__WEBPACK_IMPORTED_MODULE_1___default().stat));
+function installCli(exec) {
+    return __awaiter(this, void 0, void 0, function* () {
+        // if we have a local 'cli' folder, then use that as we're testing a private cli build
+        let cliStat = null;
+        try {
+            cliStat = yield fstat('./cli');
+        }
+        catch (_a) {
+        }
+        if (cliStat && cliStat.isDirectory()) {
+            const { exitCode } = yield exec('bash', ['-c', 'cd cli && npm install && npm install -g'], {});
+            return exitCode === 0;
+        }
+        const { exitCode } = yield exec('bash', ['-c', 'npm install -g @devcontainers/cli'], {});
+        return exitCode === 0;
+    });
+}
+function spawn(command, args, options) {
+    return new Promise((resolve, reject) => {
+        const proc = (0,child_process__WEBPACK_IMPORTED_MODULE_0__.spawn)(command, args, { env: process.env });
+        // const env = params.env ? { ...process.env, ...params.env } : process.env;
+        proc.stdout.on("data", data => options.log(data.toString()));
+        proc.stderr.on("data", data => options.err(data.toString()));
+        proc.on("error", err => {
+            reject(err);
+        });
+        proc.on("close", code => {
+            resolve({
+                code: code
+            });
+        });
+    });
+}
+function parseCliOutput(value) {
+    if (value === "") {
+        // TODO - revisit this
+        throw new Error("Unexpected empty output from CLI");
+    }
+    try {
+        return JSON.parse(value);
+    }
+    catch (error) {
+        return {
+            code: -1,
+            outcome: "error",
+            message: "Failed to parse CLI output",
+            description: `Failed to parse CLI output as JSON: ${value}\nError: ${error}`
+        };
+    }
+}
+function runSpecCli(options) {
+    return __awaiter(this, void 0, void 0, function* () {
+        let stdout = "";
+        const spawnOptions = {
+            log: data => stdout += data,
+            err: data => options.log(data),
+            env: options.env ? Object.assign(Object.assign({}, process.env), options.env) : process.env,
+        };
+        yield spawn(getSpecCliInfo().command, options.args, spawnOptions);
+        return parseCliOutput(stdout);
+    });
+}
+function devContainerBuild(args, log) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const commandArgs = ["build", "--workspace-folder", args.workspaceFolder];
+        if (args.imageName) {
+            commandArgs.push("--image-name", args.imageName);
+        }
+        if (args.additionalCacheFroms) {
+            args.additionalCacheFroms.forEach(cacheFrom => commandArgs.push('--cache-from', cacheFrom));
+        }
+        return yield runSpecCli({
+            args: commandArgs,
+            log,
+            env: { DOCKER_BUILDKIT: "1" },
+        });
+    });
+}
+function devContainerUp(args, log) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const commandArgs = ["up", "--workspace-folder", args.workspaceFolder];
+        if (args.additionalCacheFroms) {
+            args.additionalCacheFroms.forEach(cacheFrom => commandArgs.push('--cache-from', cacheFrom));
+        }
+        if (args.skipContainerUserIdUpdate) {
+            commandArgs.push('--update-remote-user-uid-default', 'off');
+        }
+        return yield runSpecCli({
+            args: commandArgs,
+            log,
+            env: { DOCKER_BUILDKIT: "1" },
+        });
+    });
+}
+function devContainerExec(args, log) {
+    return __awaiter(this, void 0, void 0, function* () {
+        // const remoteEnvArgs = args.env ? args.env.flatMap(e=> ["--remote-env", e]): []; // TODO - test flatMap again
+        const remoteEnvArgs = getRemoteEnvArray(args.env);
+        return yield runSpecCli({
+            args: ["exec", "--workspace-folder", args.workspaceFolder, ...remoteEnvArgs, ...args.command],
+            log,
+            env: { DOCKER_BUILDKIT: "1", },
+        });
+    });
+}
+function getRemoteEnvArray(env) {
+    if (!env) {
+        return [];
+    }
+    let result = [];
+    for (let i = 0; i < env.length; i++) {
+        const envItem = env[i];
+        result.push("--remote-env", envItem);
+    }
+    return result;
+}
+const devcontainer = {
+    build: devContainerBuild,
+    up: devContainerUp,
+    exec: devContainerExec,
+    isCliInstalled,
+    installCli,
+};
+
+
+/***/ }),
+
 /***/ 2255:
 /***/ ((__unused_webpack_module, __webpack_exports__, __nccwpck_require__) => {
 
@@ -17264,14 +17440,6 @@ function populateDefaults(envs) {
     }
     return result;
 }
-
-
-/***/ }),
-
-/***/ 8292:
-/***/ ((module) => {
-
-module.exports = eval("require")("../dist/dev-container-cli");
 
 
 /***/ }),

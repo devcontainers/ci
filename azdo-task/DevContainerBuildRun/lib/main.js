@@ -35,7 +35,7 @@ const task = __importStar(require("azure-pipelines-task-lib/task"));
 const task_1 = require("azure-pipelines-task-lib/task");
 const path_1 = __importDefault(require("path"));
 const envvars_1 = require("../../../common/src/envvars");
-const dev_container_cli_1 = require("../dist/dev-container-cli");
+const dev_container_cli_1 = require("../../../common/src/dev-container-cli");
 const docker_1 = require("./docker");
 const exec_1 = require("./exec");
 function run() {

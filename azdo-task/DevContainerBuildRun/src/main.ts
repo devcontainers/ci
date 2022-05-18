@@ -7,7 +7,7 @@ import {
 	DevContainerCliBuildArgs,
 	DevContainerCliExecArgs,
 	DevContainerCliUpArgs
-} from '../dist/dev-container-cli'
+} from '../../../common/src/dev-container-cli'
 
 import {isDockerBuildXInstalled, pushImage} from './docker'
 import {exec} from './exec'
