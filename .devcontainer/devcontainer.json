@@ -10,12 +10,12 @@
 		// Keep command history 
 		"source=devcontainer-build-run-bashhistory,target=/home/vscode/commandhistory",
 		// Mount host docker socket
-		"type=bind,source=/var/run/docker.sock,target=/var/run/docker.sock",
+		"type=bind,source=/var/run/docker.sock,target=/var/run/docker.sock"
 	],
 	// Set *default* container specific settings.json values on container create.
 	"settings": {
 		"terminal.integrated.shell.linux": "/bin/bash",
-		"files.eol": "\n",
+		"files.eol": "\n"
 	},
 	// Add the IDs of extensions you want installed when the container is created.
 	// "extensions": [],
@@ -33,6 +33,6 @@
 		"meganrogge.template-string-converter"
 	],
 	"features": {
-		"github-cli": "latest",
+		"github-cli": "latest"
 	}
 }

@@ -55,15 +55,15 @@ function runMain() {
             core.info('Starting...');
             const buildXInstalled = yield docker_1.isDockerBuildXInstalled();
             if (!buildXInstalled) {
-                core.setFailed('docker buildx not available: add a step to set up with docker/setup-buildx-action');
+                core.warning('docker buildx not available: add a step to set up with docker/setup-buildx-action - see https://github.com/stuartleeks/devcontainer-build-run/blob/main/docs/github-action.md');
                 return;
             }
             const devContainerCliInstalled = yield dev_container_cli_1.devcontainer.isCliInstalled(exec_1.exec);
             if (!devContainerCliInstalled) {
-                core.info('Installing dev-containers-cli...');
+                core.info('Installing @devcontainers/cli...');
                 const success = yield dev_container_cli_1.devcontainer.installCli(exec_1.exec);
                 if (!success) {
-                    core.setFailed('dev-containers-cli install failed!');
+                    core.setFailed('@devcontainers/cli install failed!');
                     return;
                 }
             }
@@ -74,12 +74,9 @@ function runMain() {
             const runCommand = core.getInput('runCmd', { required: true });
             const inputEnvs = core.getMultilineInput('env');
             const inputEnvsWithDefaults = envvars_1.populateDefaults(inputEnvs);
-            const cacheFrom = core.getMultilineInput('cacheFrom'); // TODO - handle this
-            // const skipContainerUserIdUpdate = core.getBooleanInput(
-            // 	'skipContainerUserIdUpdate'
-            // ) // TODO - handle this
+            const cacheFrom = core.getMultilineInput('cacheFrom');
+            const skipContainerUserIdUpdate = core.getBooleanInput('skipContainerUserIdUpdate');
             // TODO - nocache
-            // TODO - detect buildkit (override param??), add info/warning on no buildkit??
             const log = (message) => core.info(message);
             const workspaceFolder = path_1.default.resolve(checkoutPath, subFolder);
             const fullImageName = `${imageName}:${imageTag !== null && imageTag !== void 0 ? imageTag : 'latest'}`;
@@ -109,7 +106,8 @@ function runMain() {
             const upResult = yield core.group('start container', () => __awaiter(this, void 0, void 0, function* () {
                 const args = {
                     workspaceFolder,
-                    additionalCacheFroms: cacheFrom
+                    additionalCacheFroms: cacheFrom,
+                    skipContainerUserIdUpdate
                 };
                 const result = yield dev_container_cli_1.devcontainer.up(args, log);
                 if (result.outcome !== 'success') {

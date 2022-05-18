@@ -26,6 +26,7 @@ export interface DevContainerCliUpResult extends DevContainerCliSuccessResult {
 export interface DevContainerCliUpArgs {
     workspaceFolder: string;
     additionalCacheFroms?: string[];
+    skipContainerUserIdUpdate?: boolean;
 }
 declare function devContainerUp(args: DevContainerCliUpArgs, log: (data: string) => void): Promise<DevContainerCliUpResult | DevContainerCliError>;
 export interface DevContainerCliExecResult extends DevContainerCliSuccessResult {

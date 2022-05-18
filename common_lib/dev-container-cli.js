@@ -8,9 +8,14 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.devcontainer = void 0;
 const child_process_1 = require("child_process");
+const fs_1 = __importDefault(require("fs"));
+const util_1 = require("util");
 function getSpecCliInfo() {
     // // TODO - this is temporary until the CLI is installed via npm
     // // TODO - ^ could consider an `npm install` from the folder
@@ -33,10 +38,16 @@ function isCliInstalled(exec) {
         }
     });
 }
+const fstat = util_1.promisify(fs_1.default.stat);
 function installCli(exec) {
     return __awaiter(this, void 0, void 0, function* () {
-        // future, npm install from npmjs
-        const { exitCode } = yield exec('bash', ['-c', 'cd cli && npm install && npm install -g'], {});
+        // if we have a local 'cli' folder, then use that as we're testing a private cli build
+        const cliStat = yield fstat('./cli');
+        if (cliStat && cliStat.isDirectory()) {
+            const { exitCode } = yield exec('bash', ['-c', 'cd cli && npm install && npm install -g'], {});
+            return exitCode === 0;
+        }
+        const { exitCode } = yield exec('bash', ['-c', 'npm install -g @devcontainers/cli'], {});
         return exitCode === 0;
     });
 }
@@ -87,7 +98,7 @@ function runSpecCli(options) {
 }
 function devContainerBuild(args, log) {
     return __awaiter(this, void 0, void 0, function* () {
-        const commandArgs = ["build", "--workspace-folder", args.workspaceFolder, '--use-buildkit'];
+        const commandArgs = ["build", "--workspace-folder", args.workspaceFolder];
         if (args.imageName) {
             commandArgs.push("--image-name", args.imageName);
         }
@@ -106,6 +117,9 @@ function devContainerUp(args, log) {
         const commandArgs = ["up", "--workspace-folder", args.workspaceFolder];
         if (args.additionalCacheFroms) {
             args.additionalCacheFroms.forEach(cacheFrom => commandArgs.push('--cache-from', cacheFrom));
+        }
+        if (args.skipContainerUserIdUpdate) {
+            commandArgs.push('--update-remote-user-uid-default', 'off');
         }
         return yield runSpecCli({
             args: commandArgs,

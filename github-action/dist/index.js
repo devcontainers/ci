@@ -1824,15 +1824,15 @@ function runMain() {
             core.info('Starting...');
             const buildXInstalled = yield docker_1.isDockerBuildXInstalled();
             if (!buildXInstalled) {
-                core.setFailed('docker buildx not available: add a step to set up with docker/setup-buildx-action');
+                core.warning('docker buildx not available: add a step to set up with docker/setup-buildx-action - see https://github.com/stuartleeks/devcontainer-build-run/blob/main/docs/github-action.md');
                 return;
             }
             const devContainerCliInstalled = yield dev_container_cli_1.devcontainer.isCliInstalled(exec_1.exec);
             if (!devContainerCliInstalled) {
-                core.info('Installing dev-containers-cli...');
+                core.info('Installing @devcontainers/cli...');
                 const success = yield dev_container_cli_1.devcontainer.installCli(exec_1.exec);
                 if (!success) {
-                    core.setFailed('dev-containers-cli install failed!');
+                    core.setFailed('@devcontainers/cli install failed!');
                     return;
                 }
             }
@@ -1843,12 +1843,9 @@ function runMain() {
             const runCommand = core.getInput('runCmd', { required: true });
             const inputEnvs = core.getMultilineInput('env');
             const inputEnvsWithDefaults = envvars_1.populateDefaults(inputEnvs);
-            const cacheFrom = core.getMultilineInput('cacheFrom'); // TODO - handle this
-            // const skipContainerUserIdUpdate = core.getBooleanInput(
-            // 	'skipContainerUserIdUpdate'
-            // ) // TODO - handle this
+            const cacheFrom = core.getMultilineInput('cacheFrom');
+            const skipContainerUserIdUpdate = core.getBooleanInput('skipContainerUserIdUpdate');
             // TODO - nocache
-            // TODO - detect buildkit (override param??), add info/warning on no buildkit??
             const log = (message) => core.info(message);
             const workspaceFolder = path_1.default.resolve(checkoutPath, subFolder);
             const fullImageName = `${imageName}:${imageTag !== null && imageTag !== void 0 ? imageTag : 'latest'}`;
@@ -1878,7 +1875,8 @@ function runMain() {
             const upResult = yield core.group('start container', () => __awaiter(this, void 0, void 0, function* () {
                 const args = {
                     workspaceFolder,
-                    additionalCacheFroms: cacheFrom
+                    additionalCacheFroms: cacheFrom,
+                    skipContainerUserIdUpdate
                 };
                 const result = yield dev_container_cli_1.devcontainer.up(args, log);
                 if (result.outcome !== 'success') {
@@ -3713,6 +3711,10 @@ __nccwpck_require__.r(__webpack_exports__);
 /* harmony export */ });
 /* harmony import */ var child_process__WEBPACK_IMPORTED_MODULE_0__ = __nccwpck_require__(129);
 /* harmony import */ var child_process__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__nccwpck_require__.n(child_process__WEBPACK_IMPORTED_MODULE_0__);
+/* harmony import */ var fs__WEBPACK_IMPORTED_MODULE_1__ = __nccwpck_require__(747);
+/* harmony import */ var fs__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__nccwpck_require__.n(fs__WEBPACK_IMPORTED_MODULE_1__);
+/* harmony import */ var util__WEBPACK_IMPORTED_MODULE_2__ = __nccwpck_require__(669);
+/* harmony import */ var util__WEBPACK_IMPORTED_MODULE_2___default = /*#__PURE__*/__nccwpck_require__.n(util__WEBPACK_IMPORTED_MODULE_2__);
 var __awaiter = (undefined && undefined.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -3722,6 +3724,8 @@ var __awaiter = (undefined && undefined.__awaiter) || function (thisArg, _argume
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
+
+
 
 function getSpecCliInfo() {
     // // TODO - this is temporary until the CLI is installed via npm
@@ -3745,10 +3749,16 @@ function isCliInstalled(exec) {
         }
     });
 }
+const fstat = (0,util__WEBPACK_IMPORTED_MODULE_2__.promisify)((fs__WEBPACK_IMPORTED_MODULE_1___default().stat));
 function installCli(exec) {
     return __awaiter(this, void 0, void 0, function* () {
-        // future, npm install from npmjs
-        const { exitCode } = yield exec('bash', ['-c', 'cd cli && npm install && npm install -g'], {});
+        // if we have a local 'cli' folder, then use that as we're testing a private cli build
+        const cliStat = yield fstat('./cli');
+        if (cliStat && cliStat.isDirectory()) {
+            const { exitCode } = yield exec('bash', ['-c', 'cd cli && npm install && npm install -g'], {});
+            return exitCode === 0;
+        }
+        const { exitCode } = yield exec('bash', ['-c', 'npm install -g @devcontainers/cli'], {});
         return exitCode === 0;
     });
 }
@@ -3799,7 +3809,7 @@ function runSpecCli(options) {
 }
 function devContainerBuild(args, log) {
     return __awaiter(this, void 0, void 0, function* () {
-        const commandArgs = ["build", "--workspace-folder", args.workspaceFolder, '--use-buildkit'];
+        const commandArgs = ["build", "--workspace-folder", args.workspaceFolder];
         if (args.imageName) {
             commandArgs.push("--image-name", args.imageName);
         }
@@ -3818,6 +3828,9 @@ function devContainerUp(args, log) {
         const commandArgs = ["up", "--workspace-folder", args.workspaceFolder];
         if (args.additionalCacheFroms) {
             args.additionalCacheFroms.forEach(cacheFrom => commandArgs.push('--cache-from', cacheFrom));
+        }
+        if (args.skipContainerUserIdUpdate) {
+            commandArgs.push('--update-remote-user-uid-default', 'off');
         }
         return yield runSpecCli({
             args: commandArgs,

@@ -119,7 +119,7 @@ export interface DevContainerCliBuildArgs {
   additionalCacheFroms?: string[];
 }
 async function devContainerBuild(args: DevContainerCliBuildArgs, log: (data: string) => void): Promise<DevContainerCliBuildResult | DevContainerCliError> {
-  const commandArgs: string[] = ["build", "--workspace-folder", args.workspaceFolder, '--use-buildkit'];
+  const commandArgs: string[] = ["build", "--workspace-folder", args.workspaceFolder];
   if (args.imageName) {
     commandArgs.push("--image-name", args.imageName);
   }
