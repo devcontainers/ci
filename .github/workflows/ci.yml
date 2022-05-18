@@ -23,6 +23,7 @@ jobs:
     outputs:
       version_short: ${{ steps.build.outputs.version_short }}
       version: ${{ steps.build.outputs.version }}
+      image_tag: ${{ steps.build.set_image_tag.image_tag }}
     steps:
       - name: Checkout
         uses: actions/checkout@v2
@@ -273,7 +274,6 @@ jobs:
 
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v1 
-        if: github.ref == 'refs/heads/main' # only need this for push (on `main`)
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
@@ -285,6 +285,10 @@ jobs:
           subFolder: github-tests/run-args
           imageName: ghcr.io/stuartleeks/devcontainer-build-run/tests/run-args
           runCmd: echo $HOSTNAME && [[ $HOSTNAME == "my-host" ]]
+          imageTag: ${{ needs.build.outputs.image_tag }}
+          eventFilterForPush: | # allow image push on pull_request
+            push
+            pull_request
 
   test-gh-build-args:
     name: Run GitHub build-args test
@@ -310,6 +314,10 @@ jobs:
           subFolder: github-tests/build-args
           imageName: ghcr.io/stuartleeks/devcontainer-build-run/tests/build-args
           runCmd: echo $BUILD_ARG_TEST && [[ $BUILD_ARG_TEST == "Hello build-args!" ]]
+          imageTag: ${{ needs.build.outputs.image_tag }}
+          eventFilterForPush: | # allow image push on pull_request
+            push
+            pull_request
 
   test-gh-dockerfile-context:
     name: Run GitHub dockerfile-context test
@@ -335,6 +343,10 @@ jobs:
           subFolder: github-tests/dockerfile-context
           imageName: ghcr.io/stuartleeks/devcontainer-build-run/tests/dockerfile-context
           runCmd: /tmp/dummy.sh
+          imageTag: ${{ needs.build.outputs.image_tag }}
+          eventFilterForPush: | # allow image push on pull_request
+            push
+            pull_request
 
   test-gh-feature-docker-from-docker:
     name: Run GitHub feature-docker-from-docker test
@@ -360,6 +372,10 @@ jobs:
           subFolder: github-tests/feature-docker-from-docker
           imageName: ghcr.io/stuartleeks/devcontainer-build-run/tests/feature-docker-from-docker
           runCmd: make docker-build
+          imageTag: ${{ needs.build.outputs.image_tag }}
+          eventFilterForPush: | # allow image push on pull_request
+            push
+            pull_request
 
   test-gh-docker-from-docker-non-root:
     name: Run GitHub docker-from-docker-non-root test
@@ -385,6 +401,10 @@ jobs:
           subFolder: github-tests/docker-from-docker-non-root
           imageName: ghcr.io/stuartleeks/devcontainer-build-run/tests/docker-from-docker-non-root
           runCmd: make docker-build
+          imageTag: ${{ needs.build.outputs.image_tag }}
+          eventFilterForPush: | # allow image push on pull_request
+            push
+            pull_request
 
   test-gh-docker-from-docker-root:
     name: Run GitHub docker-from-docker-root test
@@ -410,6 +430,10 @@ jobs:
           subFolder: github-tests/docker-from-docker-root
           imageName: ghcr.io/stuartleeks/devcontainer-build-run/tests/docker-from-docker-root
           runCmd: make docker-build
+          imageTag: ${{ needs.build.outputs.image_tag }}
+          eventFilterForPush: | # allow image push on pull_request
+            push
+            pull_request
 
 
   # test-gh-image-tag:
@@ -446,6 +470,10 @@ jobs:
   #           container_tag=$(echo $container_image | sed s/[^:].*://g)
   #           echo "Container tag: $container_tag"
   #           [[ $container_tag == "custom-tag" ]]
+          # imageTag: ${{ needs.build.outputs.image_tag }}
+          # eventFilterForPush: | # allow image push on pull_request
+          #   push
+          #   pull_request
 
   # test-gh-skip-user-update:
   #   name: Run GitHub skipContainerUserIdUpdate test
@@ -479,6 +507,10 @@ jobs:
   #           group_id=$(id -g $(whoami))
   #           echo "Group ID: $group_id"
   #           [[ $user_id == 1000 ]] && [[ $group_id == 1000 ]]
+          # imageTag: ${{ needs.build.outputs.image_tag }}
+          # eventFilterForPush: | # allow image push on pull_request
+          #   push
+          #   pull_request
 
   #     # - name: fail
   #     #   run: |
