@@ -21,7 +21,7 @@ jobs:
     outputs:
       version_short: ${{ steps.build.outputs.version_short }}
       version: ${{ steps.build.outputs.version }}
-      image_tag: ${{ steps.build.set_image_tag.image_tag }}
+      image_tag: ${{ steps.set_image_tag.outputs.image_tag }}
       build_number: ${{ steps.build_number.outputs.build_number }}
     steps:
       - name: Checkout
