@@ -27,4 +27,4 @@ jobs:
         runCmd: 'echo $PWD'
         subFolder: '.'
         env: ''
-        sourceBranchFilterForPush: refs/heads/main
+        imageTag: $(IMAGE_TAG)
