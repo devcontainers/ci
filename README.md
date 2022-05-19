@@ -1,10 +1,11 @@
 # devcontainer-build-run
 
-devcontainer-build-run is the start of a GitHub action and Azure DevOps task aimed at making it easier to re-use a [Visual Studio Code dev container](https://code.visualstudio.com/) in a GitHub workflow or Azure DevOps pipeline.
-
 **Status: this is a pet project that I've been experimenting with. It is not supported and you should expect bugs :-)**
 
-NOTE: Currently, the devcontainer-build-run action only supports Dockerfile-based dev containers
+devcontainer-build-run is the start of a GitHub action and Azure DevOps task aimed at making it easier to re-use a [Visual Studio Code dev container](https://code.visualstudio.com/) in a GitHub workflow or Azure DevOps pipeline.
+
+This project builds on top of [@devcontainers/cli](https://www.npmjs.com/package/@devcontainers/cli)
+
 
 ## GitHub Action
 
@@ -30,3 +31,18 @@ The example below shows usage of the Azure DevOps Task - see the [Azure DevOps T
     runCmd: 'make ci-build'
     sourceBranchFilterForPush: refs/heads/main
 ```
+
+
+## CHANGELOG
+
+### Version 0.2.0
+
+This version updates the implementation to use [@devcontainers/cli](https://www.npmjs.com/package/@devcontainers/cli).
+
+This brings many benefits around compatibility with VS Code Remote-Containers. One key area is that [container-features](https://code.visualstudio.com/docs/remote/containers#_dev-container-features-preview) can now be used in CI.
+
+In theory, docker-compose based dev containers should also work however these are currently untested and image caching is blocked on [this issue](https://github.com/devcontainers/cli/issues/10)
+
+### Version 0.1.x
+
+0.1.x versions were the initial version of the action/task and attempted to mimic the behaviour of dev containers with manual `docker` commands
