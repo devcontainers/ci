@@ -1,0 +1,26 @@
+trigger:
+- main
+
+pool:
+  vmImage: ubuntu-latest
+
+jobs:
+  - job: test_local
+    displayName: Test local dev container definition
+    steps:
+    - script: |
+        docker login -u gh-test -p $ACR_TOKEN dcbuilds.azurecr.io
+      displayName: 'Log in to Azure Container Registry'
+      env:
+        ACR_TOKEN: $(ACR_TOKEN)
+
+    - script: |
+        printenv | sort
+
+    - task: DevContainerBuildRun@0
+      inputs:
+        imageName: 'dcbuilds.azurecr.io/stuartleeks/azdo-devcontainer-build-run-examples-acr'
+        runCmd: 'echo $PWD'
+        subFolder: '.'
+        env: ''
+        sourceBranchFilterForPush: refs/heads/main
