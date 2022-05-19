@@ -50,7 +50,7 @@
 	// "forwardPorts": [],
 
 	// Use 'postCreateCommand' to run commands after the container is created.
-	// "postCreateCommand": "echo hello",
+	"postCreateCommand": "./scripts/go-tools.sh",
 
 	"remoteUser": "vscode",
 	

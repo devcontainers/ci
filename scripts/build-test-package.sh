@@ -26,6 +26,7 @@ cd "$script_dir/../azdo-task"
 if [[ -n "$SKIP_VSIX" ]]; then
     echo "SKIP_VSIX set - skipping VSIX creation"
 else
+    echo "Creating VSIX (BUILD_NUMBER=${BUILD_NUMBER})"
     ./scripts/build-package.sh --set-patch-version $BUILD_NUMBER
 
     mkdir -p "$script_dir/../output"
@@ -43,6 +44,8 @@ cd "$script_dir/.."
 # reset these before checking for changes
 git checkout azdo-task/vss-extension.json
 git checkout azdo-task/DevContainerBuildRun/task.json
+# The GH action to generate the build number leaves a BUILD_NUMBER file behind
+rm BUILD_NUMBER
 if [[ -n $(git status --short) ]]; then
     echo "*** There are unexpected changes in the working directory (see git status output below)"
     echo "*** Ensure you have run scripts/build-local.sh"

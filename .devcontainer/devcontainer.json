@@ -4,41 +4,35 @@
 	"name": "devcontainer-build-run",
 	"dockerFile": "Dockerfile",
 	"build": {
-		// "cacheFrom": "ghcr.io/stuartleeks/devcontainer-build-run-devcontainer:latest"
-		"cacheFrom": ["ghcr.io/stuartleeks/devcontainer-build-run-devcontainer:latest", "stuartleeks/foo"]
+		"cacheFrom": "ghcr.io/stuartleeks/devcontainer-build-run-devcontainer:latest"
 	},
-
 	"mounts": [
 		// Keep command history 
 		"source=devcontainer-build-run-bashhistory,target=/home/vscode/commandhistory",
 		// Mount host docker socket
-		"type=bind,source=/var/run/docker.sock,target=/var/run/docker.sock",
-		// Mounts the .config/gh host folder into the dev container to pick up host gh CLI login details
-		// NOTE that mounting directly to ~/.config/gh makes ~/.config only root-writable
-		// Instead monut to another location and symlink in Dockerfile
-		"type=bind,source=${env:HOME}${env:USERPROFILE}/.config/gh,target=/config/gh",
+		"type=bind,source=/var/run/docker.sock,target=/var/run/docker.sock"
 	],
-
 	// Set *default* container specific settings.json values on container create.
-	"settings": { 
+	"settings": {
 		"terminal.integrated.shell.linux": "/bin/bash",
-		"files.eol": "\n",
+		"files.eol": "\n"
 	},
-	
 	// Add the IDs of extensions you want installed when the container is created.
 	// "extensions": [],
-
 	// Use 'forwardPorts' to make a list of ports inside the container available locally.
 	// "forwardPorts": [],
-
 	// Use 'postCreateCommand' to run commands after the container is created.
 	// "postCreateCommand": "echo hello",
-
 	"remoteUser": "vscode",
 	"extensions": [
 		"ms-azuretools.vscode-docker",
 		"yzhang.markdown-all-in-one",
 		"davidanson.vscode-markdownlint",
-		"heaths.vscode-guid"
-	]
+		"heaths.vscode-guid",
+		"esbenp.prettier-vscode",
+		"meganrogge.template-string-converter"
+	],
+	"features": {
+		"github-cli": "latest"
+	}
 }

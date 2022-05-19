@@ -27,9 +27,16 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 const core = __importStar(require("@actions/core"));
+const path_1 = __importDefault(require("path"));
+const exec_1 = require("./exec");
+const dev_container_cli_1 = require("../../common/src/dev-container-cli");
 const docker_1 = require("./docker");
+const envvars_1 = require("../../common/src/envvars");
 function run() {
     return __awaiter(this, void 0, void 0, function* () {
         const hasRunMain = core.getState('hasRunMain');
@@ -45,26 +52,90 @@ function run() {
 function runMain() {
     return __awaiter(this, void 0, void 0, function* () {
         try {
+            core.info('Starting...');
             const buildXInstalled = yield docker_1.isDockerBuildXInstalled();
             if (!buildXInstalled) {
-                core.setFailed('docker buildx not available: add a step to set up with docker/setup-buildx-action');
+                core.warning('docker buildx not available: add a step to set up with docker/setup-buildx-action - see https://github.com/stuartleeks/devcontainer-build-run/blob/main/docs/github-action.md');
                 return;
+            }
+            const devContainerCliInstalled = yield dev_container_cli_1.devcontainer.isCliInstalled(exec_1.exec);
+            if (!devContainerCliInstalled) {
+                core.info('Installing @devcontainers/cli...');
+                const success = yield dev_container_cli_1.devcontainer.installCli(exec_1.exec);
+                if (!success) {
+                    core.setFailed('@devcontainers/cli install failed!');
+                    return;
+                }
             }
             const checkoutPath = core.getInput('checkoutPath');
             const imageName = core.getInput('imageName', { required: true });
             const imageTag = emptyStringAsUndefined(core.getInput('imageTag'));
             const subFolder = core.getInput('subFolder');
             const runCommand = core.getInput('runCmd', { required: true });
-            const envs = core.getMultilineInput('env');
+            const inputEnvs = core.getMultilineInput('env');
+            const inputEnvsWithDefaults = envvars_1.populateDefaults(inputEnvs);
             const cacheFrom = core.getMultilineInput('cacheFrom');
             const skipContainerUserIdUpdate = core.getBooleanInput('skipContainerUserIdUpdate');
-            const buildImageName = yield docker_1.buildImage(imageName, imageTag, checkoutPath, subFolder, skipContainerUserIdUpdate, cacheFrom);
-            if (buildImageName === '') {
+            // TODO - nocache
+            const log = (message) => core.info(message);
+            const workspaceFolder = path_1.default.resolve(checkoutPath, subFolder);
+            const fullImageName = `${imageName}:${imageTag !== null && imageTag !== void 0 ? imageTag : 'latest'}`;
+            if (!cacheFrom.includes(fullImageName)) {
+                // If the cacheFrom options don't include the fullImageName, add it here
+                // This ensures that when building a PR where the image specified in the action
+                // isn't included in devcontainer.json (or docker-compose.yml), the action still
+                // resolves a previous image for the tag as a layer cache (if pushed to a registry)
+                cacheFrom.splice(0, 0, fullImageName);
+            }
+            const buildResult = yield core.group('build container', () => __awaiter(this, void 0, void 0, function* () {
+                const args = {
+                    workspaceFolder,
+                    imageName: fullImageName,
+                    additionalCacheFroms: cacheFrom
+                };
+                const result = yield dev_container_cli_1.devcontainer.build(args, log);
+                if (result.outcome !== 'success') {
+                    core.error(`Dev container build failed: ${result.message} (exit code: ${result.code})\n${result.description}`);
+                    core.setFailed(result.message);
+                }
+                return result;
+            }));
+            if (buildResult.outcome !== 'success') {
                 return;
             }
-            if (!(yield docker_1.runContainer(buildImageName, imageTag, checkoutPath, subFolder, runCommand, envs))) {
+            const upResult = yield core.group('start container', () => __awaiter(this, void 0, void 0, function* () {
+                const args = {
+                    workspaceFolder,
+                    additionalCacheFroms: cacheFrom,
+                    skipContainerUserIdUpdate
+                };
+                const result = yield dev_container_cli_1.devcontainer.up(args, log);
+                if (result.outcome !== 'success') {
+                    core.error(`Dev container up failed: ${result.message} (exit code: ${result.code})\n${result.description}`);
+                    core.setFailed(result.message);
+                }
+                return result;
+            }));
+            if (upResult.outcome !== 'success') {
                 return;
             }
+            const execResult = yield core.group('Run command in container', () => __awaiter(this, void 0, void 0, function* () {
+                const args = {
+                    workspaceFolder,
+                    command: ['bash', '-c', runCommand],
+                    env: inputEnvsWithDefaults
+                };
+                const result = yield dev_container_cli_1.devcontainer.exec(args, log);
+                if (result.outcome !== 'success') {
+                    core.error(`Dev container exec: ${result.message} (exit code: ${result.code})\n${result.description}`);
+                    core.setFailed(result.message);
+                }
+                return result;
+            }));
+            if (execResult.outcome !== 'success') {
+                return;
+            }
+            // TODO - should we stop the container?
         }
         catch (error) {
             core.setFailed(error.message);
@@ -85,7 +156,7 @@ function runPost() {
             const ref = process.env.GITHUB_REF;
             if (refFilterForPush.length !== 0 && // empty filter allows all
                 !refFilterForPush.some(s => s === ref)) {
-                core.info(`Image push skipped because GITHUB_REF (${ref}) is not in refFilterForPush`);
+                core.info(`Immage push skipped because GITHUB_REF (${ref}) is not in refFilterForPush`);
                 return;
             }
             const eventName = process.env.GITHUB_EVENT_NAME;

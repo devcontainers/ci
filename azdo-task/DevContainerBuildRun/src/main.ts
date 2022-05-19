@@ -1,11 +1,16 @@
 import * as task from 'azure-pipelines-task-lib/task'
-
+import {TaskResult} from 'azure-pipelines-task-lib/task'
+import path from 'path'
+import {populateDefaults} from '../../../common/src/envvars'
 import {
-	isDockerBuildXInstalled,
-	buildImage,
-	runContainer,
-	pushImage
-} from './docker'
+	devcontainer,
+	DevContainerCliBuildArgs,
+	DevContainerCliExecArgs,
+	DevContainerCliUpArgs
+} from '../../../common/src/dev-container-cli'
+
+import {isDockerBuildXInstalled, pushImage} from './docker'
+import {exec} from './exec'
 
 async function run(): Promise<void> {
 	console.log('DevContainerBuildRun starting...')
@@ -24,11 +29,22 @@ async function runMain(): Promise<void> {
 	try {
 		const buildXInstalled = await isDockerBuildXInstalled()
 		if (!buildXInstalled) {
-			task.setResult(
-				task.TaskResult.Failed,
-				'docker buildx not available: add a step to set up with docker/setup-buildx-action'
+			console.log(
+				'### WARNING: docker buildx not available: add a step to set up with docker/setup-buildx-action - see https://github.com/stuartleeks/devcontainer-build-run/blob/main/docs/azure-devops-task.md'
 			)
 			return
+		}
+		const devContainerCliInstalled = await devcontainer.isCliInstalled(exec)
+		if (!devContainerCliInstalled) {
+			console.log('Installing @devcontainers/cli...')
+			const success = await devcontainer.installCli(exec)
+			if (!success) {
+				task.setResult(
+					task.TaskResult.Failed,
+					'@devcontainers/cli install failed!'
+				)
+				return
+			}
 		}
 
 		const checkoutPath = task.getInput('checkoutPath') ?? ''
@@ -45,34 +61,83 @@ async function runMain(): Promise<void> {
 			return
 		}
 		const envs = task.getInput('env')?.split('\n') ?? []
+		const inputEnvsWithDefaults = populateDefaults(envs)
 		const cacheFrom = task.getInput('cacheFrom')?.split('\n') ?? []
 		const skipContainerUserIdUpdate =
 			(task.getInput('skipContainerUserIdUpdate') ?? 'false') === 'true'
 
-		const buildImageName = await buildImage(
-			imageName,
-			imageTag,
-			checkoutPath,
-			subFolder,
-			skipContainerUserIdUpdate,
-			cacheFrom
-		)
-		if (buildImageName === '') {
+		const log = (message: string): void => console.log(message)
+		const workspaceFolder = path.resolve(checkoutPath, subFolder)
+		const fullImageName = `${imageName}:${imageTag ?? 'latest'}`
+		if (!cacheFrom.includes(fullImageName)) {
+			// If the cacheFrom options don't include the fullImageName, add it here
+			// This ensures that when building a PR where the image specified in the action
+			// isn't included in devcontainer.json (or docker-compose.yml), the action still
+			// resolves a previous image for the tag as a layer cache (if pushed to a registry)
+			cacheFrom.splice(0, 0, fullImageName)
+		}
+		const buildArgs: DevContainerCliBuildArgs = {
+			workspaceFolder,
+			imageName: fullImageName,
+			additionalCacheFroms: cacheFrom
+		}
+
+		console.log('\n\n')
+		console.log('***')
+		console.log('*** Building the dev container')
+		console.log('***')
+		const buildResult = await devcontainer.build(buildArgs, log)
+		if (buildResult.outcome !== 'success') {
+			console.log(
+				`### ERROR: Dev container build failed: ${buildResult.message} (exit code: ${buildResult.code})\n${buildResult.description}`
+			)
+			task.setResult(TaskResult.Failed, buildResult.message)
+		}
+		if (buildResult.outcome !== 'success') {
 			return
 		}
 
-		if (
-			!(await runContainer(
-				buildImageName,
-				imageTag,
-				checkoutPath,
-				subFolder,
-				runCommand,
-				envs
-			))
-		) {
+		console.log('\n\n')
+		console.log('***')
+		console.log('*** Starting the dev container')
+		console.log('***')
+		const upArgs: DevContainerCliUpArgs = {
+			workspaceFolder,
+			additionalCacheFroms: cacheFrom,
+			skipContainerUserIdUpdate
+		}
+		const upResult = await devcontainer.up(upArgs, log)
+		if (upResult.outcome !== 'success') {
+			console.log(
+				`### ERROR: Dev container up failed: ${upResult.message} (exit code: ${upResult.code})\n${upResult.description}`
+			)
+			task.setResult(TaskResult.Failed, upResult.message)
+		}
+		if (upResult.outcome !== 'success') {
 			return
 		}
+
+		console.log('\n\n')
+		console.log('***')
+		console.log('*** Running command in the dev container')
+		console.log('***')
+		const execArgs: DevContainerCliExecArgs = {
+			workspaceFolder,
+			command: ['bash', '-c', runCommand],
+			env: inputEnvsWithDefaults
+		}
+		const execResult = await devcontainer.exec(execArgs, log)
+		if (execResult.outcome !== 'success') {
+			console.log(
+				`### ERROR: Dev container exec: ${execResult.message} (exit code: ${execResult.code})\n${execResult.description}`
+			)
+			task.setResult(TaskResult.Failed, execResult.message)
+		}
+		if (execResult.outcome !== 'success') {
+			return
+		}
+
+		// TODO - should we stop the container?
 	} catch (err) {
 		task.setResult(task.TaskResult.Failed, err.message)
 	}

@@ -12,10 +12,10 @@ export function parsePasswd(input: string): User[] {
 	const lines = input.split('\n');
 	for (const line of lines) {
 		const parts = line.split(':');
-		const user : User = {
-			name : parts[0],
+		const user: User = {
+			name: parts[0],
 			uid: parts[2],
-			gid : parts[3]
+			gid: parts[3]
 		};
 		result.push(user);
 	}
@@ -26,18 +26,18 @@ interface Group {
 	name: string,
 	// omitted password
 	gid: string,
-	users : string[]
+	users: string[];
 }
 
-export function parseGroup(input: string) : Group[] {
+export function parseGroup(input: string): Group[] {
 	const result: Group[] = [];
 	const lines = input.split('\n');
 	for (const line of lines) {
 		const parts = line.split(':');
-		const group : Group = {
-			name : parts[0],
-			gid : parts[2],
-			users:  parts[3] ? parts[3].split(',') : []
+		const group: Group = {
+			name: parts[0],
+			gid: parts[2],
+			users: parts[3] ? parts[3].split(',') : []
 		};
 		result.push(group);
 	}
