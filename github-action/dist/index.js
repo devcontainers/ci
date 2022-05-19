@@ -1645,7 +1645,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.pushImage = exports.runContainer = exports.buildImage = exports.isDockerBuildXInstalled = void 0;
 const core = __importStar(__nccwpck_require__(186));
-const docker = __importStar(__nccwpck_require__(726));
+const docker = __importStar(__nccwpck_require__(365));
 const exec_1 = __nccwpck_require__(757);
 function isDockerBuildXInstalled() {
     return __awaiter(this, void 0, void 0, function* () {
@@ -1653,11 +1653,11 @@ function isDockerBuildXInstalled() {
     });
 }
 exports.isDockerBuildXInstalled = isDockerBuildXInstalled;
-function buildImage(imageName, imageTag, checkoutPath, subFolder, skipContainerUserIdUpdate) {
+function buildImage(imageName, imageTag, checkoutPath, subFolder, skipContainerUserIdUpdate, cacheFrom) {
     return __awaiter(this, void 0, void 0, function* () {
         core.startGroup('🏗 Building dev container...');
         try {
-            return yield docker.buildImage(exec_1.exec, imageName, imageTag, checkoutPath, subFolder, skipContainerUserIdUpdate);
+            return yield docker.buildImage(exec_1.exec, imageName, imageTag, checkoutPath, subFolder, skipContainerUserIdUpdate, cacheFrom);
         }
         catch (error) {
             core.setFailed(error);
@@ -1796,9 +1796,16 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 const core = __importStar(__nccwpck_require__(186));
+const path_1 = __importDefault(__nccwpck_require__(622));
+const exec_1 = __nccwpck_require__(757);
+const dev_container_cli_1 = __nccwpck_require__(331);
 const docker_1 = __nccwpck_require__(758);
+const envvars_1 = __nccwpck_require__(228);
 function run() {
     return __awaiter(this, void 0, void 0, function* () {
         const hasRunMain = core.getState('hasRunMain');
@@ -1814,25 +1821,90 @@ function run() {
 function runMain() {
     return __awaiter(this, void 0, void 0, function* () {
         try {
+            core.info('Starting...');
             const buildXInstalled = yield docker_1.isDockerBuildXInstalled();
             if (!buildXInstalled) {
-                core.setFailed('docker buildx not available: add a step to set up with docker/setup-buildx-action');
+                core.warning('docker buildx not available: add a step to set up with docker/setup-buildx-action - see https://github.com/stuartleeks/devcontainer-build-run/blob/main/docs/github-action.md');
                 return;
+            }
+            const devContainerCliInstalled = yield dev_container_cli_1.devcontainer.isCliInstalled(exec_1.exec);
+            if (!devContainerCliInstalled) {
+                core.info('Installing @devcontainers/cli...');
+                const success = yield dev_container_cli_1.devcontainer.installCli(exec_1.exec);
+                if (!success) {
+                    core.setFailed('@devcontainers/cli install failed!');
+                    return;
+                }
             }
             const checkoutPath = core.getInput('checkoutPath');
             const imageName = core.getInput('imageName', { required: true });
             const imageTag = emptyStringAsUndefined(core.getInput('imageTag'));
             const subFolder = core.getInput('subFolder');
             const runCommand = core.getInput('runCmd', { required: true });
-            const envs = core.getMultilineInput('env');
+            const inputEnvs = core.getMultilineInput('env');
+            const inputEnvsWithDefaults = envvars_1.populateDefaults(inputEnvs);
+            const cacheFrom = core.getMultilineInput('cacheFrom');
             const skipContainerUserIdUpdate = core.getBooleanInput('skipContainerUserIdUpdate');
-            const buildImageName = yield docker_1.buildImage(imageName, imageTag, checkoutPath, subFolder, skipContainerUserIdUpdate);
-            if (buildImageName === '') {
+            // TODO - nocache
+            const log = (message) => core.info(message);
+            const workspaceFolder = path_1.default.resolve(checkoutPath, subFolder);
+            const fullImageName = `${imageName}:${imageTag !== null && imageTag !== void 0 ? imageTag : 'latest'}`;
+            if (!cacheFrom.includes(fullImageName)) {
+                // If the cacheFrom options don't include the fullImageName, add it here
+                // This ensures that when building a PR where the image specified in the action
+                // isn't included in devcontainer.json (or docker-compose.yml), the action still
+                // resolves a previous image for the tag as a layer cache (if pushed to a registry)
+                cacheFrom.splice(0, 0, fullImageName);
+            }
+            const buildResult = yield core.group('build container', () => __awaiter(this, void 0, void 0, function* () {
+                const args = {
+                    workspaceFolder,
+                    imageName: fullImageName,
+                    additionalCacheFroms: cacheFrom
+                };
+                const result = yield dev_container_cli_1.devcontainer.build(args, log);
+                if (result.outcome !== 'success') {
+                    core.error(`Dev container build failed: ${result.message} (exit code: ${result.code})\n${result.description}`);
+                    core.setFailed(result.message);
+                }
+                return result;
+            }));
+            if (buildResult.outcome !== 'success') {
                 return;
             }
-            if (!(yield docker_1.runContainer(buildImageName, imageTag, checkoutPath, subFolder, runCommand, envs))) {
+            const upResult = yield core.group('start container', () => __awaiter(this, void 0, void 0, function* () {
+                const args = {
+                    workspaceFolder,
+                    additionalCacheFroms: cacheFrom,
+                    skipContainerUserIdUpdate
+                };
+                const result = yield dev_container_cli_1.devcontainer.up(args, log);
+                if (result.outcome !== 'success') {
+                    core.error(`Dev container up failed: ${result.message} (exit code: ${result.code})\n${result.description}`);
+                    core.setFailed(result.message);
+                }
+                return result;
+            }));
+            if (upResult.outcome !== 'success') {
                 return;
             }
+            const execResult = yield core.group('Run command in container', () => __awaiter(this, void 0, void 0, function* () {
+                const args = {
+                    workspaceFolder,
+                    command: ['bash', '-c', runCommand],
+                    env: inputEnvsWithDefaults
+                };
+                const result = yield dev_container_cli_1.devcontainer.exec(args, log);
+                if (result.outcome !== 'success') {
+                    core.error(`Dev container exec: ${result.message} (exit code: ${result.code})\n${result.description}`);
+                    core.setFailed(result.message);
+                }
+                return result;
+            }));
+            if (execResult.outcome !== 'success') {
+                return;
+            }
+            // TODO - should we stop the container?
         }
         catch (error) {
             core.setFailed(error.message);
@@ -1853,7 +1925,7 @@ function runPost() {
             const ref = process.env.GITHUB_REF;
             if (refFilterForPush.length !== 0 && // empty filter allows all
                 !refFilterForPush.some(s => s === ref)) {
-                core.info(`Image push skipped because GITHUB_REF (${ref}) is not in refFilterForPush`);
+                core.info(`Immage push skipped because GITHUB_REF (${ref}) is not in refFilterForPush`);
                 return;
             }
             const eventName = process.env.GITHUB_EVENT_NAME;
@@ -3629,7 +3701,183 @@ function copyFile(srcFile, destFile, force) {
 
 /***/ }),
 
-/***/ 726:
+/***/ 331:
+/***/ ((__unused_webpack_module, __webpack_exports__, __nccwpck_require__) => {
+
+"use strict";
+__nccwpck_require__.r(__webpack_exports__);
+/* harmony export */ __nccwpck_require__.d(__webpack_exports__, {
+/* harmony export */   "devcontainer": () => (/* binding */ devcontainer)
+/* harmony export */ });
+/* harmony import */ var child_process__WEBPACK_IMPORTED_MODULE_0__ = __nccwpck_require__(129);
+/* harmony import */ var child_process__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__nccwpck_require__.n(child_process__WEBPACK_IMPORTED_MODULE_0__);
+/* harmony import */ var fs__WEBPACK_IMPORTED_MODULE_1__ = __nccwpck_require__(747);
+/* harmony import */ var fs__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__nccwpck_require__.n(fs__WEBPACK_IMPORTED_MODULE_1__);
+/* harmony import */ var util__WEBPACK_IMPORTED_MODULE_2__ = __nccwpck_require__(669);
+/* harmony import */ var util__WEBPACK_IMPORTED_MODULE_2___default = /*#__PURE__*/__nccwpck_require__.n(util__WEBPACK_IMPORTED_MODULE_2__);
+var __awaiter = (undefined && undefined.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+
+
+
+function getSpecCliInfo() {
+    // // TODO - this is temporary until the CLI is installed via npm
+    // // TODO - ^ could consider an `npm install` from the folder
+    // const specCLIPath = path.resolve(__dirname, "..", "cli", "cli.js");
+    // return {
+    //   command: `node ${specCLIPath}`,
+    // };
+    return {
+        command: "devcontainer"
+    };
+}
+function isCliInstalled(exec) {
+    return __awaiter(this, void 0, void 0, function* () {
+        try {
+            const { exitCode } = yield exec(getSpecCliInfo().command, ['--help'], { silent: true });
+            return exitCode === 0;
+        }
+        catch (error) {
+            return false;
+        }
+    });
+}
+const fstat = (0,util__WEBPACK_IMPORTED_MODULE_2__.promisify)((fs__WEBPACK_IMPORTED_MODULE_1___default().stat));
+function installCli(exec) {
+    return __awaiter(this, void 0, void 0, function* () {
+        // if we have a local 'cli' folder, then use that as we're testing a private cli build
+        let cliStat = null;
+        try {
+            cliStat = yield fstat('./cli');
+        }
+        catch (_a) {
+        }
+        if (cliStat && cliStat.isDirectory()) {
+            const { exitCode } = yield exec('bash', ['-c', 'cd cli && npm install && npm install -g'], {});
+            return exitCode === 0;
+        }
+        const { exitCode } = yield exec('bash', ['-c', 'npm install -g @devcontainers/cli'], {});
+        return exitCode === 0;
+    });
+}
+function spawn(command, args, options) {
+    return new Promise((resolve, reject) => {
+        const proc = (0,child_process__WEBPACK_IMPORTED_MODULE_0__.spawn)(command, args, { env: process.env });
+        // const env = params.env ? { ...process.env, ...params.env } : process.env;
+        proc.stdout.on("data", data => options.log(data.toString()));
+        proc.stderr.on("data", data => options.err(data.toString()));
+        proc.on("error", err => {
+            reject(err);
+        });
+        proc.on("close", code => {
+            resolve({
+                code: code
+            });
+        });
+    });
+}
+function parseCliOutput(value) {
+    if (value === "") {
+        // TODO - revisit this
+        throw new Error("Unexpected empty output from CLI");
+    }
+    try {
+        return JSON.parse(value);
+    }
+    catch (error) {
+        return {
+            code: -1,
+            outcome: "error",
+            message: "Failed to parse CLI output",
+            description: `Failed to parse CLI output as JSON: ${value}\nError: ${error}`
+        };
+    }
+}
+function runSpecCli(options) {
+    return __awaiter(this, void 0, void 0, function* () {
+        let stdout = "";
+        const spawnOptions = {
+            log: data => stdout += data,
+            err: data => options.log(data),
+            env: options.env ? Object.assign(Object.assign({}, process.env), options.env) : process.env,
+        };
+        yield spawn(getSpecCliInfo().command, options.args, spawnOptions);
+        return parseCliOutput(stdout);
+    });
+}
+function devContainerBuild(args, log) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const commandArgs = ["build", "--workspace-folder", args.workspaceFolder];
+        if (args.imageName) {
+            commandArgs.push("--image-name", args.imageName);
+        }
+        if (args.additionalCacheFroms) {
+            args.additionalCacheFroms.forEach(cacheFrom => commandArgs.push('--cache-from', cacheFrom));
+        }
+        return yield runSpecCli({
+            args: commandArgs,
+            log,
+            env: { DOCKER_BUILDKIT: "1" },
+        });
+    });
+}
+function devContainerUp(args, log) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const commandArgs = ["up", "--workspace-folder", args.workspaceFolder];
+        if (args.additionalCacheFroms) {
+            args.additionalCacheFroms.forEach(cacheFrom => commandArgs.push('--cache-from', cacheFrom));
+        }
+        if (args.skipContainerUserIdUpdate) {
+            commandArgs.push('--update-remote-user-uid-default', 'off');
+        }
+        return yield runSpecCli({
+            args: commandArgs,
+            log,
+            env: { DOCKER_BUILDKIT: "1" },
+        });
+    });
+}
+function devContainerExec(args, log) {
+    return __awaiter(this, void 0, void 0, function* () {
+        // const remoteEnvArgs = args.env ? args.env.flatMap(e=> ["--remote-env", e]): []; // TODO - test flatMap again
+        const remoteEnvArgs = getRemoteEnvArray(args.env);
+        return yield runSpecCli({
+            args: ["exec", "--workspace-folder", args.workspaceFolder, ...remoteEnvArgs, ...args.command],
+            log,
+            env: { DOCKER_BUILDKIT: "1", },
+        });
+    });
+}
+function getRemoteEnvArray(env) {
+    if (!env) {
+        return [];
+    }
+    let result = [];
+    for (let i = 0; i < env.length; i++) {
+        const envItem = env[i];
+        result.push("--remote-env", envItem);
+    }
+    return result;
+}
+const devcontainer = {
+    build: devContainerBuild,
+    up: devContainerUp,
+    exec: devContainerExec,
+    isCliInstalled,
+    installCli,
+};
+
+
+/***/ }),
+
+/***/ 365:
 /***/ ((__unused_webpack_module, __webpack_exports__, __nccwpck_require__) => {
 
 "use strict";
@@ -3709,32 +3957,8 @@ function getAbsolutePath(inputPath, referencePath) {
     return external_path_default().join(referencePath, inputPath);
 }
 
-;// CONCATENATED MODULE: ../common/src/envvars.ts
-function substituteValues(input) {
-    // Find all `${...}` entries and substitute
-    // Note the non-greedy `.+?` match to avoid matching the start of
-    // one placeholder up to the end of another when multiple placeholders are present
-    return input.replace(/\$\{(.+?)\}/g, getSubstitutionValue);
-}
-function getSubstitutionValue(regexMatch, placeholder) {
-    // Substitution values are in TYPE:KEY form
-    // e.g. env:MY_ENV
-    var _a;
-    const parts = placeholder.split(':');
-    if (parts.length === 2) {
-        const type = parts[0];
-        const key = parts[1];
-        switch (type.toLowerCase()) {
-            case 'env':
-            case 'localenv':
-                return (_a = process.env[key]) !== null && _a !== void 0 ? _a : '';
-        }
-    }
-    // if we can't process the format then return the original string
-    // as having it present in any output will likely make issues more obvious
-    return regexMatch;
-}
-
+// EXTERNAL MODULE: ../common/src/envvars.ts
+var envvars = __nccwpck_require__(228);
 ;// CONCATENATED MODULE: ../common/src/users.ts
 function parsePasswd(input) {
     const result = [];
@@ -3788,13 +4012,13 @@ function isDockerBuildXInstalled(exec) {
         return exitCode === 0;
     });
 }
-function buildImage(exec, imageName, imageTag, checkoutPath, subFolder, skipContainerUserIdUpdate) {
+function buildImage(exec, imageName, imageTag, checkoutPath, subFolder, skipContainerUserIdUpdate, cacheFrom) {
     return docker_awaiter(this, void 0, void 0, function* () {
         const folder = external_path_default().join(checkoutPath, subFolder);
         const devcontainerJsonPath = external_path_default().join(folder, '.devcontainer/devcontainer.json');
         const devcontainerConfig = yield loadFromFile(devcontainerJsonPath);
         // build the image from the .devcontainer spec
-        yield buildImageBase(exec, imageName, imageTag, folder, devcontainerConfig);
+        yield buildImageBase(exec, imageName, imageTag, folder, devcontainerConfig, cacheFrom);
         if (!devcontainerConfig.remoteUser || skipContainerUserIdUpdate == true) {
             return imageName;
         }
@@ -3804,7 +4028,7 @@ function buildImage(exec, imageName, imageTag, checkoutPath, subFolder, skipCont
 function coerceToArray(value) {
     return (typeof (value) === 'string') ? [value] : value;
 }
-function buildImageBase(exec, imageName, imageTag, folder, devcontainerConfig) {
+function buildImageBase(exec, imageName, imageTag, folder, devcontainerConfig, cacheFrom) {
     var _a, _b, _c;
     return docker_awaiter(this, void 0, void 0, function* () {
         const configDockerfile = getDockerfile(devcontainerConfig);
@@ -3823,12 +4047,13 @@ function buildImageBase(exec, imageName, imageTag, folder, devcontainerConfig) {
         if (configCacheFrom) {
             coerceToArray(configCacheFrom).forEach(cacheValue => args.push('--cache-from', cacheValue));
         }
+        cacheFrom.forEach(cacheValue => args.push('--cache-from', cacheValue));
         args.push('--cache-to');
         args.push('type=inline');
         args.push('--output=type=docker');
         const buildArgs = (_c = devcontainerConfig.build) === null || _c === void 0 ? void 0 : _c.args;
         for (const argName in buildArgs) {
-            const argValue = substituteValues(buildArgs[argName]);
+            const argValue = (0,envvars.substituteValues)(buildArgs[argName]);
             args.push('--build-arg', `${argName}=${argValue}`);
         }
         args.push('-f', dockerfilePath);
@@ -3917,7 +4142,7 @@ function runContainer(exec, imageName, imageTag, checkoutPath, subFolder, comman
         args.push('--mount', `type=bind,src=${checkoutPathAbsolute},dst=${workspaceFolder}`);
         if (devcontainerConfig.mounts) {
             devcontainerConfig.mounts
-                .map(m => substituteValues(m))
+                .map(m => (0,envvars.substituteValues)(m))
                 .forEach(m => {
                 const mount = parseMount(m);
                 if (mount.type === "bind") {
@@ -3933,7 +4158,7 @@ function runContainer(exec, imageName, imageTag, checkoutPath, subFolder, comman
         args.push('--workdir', workdir);
         args.push('--user', remoteUser);
         if (devcontainerConfig.runArgs) {
-            const substitutedRunArgs = devcontainerConfig.runArgs.map(a => substituteValues(a));
+            const substitutedRunArgs = devcontainerConfig.runArgs.map(a => (0,envvars.substituteValues)(a));
             args.push(...substitutedRunArgs);
         }
         if (envs) {
@@ -3992,6 +4217,65 @@ function parseMount(mountString) {
         }
     }
     return { type, source, target };
+}
+
+
+/***/ }),
+
+/***/ 228:
+/***/ ((__unused_webpack_module, __webpack_exports__, __nccwpck_require__) => {
+
+"use strict";
+__nccwpck_require__.r(__webpack_exports__);
+/* harmony export */ __nccwpck_require__.d(__webpack_exports__, {
+/* harmony export */   "substituteValues": () => (/* binding */ substituteValues),
+/* harmony export */   "populateDefaults": () => (/* binding */ populateDefaults)
+/* harmony export */ });
+function substituteValues(input) {
+    // Find all `${...}` entries and substitute
+    // Note the non-greedy `.+?` match to avoid matching the start of
+    // one placeholder up to the end of another when multiple placeholders are present
+    return input.replace(/\$\{(.+?)\}/g, getSubstitutionValue);
+}
+function getSubstitutionValue(regexMatch, placeholder) {
+    // Substitution values are in TYPE:KEY form
+    // e.g. env:MY_ENV
+    var _a;
+    const parts = placeholder.split(':');
+    if (parts.length === 2) {
+        const type = parts[0];
+        const key = parts[1];
+        switch (type.toLowerCase()) {
+            case 'env':
+            case 'localenv':
+                return (_a = process.env[key]) !== null && _a !== void 0 ? _a : '';
+        }
+    }
+    // if we can't process the format then return the original string
+    // as having it present in any output will likely make issues more obvious
+    return regexMatch;
+}
+// populateDefaults expects strings either "FOO=hello" or "BAR".
+// In the latter case, the corresponding returned item would be "BAR=hi"
+// where the value is taken from the matching process env var.
+// In the case of values not set in the process, they are omitted
+function populateDefaults(envs) {
+    const result = [];
+    for (let i = 0; i < envs.length; i++) {
+        const inputEnv = envs[i];
+        if (inputEnv.indexOf('=') >= 0) {
+            // pass straight through to result
+            result.push(inputEnv);
+        }
+        else {
+            // inputEnv is just the env var name
+            const processEnvValue = process.env[inputEnv];
+            if (processEnvValue) {
+                result.push(`${inputEnv}=${processEnvValue}`);
+            }
+        }
+    }
+    return result;
 }
 
 

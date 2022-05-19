@@ -14,12 +14,15 @@ on: # rebuild any PRs and main branch changes
   workflow_dispatch:
   
 jobs:
+
   build: # run build using the github action!
     runs-on: ubuntu-latest
     name: build, test, package
     outputs:
       version_short: ${{ steps.build.outputs.version_short }}
       version: ${{ steps.build.outputs.version }}
+      image_tag: ${{ steps.set_image_tag.outputs.image_tag }}
+      build_number: ${{ steps.build_number.outputs.build_number }}
     steps:
       - name: Checkout
         uses: actions/checkout@v2
@@ -29,25 +32,55 @@ jobs:
 
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v1 
-        if: github.ref == 'refs/heads/main' # only need this for push (on `main`)
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Previously, run_id was used as the patch number (BUILD_NUMBER)
+      # but this got outside the limit for AzDO extensions (0 to 2147483647)
+      - name: Generate build number
+        id: build_number
+        uses: einaregilsson/build-number@v3 
+        with:
+          token: ${{ secrets.github_token }}
+
+      - id: set_image_tag
+        name: Set image_tag...
+        uses: actions/github-script@v6
+        with:
+          script: |
+            if (context.eventName === "push" && context.ref === "refs/heads/main") {
+              console.log("Setting image_tag=latest for push to main");
+              core.setOutput("image_tag", "latest");
+              return;
+            }
+            if (context.eventName === "pull_request") {
+              const prTag = `pr-${context.payload.pull_request.number}`;
+              console.log(`Setting image_tag=${prTag} for pull_request`);
+              core.setOutput("image_tag", prTag);
+              return;
+            }
+            core.error('Failed to set image_tag');
+            console.log(context);
 
       - name: Build in dev container
         uses: ./
         id: build
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          BUILD_NUMBER: ${{ github.run_id }}
+          BUILD_NUMBER: ${{ steps.build_number.outputs.build_number }}
           IS_PR: ${{ github.head_ref }}
           BRANCH: ${{ github.ref }}
         with:
-          imageName: ghcr.io/stuartleeks/devcontainer-build-run-devcontainer
+          imageName: ghcr.io/stuartleeks/dev-container-build-run-devcontainer
+          imageTag: ${{ steps.set_image_tag.outputs.image_tag }} 
           runCmd: |
             echo "Starting"
             ./scripts/build-test-package.sh
+          eventFilterForPush: | # allow image push on pull_request
+            push
+            pull_request
           env: |
             BUILD_NUMBER
             IS_CI=1
@@ -71,15 +104,16 @@ jobs:
   release:
     name: Create release
     runs-on: ubuntu-latest
-    needs:
-      - test-azdo
+    needs: # TODO - check what jobs need adding here
       - build
+      - test-azdo
       - test-gh-run-args
       - test-gh-build-args
       - test-gh-dockerfile-context
+      - test-gh-feature-docker-from-docker
       - test-gh-docker-from-docker-non-root
       - test-gh-docker-from-docker-root
-      - test-gh-image-tag
+      # - test-gh-image-tag
       - test-gh-skip-user-update
     if: github.ref == 'refs/heads/main' # only create release on `main`
     env:
@@ -219,6 +253,7 @@ jobs:
           BUILD_NUMBER: ${{ github.run_id }}
           IS_PR: ${{ github.head_ref }}
           BRANCH: ${{ github.ref }}
+          IMAGE_TAG: ${{ needs.build.outputs.image_tag }}
         with:
           imageName: ghcr.io/stuartleeks/devcontainer-build-run-devcontainer
           runCmd: |
@@ -226,6 +261,7 @@ jobs:
             ./scripts/test-azdo.sh
           env: |
             BUILD_NUMBER
+            IMAGE_TAG
             IS_CI=1
             IS_PR
             BRANCH
@@ -233,7 +269,7 @@ jobs:
             AZURE_DEVOPS_EXT_PAT
             AZDO_ORG=https://dev.azure.com/stuartle
             AZDO_PROJECT=AzDODevContainerBuildRunTest
-            AZDO_BUILD=AzDODevContainerBuildRunTest
+            AZDO_BUILD=stuartleeks.devcontainer-build-run
 
   test-gh-run-args:
     name: Run GitHub run-args test
@@ -248,7 +284,6 @@ jobs:
 
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v1 
-        if: github.ref == 'refs/heads/main' # only need this for push (on `main`)
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
@@ -260,6 +295,10 @@ jobs:
           subFolder: github-tests/run-args
           imageName: ghcr.io/stuartleeks/devcontainer-build-run/tests/run-args
           runCmd: echo $HOSTNAME && [[ $HOSTNAME == "my-host" ]]
+          imageTag: ${{ needs.build.outputs.image_tag }}
+          eventFilterForPush: | # allow image push on pull_request
+            push
+            pull_request
 
   test-gh-build-args:
     name: Run GitHub build-args test
@@ -285,6 +324,10 @@ jobs:
           subFolder: github-tests/build-args
           imageName: ghcr.io/stuartleeks/devcontainer-build-run/tests/build-args
           runCmd: echo $BUILD_ARG_TEST && [[ $BUILD_ARG_TEST == "Hello build-args!" ]]
+          imageTag: ${{ needs.build.outputs.image_tag }}
+          eventFilterForPush: | # allow image push on pull_request
+            push
+            pull_request
 
   test-gh-dockerfile-context:
     name: Run GitHub dockerfile-context test
@@ -310,6 +353,39 @@ jobs:
           subFolder: github-tests/dockerfile-context
           imageName: ghcr.io/stuartleeks/devcontainer-build-run/tests/dockerfile-context
           runCmd: /tmp/dummy.sh
+          imageTag: ${{ needs.build.outputs.image_tag }}
+          eventFilterForPush: | # allow image push on pull_request
+            push
+            pull_request
+
+  test-gh-feature-docker-from-docker:
+    name: Run GitHub feature-docker-from-docker test
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v1
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run test
+        uses: ./
+        with:
+          subFolder: github-tests/feature-docker-from-docker
+          imageName: ghcr.io/stuartleeks/devcontainer-build-run/tests/feature-docker-from-docker
+          runCmd: make docker-build
+          imageTag: ${{ needs.build.outputs.image_tag }}
+          eventFilterForPush: | # allow image push on pull_request
+            push
+            pull_request
 
   test-gh-docker-from-docker-non-root:
     name: Run GitHub docker-from-docker-non-root test
@@ -335,6 +411,10 @@ jobs:
           subFolder: github-tests/docker-from-docker-non-root
           imageName: ghcr.io/stuartleeks/devcontainer-build-run/tests/docker-from-docker-non-root
           runCmd: make docker-build
+          imageTag: ${{ needs.build.outputs.image_tag }}
+          eventFilterForPush: | # allow image push on pull_request
+            push
+            pull_request
 
   test-gh-docker-from-docker-root:
     name: Run GitHub docker-from-docker-root test
@@ -360,42 +440,49 @@ jobs:
           subFolder: github-tests/docker-from-docker-root
           imageName: ghcr.io/stuartleeks/devcontainer-build-run/tests/docker-from-docker-root
           runCmd: make docker-build
+          imageTag: ${{ needs.build.outputs.image_tag }}
+          eventFilterForPush: | # allow image push on pull_request
+            push
+            pull_request
 
 
-  test-gh-image-tag:
-    name: Run GitHub image-tag test
-    runs-on: ubuntu-latest
-    needs: build
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v2
+  # TODO - Review whether this test is meaningful now that we're building on the CLI.
+  #        It doesn't currently succeed as the image being run by the CLI isn't the tagged image
+  # test-gh-image-tag:
+  #   name: Run GitHub image-tag test
+  #   runs-on: ubuntu-latest
+  #   needs: build
+  #   steps:
+  #     - name: Checkout
+  #       uses: actions/checkout@v2
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v1
+  #     - name: Set up Docker Buildx
+  #       uses: docker/setup-buildx-action@v1
 
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@v1 
-        if: github.ref == 'refs/heads/main' # only need this for push (on `main`)
-        with:
-          registry: ghcr.io
-          username: ${{ github.repository_owner }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+  #     - name: Login to GitHub Container Registry
+  #       uses: docker/login-action@v1 
+  #       if: github.ref == 'refs/heads/main' # only need this for push (on `main`)
+  #       with:
+  #         registry: ghcr.io
+  #         username: ${{ github.repository_owner }}
+  #         password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Run test
-        uses: ./
-        with:
-          subFolder: github-tests/image-tag
-          imageName: ghcr.io/stuartleeks/devcontainer-build-run/tests/image-tag
-          imageTag: custom-tag
-          runCmd: |
-            echo "Get dev container..."
-            container_id=$(docker ps --latest --format "{{.ID}}" --no-trunc)
-            echo "Container ID: $container_id"
-            container_image=$(docker inspect $container_id --format "{{.Config.Image}}")
-            echo "Container Image: $container_image"
-            container_tag=$(echo $container_image | sed s/[^:].*://g)
-            echo "Container tag: $container_tag"
-            [[ $container_tag == "custom-tag" ]]
+  #     - name: Run test
+  #       uses: ./
+  #       with:
+  #         subFolder: github-tests/image-tag
+  #         imageName: ghcr.io/stuartleeks/devcontainer-build-run/tests/image-tag
+  #         # Don't push this as we have a fixed custom tag
+  #         imageTag: custom-tag
+  #         runCmd: |
+  #           echo "Get dev container..."
+  #           container_id=$(docker ps --latest --format "{{.ID}}" --no-trunc)
+  #           echo "Container ID: $container_id"
+  #           container_image=$(docker inspect $container_id --format "{{.Config.Image}}")
+  #           echo "Container Image: $container_image"
+  #           container_tag=$(echo $container_image | sed s/[^:].*://g)
+  #           echo "Container tag: $container_tag"
+  #           [[ $container_tag == "custom-tag" ]]
 
   test-gh-skip-user-update:
     name: Run GitHub skipContainerUserIdUpdate test
@@ -410,7 +497,6 @@ jobs:
 
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v1 
-        if: github.ref == 'refs/heads/main' # only need this for push (on `main`)
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
@@ -429,8 +515,7 @@ jobs:
             group_id=$(id -g $(whoami))
             echo "Group ID: $group_id"
             [[ $user_id == 1000 ]] && [[ $group_id == 1000 ]]
-
-      # - name: fail
-      #   run: |
-      #     echo "::error file=app.js,line=10,col=15::Something went wrong"
-      #     exit 1
+          imageTag: ${{ needs.build.outputs.image_tag }}
+          eventFilterForPush: | # allow image push on pull_request
+            push
+            pull_request

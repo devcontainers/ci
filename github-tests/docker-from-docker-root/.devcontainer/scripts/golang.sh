@@ -2,7 +2,7 @@
 set -e
 
 get_latest_release() {
-  curl --silent "https://golang.org/dl/" | grep -Po -m 1 '(\d+\.\d+\.\d+)\.linux-amd64' | sed 's/.linux-amd64//'
+  curl --silent "https://go.dev/dl/" | grep -Po -m 1 '(\d+\.\d+\.\d+)\.linux-amd64' | sed 's/.linux-amd64//'
 }
 
 VERSION=${1:-"$(get_latest_release)"}

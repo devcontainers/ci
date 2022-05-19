@@ -37,7 +37,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.pushImage = exports.runContainer = exports.buildImage = exports.isDockerBuildXInstalled = void 0;
 const task = __importStar(__nccwpck_require__(347));
-const docker = __importStar(__nccwpck_require__(9340));
+const docker = __importStar(__nccwpck_require__(2255));
 const exec_1 = __nccwpck_require__(7757);
 function isDockerBuildXInstalled() {
     return __awaiter(this, void 0, void 0, function* () {
@@ -45,11 +45,11 @@ function isDockerBuildXInstalled() {
     });
 }
 exports.isDockerBuildXInstalled = isDockerBuildXInstalled;
-function buildImage(imageName, imageTag, checkoutPath, subFolder, skipContainerUserIdUpdate) {
+function buildImage(imageName, imageTag, checkoutPath, subFolder, skipContainerUserIdUpdate, cacheFrom) {
     return __awaiter(this, void 0, void 0, function* () {
         console.log('🏗 Building dev container...');
         try {
-            return yield docker.buildImage(exec_1.exec, imageName, imageTag, checkoutPath, subFolder, skipContainerUserIdUpdate);
+            return yield docker.buildImage(exec_1.exec, imageName, imageTag, checkoutPath, subFolder, skipContainerUserIdUpdate, cacheFrom);
         }
         catch (error) {
             task.setResult(task.TaskResult.Failed, error);
@@ -216,9 +216,17 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 const task = __importStar(__nccwpck_require__(347));
+const task_1 = __nccwpck_require__(347);
+const path_1 = __importDefault(__nccwpck_require__(5622));
+const envvars_1 = __nccwpck_require__(9243);
+const dev_container_cli_1 = __nccwpck_require__(4624);
 const docker_1 = __nccwpck_require__(3758);
+const exec_1 = __nccwpck_require__(7757);
 function run() {
     return __awaiter(this, void 0, void 0, function* () {
         console.log('DevContainerBuildRun starting...');
@@ -235,13 +243,22 @@ function run() {
     });
 }
 function runMain() {
-    var _a, _b, _c, _d, _e;
+    var _a, _b, _c, _d, _e, _f, _g;
     return __awaiter(this, void 0, void 0, function* () {
         try {
             const buildXInstalled = yield docker_1.isDockerBuildXInstalled();
             if (!buildXInstalled) {
-                task.setResult(task.TaskResult.Failed, 'docker buildx not available: add a step to set up with docker/setup-buildx-action');
+                console.log('### WARNING: docker buildx not available: add a step to set up with docker/setup-buildx-action - see https://github.com/stuartleeks/devcontainer-build-run/blob/main/docs/azure-devops-task.md');
                 return;
+            }
+            const devContainerCliInstalled = yield dev_container_cli_1.devcontainer.isCliInstalled(exec_1.exec);
+            if (!devContainerCliInstalled) {
+                console.log('Installing @devcontainers/cli...');
+                const success = yield dev_container_cli_1.devcontainer.installCli(exec_1.exec);
+                if (!success) {
+                    task.setResult(task.TaskResult.Failed, '@devcontainers/cli install failed!');
+                    return;
+                }
             }
             const checkoutPath = (_a = task.getInput('checkoutPath')) !== null && _a !== void 0 ? _a : '';
             const imageName = task.getInput('imageName', true);
@@ -257,14 +274,71 @@ function runMain() {
                 return;
             }
             const envs = (_d = (_c = task.getInput('env')) === null || _c === void 0 ? void 0 : _c.split('\n')) !== null && _d !== void 0 ? _d : [];
-            const skipContainerUserIdUpdate = ((_e = task.getInput('skipContainerUserIdUpdate')) !== null && _e !== void 0 ? _e : 'false') === 'true';
-            const buildImageName = yield docker_1.buildImage(imageName, imageTag, checkoutPath, subFolder, skipContainerUserIdUpdate);
-            if (buildImageName === '') {
+            const inputEnvsWithDefaults = envvars_1.populateDefaults(envs);
+            const cacheFrom = (_f = (_e = task.getInput('cacheFrom')) === null || _e === void 0 ? void 0 : _e.split('\n')) !== null && _f !== void 0 ? _f : [];
+            const skipContainerUserIdUpdate = ((_g = task.getInput('skipContainerUserIdUpdate')) !== null && _g !== void 0 ? _g : 'false') === 'true';
+            const log = (message) => console.log(message);
+            const workspaceFolder = path_1.default.resolve(checkoutPath, subFolder);
+            const fullImageName = `${imageName}:${imageTag !== null && imageTag !== void 0 ? imageTag : 'latest'}`;
+            if (!cacheFrom.includes(fullImageName)) {
+                // If the cacheFrom options don't include the fullImageName, add it here
+                // This ensures that when building a PR where the image specified in the action
+                // isn't included in devcontainer.json (or docker-compose.yml), the action still
+                // resolves a previous image for the tag as a layer cache (if pushed to a registry)
+                cacheFrom.splice(0, 0, fullImageName);
+            }
+            const buildArgs = {
+                workspaceFolder,
+                imageName: fullImageName,
+                additionalCacheFroms: cacheFrom
+            };
+            console.log('\n\n');
+            console.log('***');
+            console.log('*** Building the dev container');
+            console.log('***');
+            const buildResult = yield dev_container_cli_1.devcontainer.build(buildArgs, log);
+            if (buildResult.outcome !== 'success') {
+                console.log(`### ERROR: Dev container build failed: ${buildResult.message} (exit code: ${buildResult.code})\n${buildResult.description}`);
+                task.setResult(task_1.TaskResult.Failed, buildResult.message);
+            }
+            if (buildResult.outcome !== 'success') {
                 return;
             }
-            if (!(yield docker_1.runContainer(buildImageName, imageTag, checkoutPath, subFolder, runCommand, envs))) {
+            console.log('\n\n');
+            console.log('***');
+            console.log('*** Starting the dev container');
+            console.log('***');
+            const upArgs = {
+                workspaceFolder,
+                additionalCacheFroms: cacheFrom,
+                skipContainerUserIdUpdate
+            };
+            const upResult = yield dev_container_cli_1.devcontainer.up(upArgs, log);
+            if (upResult.outcome !== 'success') {
+                console.log(`### ERROR: Dev container up failed: ${upResult.message} (exit code: ${upResult.code})\n${upResult.description}`);
+                task.setResult(task_1.TaskResult.Failed, upResult.message);
+            }
+            if (upResult.outcome !== 'success') {
                 return;
             }
+            console.log('\n\n');
+            console.log('***');
+            console.log('*** Running command in the dev container');
+            console.log('***');
+            const execArgs = {
+                workspaceFolder,
+                command: ['bash', '-c', runCommand],
+                env: inputEnvsWithDefaults
+            };
+            const execResult = yield dev_container_cli_1.devcontainer.exec(execArgs, log);
+            if (execResult.outcome !== 'success') {
+                console.log(`### ERROR: Dev container exec: ${execResult.message} (exit code: ${execResult.code})\n${execResult.description}`);
+                task.setResult(task_1.TaskResult.Failed, execResult.message);
+            }
+            if (execResult.outcome !== 'success') {
+                return;
+            }
+            // TODO - should we stop the container?
         }
         catch (err) {
             task.setResult(task.TaskResult.Failed, err.message);
@@ -327,11 +401,12 @@ run();
 /***/ }),
 
 /***/ 6526:
-/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports._exposeCertSettings = exports._exposeProxySettings = exports._normalizeSeparators = exports._isRooted = exports._getDirectoryName = exports._ensureRooted = exports._isUncPath = exports._loadData = exports._ensurePatternRooted = exports._getFindInfoFromPattern = exports._cloneMatchOptions = exports._legacyFindFiles_convertPatternToRegExp = exports._which = exports._checkPath = exports._exist = exports._debug = exports._error = exports._warning = exports._command = exports._getVariableKey = exports._getVariable = exports._loc = exports._setResourcePath = exports._setErrStream = exports._setStdStream = exports._writeLine = exports._endsWith = exports._startsWith = exports._vault = exports._knownVariableMap = void 0;
 var fs = __nccwpck_require__(5747);
 var path = __nccwpck_require__(5622);
 var os = __nccwpck_require__(2087);
@@ -356,7 +431,7 @@ exports._knownVariableMap = {};
 //-----------------------------------------------------
 // async await needs generators in node 4.x+
 if (semver.lt(process.versions.node, '4.2.0')) {
-    this.warning('Tasks require a new agent.  Upgrade your agent or node to 4.2.0 or later');
+    _warning('Tasks require a new agent.  Upgrade your agent or node to 4.2.0 or later');
 }
 //-----------------------------------------------------
 // String convenience
@@ -454,7 +529,6 @@ function _loadLocStrings(resourceFile, culture) {
 /**
  * Sets the location of the resources json.  This is typically the task.json file.
  * Call once at the beginning of the script before any calls to loc.
- *
  * @param     path      Full path to the json.
  * @param     ignoreWarnings  Won't throw warnings if path already set.
  * @returns   void
@@ -517,10 +591,10 @@ function _loc(key) {
     }
     else {
         if (Object.keys(_resourceFiles).length <= 0) {
-            _warning(_loc('LIB_ResourceFileNotSet', key));
+            _warning("Resource file haven't been set, can't find loc string for key: " + key);
         }
         else {
-            _warning(_loc('LIB_LocStringNotFound', key));
+            _warning("Can't find loc string for key: " + key);
         }
         locString = key;
     }
@@ -964,10 +1038,11 @@ function _loadData() {
                 }
             }
             // store the secret
-            if (process.env[envvar]) {
+            var value = process.env[envvar];
+            if (value) {
                 ++loaded;
                 _debug('loading ' + envvar);
-                exports._vault.storeSecret(envvar, process.env[envvar]);
+                exports._vault.storeSecret(envvar, value);
                 delete process.env[envvar];
             }
         }
@@ -1003,6 +1078,16 @@ exports._loadData = _loadData;
 //--------------------------------------------------------------------------------
 // Internal path helpers.
 //--------------------------------------------------------------------------------
+/**
+ * Defines if path is unc-path.
+ *
+ * @param path  a path to a file.
+ * @returns     true if path starts with double backslash, otherwise returns false.
+ */
+function _isUncPath(path) {
+    return /^\\\\[^\\]/.test(path);
+}
+exports._isUncPath = _isUncPath;
 function _ensureRooted(root, p) {
     if (!root) {
         throw new Error('ensureRooted() parameter "root" cannot be empty');
@@ -2699,11 +2784,12 @@ function coerce (version) {
 /***/ }),
 
 /***/ 347:
-/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.updateReleaseName = exports.addBuildTag = exports.updateBuildNumber = exports.uploadBuildLog = exports.associateArtifact = exports.uploadArtifact = exports.logIssue = exports.logDetail = exports.setProgress = exports.setEndpoint = exports.addAttachment = exports.uploadSummary = exports.prependPath = exports.uploadFile = exports.CodeCoverageEnabler = exports.CodeCoveragePublisher = exports.TestPublisher = exports.getHttpCertConfiguration = exports.getHttpProxyConfiguration = exports.findMatch = exports.filter = exports.match = exports.tool = exports.execSync = exports.exec = exports.rmRF = exports.legacyFindFiles = exports.find = exports.retry = exports.mv = exports.cp = exports.ls = exports.which = exports.resolve = exports.mkdirP = exports.popd = exports.pushd = exports.cd = exports.checkPath = exports.cwd = exports.getPlatform = exports.osType = exports.writeFile = exports.exist = exports.stats = exports.debug = exports.error = exports.warning = exports.command = exports.setTaskVariable = exports.getTaskVariable = exports.getSecureFileTicket = exports.getSecureFileName = exports.getEndpointAuthorization = exports.getEndpointAuthorizationParameter = exports.getEndpointAuthorizationScheme = exports.getEndpointDataParameter = exports.getEndpointUrl = exports.getPathInput = exports.filePathSupplied = exports.getDelimitedInput = exports.getBoolInput = exports.getInput = exports.setSecret = exports.setVariable = exports.getVariables = exports.assertAgent = exports.getVariable = exports.loc = exports.setResourcePath = exports.setResult = exports.setErrStream = exports.setStdStream = exports.Platform = exports.FieldType = exports.ArtifactType = exports.IssueType = exports.TaskState = exports.TaskResult = void 0;
 var shell = __nccwpck_require__(3516);
 var childProcess = __nccwpck_require__(3129);
 var fs = __nccwpck_require__(5747);
@@ -3064,7 +3150,7 @@ function getEndpointAuthorizationParameter(id, key, optional) {
 exports.getEndpointAuthorizationParameter = getEndpointAuthorizationParameter;
 /**
  * Gets the authorization details for a service endpoint
- * If the authorization was not set and is not optional, it will throw.
+ * If the authorization was not set and is not optional, it will set the task result to Failed.
  *
  * @param     id        name of the service endpoint
  * @param     optional  whether the url is optional
@@ -3075,7 +3161,7 @@ function getEndpointAuthorization(id, optional) {
     if (!optional && !aval) {
         setResult(TaskResult.Failed, exports.loc('LIB_EndpointAuthNotExist', id));
     }
-    exports.debug(id + ' exists ' + (aval !== null));
+    exports.debug(id + ' exists ' + (!!aval));
     var auth;
     try {
         if (aval) {
@@ -3380,13 +3466,13 @@ exports.ls = ls;
 function cp(source, dest, options, continueOnError, retryCount) {
     if (retryCount === void 0) { retryCount = 0; }
     while (retryCount >= 0) {
-        if (options) {
-            shell.cp(options, source, dest);
-        }
-        else {
-            shell.cp(source, dest);
-        }
         try {
+            if (options) {
+                shell.cp(options, source, dest);
+            }
+            else {
+                shell.cp(source, dest);
+            }
             _checkShell('cp', false);
             break;
         }
@@ -3427,6 +3513,72 @@ function mv(source, dest, options, continueOnError) {
 }
 exports.mv = mv;
 /**
+ * Tries to execute a function a specified number of times.
+ *
+ * @param   func            a function to be executed.
+ * @param   args            executed function arguments array.
+ * @param   retryOptions    optional. Defaults to { continueOnError: false, retryCount: 0 }.
+ * @returns the same as the usual function.
+ */
+function retry(func, args, retryOptions) {
+    if (retryOptions === void 0) { retryOptions = { continueOnError: false, retryCount: 0 }; }
+    while (retryOptions.retryCount >= 0) {
+        try {
+            return func.apply(void 0, args);
+        }
+        catch (e) {
+            if (retryOptions.retryCount <= 0) {
+                if (retryOptions.continueOnError) {
+                    exports.warning(e);
+                    break;
+                }
+                else {
+                    throw e;
+                }
+            }
+            else {
+                exports.debug("Attempt to execute function \"" + (func === null || func === void 0 ? void 0 : func.name) + "\" failed, retries left: " + retryOptions.retryCount);
+                retryOptions.retryCount--;
+            }
+        }
+    }
+}
+exports.retry = retry;
+/**
+ * Gets info about item stats.
+ *
+ * @param path                      a path to the item to be processed.
+ * @param followSymbolicLink        indicates whether to traverse descendants of symbolic link directories.
+ * @param allowBrokenSymbolicLinks  when true, broken symbolic link will not cause an error.
+ * @returns fs.Stats
+ */
+function _getStats(path, followSymbolicLink, allowBrokenSymbolicLinks) {
+    // stat returns info about the target of a symlink (or symlink chain),
+    // lstat returns info about a symlink itself
+    var stats;
+    if (followSymbolicLink) {
+        try {
+            // use stat (following symlinks)
+            stats = fs.statSync(path);
+        }
+        catch (err) {
+            if (err.code == 'ENOENT' && allowBrokenSymbolicLinks) {
+                // fallback to lstat (broken symlinks allowed)
+                stats = fs.lstatSync(path);
+                exports.debug("  " + path + " (broken symlink)");
+            }
+            else {
+                throw err;
+            }
+        }
+    }
+    else {
+        // use lstat (not following symlinks)
+        stats = fs.lstatSync(path);
+    }
+    return stats;
+}
+/**
  * Recursively finds all paths a given path. Returns an array of paths.
  *
  * @param     findPath  path to search
@@ -3464,54 +3616,38 @@ function find(findPath, options) {
         var _loop_1 = function () {
             // pop the next item and push to the result array
             var item = stack.pop(); // non-null because `stack.length` was truthy
-            result.push(item.path);
-            // stat the item.  the stat info is used further below to determine whether to traverse deeper
-            //
-            // stat returns info about the target of a symlink (or symlink chain),
-            // lstat returns info about a symlink itself
             var stats_2 = void 0;
-            if (options.followSymbolicLinks) {
-                try {
-                    // use stat (following all symlinks)
-                    stats_2 = fs.statSync(item.path);
-                }
-                catch (err) {
-                    if (err.code == 'ENOENT' && options.allowBrokenSymbolicLinks) {
-                        // fallback to lstat (broken symlinks allowed)
-                        stats_2 = fs.lstatSync(item.path);
-                        exports.debug("  " + item.path + " (broken symlink)");
-                    }
-                    else {
-                        throw err;
-                    }
-                }
+            try {
+                // `item.path` equals `findPath` for the first item to be processed, when the `result` array is empty
+                var isPathToSearch = !result.length;
+                // following specified symlinks only if current path equals specified path
+                var followSpecifiedSymbolicLink = options.followSpecifiedSymbolicLink && isPathToSearch;
+                // following all symlinks or following symlink for the specified path
+                var followSymbolicLink = options.followSymbolicLinks || followSpecifiedSymbolicLink;
+                // stat the item. The stat info is used further below to determine whether to traverse deeper
+                stats_2 = _getStats(item.path, followSymbolicLink, options.allowBrokenSymbolicLinks);
             }
-            else if (options.followSpecifiedSymbolicLink && result.length == 1) {
-                try {
-                    // use stat (following symlinks for the specified path and this is the specified path)
-                    stats_2 = fs.statSync(item.path);
+            catch (err) {
+                if (err.code == 'ENOENT' && options.skipMissingFiles) {
+                    exports.warning("No such file or directory: \"" + item.path + "\" - skipping.");
+                    return "continue";
                 }
-                catch (err) {
-                    if (err.code == 'ENOENT' && options.allowBrokenSymbolicLinks) {
-                        // fallback to lstat (broken symlinks allowed)
-                        stats_2 = fs.lstatSync(item.path);
-                        exports.debug("  " + item.path + " (broken symlink)");
-                    }
-                    else {
-                        throw err;
-                    }
-                }
+                throw err;
             }
-            else {
-                // use lstat (not following symlinks)
-                stats_2 = fs.lstatSync(item.path);
-            }
+            result.push(item.path);
             // note, isDirectory() returns false for the lstat of a symlink
             if (stats_2.isDirectory()) {
                 exports.debug("  " + item.path + " (directory)");
                 if (options.followSymbolicLinks) {
                     // get the realpath
-                    var realPath_1 = fs.realpathSync(item.path);
+                    var realPath_1;
+                    if (im._isUncPath(item.path)) {
+                        // Sometimes there are spontaneous issues when working with unc-paths, so retries have been added for them.
+                        realPath_1 = retry(fs.realpathSync, [item.path], { continueOnError: false, retryCount: 5 });
+                    }
+                    else {
+                        realPath_1 = fs.realpathSync(item.path);
+                    }
                     // fixup the traversal chain to match the item level
                     while (traversalChain.length >= item.level) {
                         traversalChain.pop();
@@ -3558,12 +3694,14 @@ function _debugFindOptions(options) {
     exports.debug("findOptions.allowBrokenSymbolicLinks: '" + options.allowBrokenSymbolicLinks + "'");
     exports.debug("findOptions.followSpecifiedSymbolicLink: '" + options.followSpecifiedSymbolicLink + "'");
     exports.debug("findOptions.followSymbolicLinks: '" + options.followSymbolicLinks + "'");
+    exports.debug("findOptions.skipMissingFiles: '" + options.skipMissingFiles + "'");
 }
 function _getDefaultFindOptions() {
     return {
         allowBrokenSymbolicLinks: false,
         followSpecifiedSymbolicLink: true,
-        followSymbolicLinks: true
+        followSymbolicLinks: true,
+        skipMissingFiles: false
     };
 }
 /**
@@ -4538,7 +4676,7 @@ exports.addBuildTag = addBuildTag;
  * @returns         void
  */
 function updateReleaseName(name) {
-    assertAgent("2.132");
+    assertAgent("2.132.0");
     exports.command("release.updatereleasename", null, name);
 }
 exports.updateReleaseName = updateReleaseName;
@@ -4553,7 +4691,7 @@ exports.ToolRunner = trm.ToolRunner;
 //-----------------------------------------------------
 // async await needs generators in node 4.x+
 if (semver.lt(process.versions.node, '4.2.0')) {
-    this.warning('Tasks require a new agent.  Upgrade your agent or node to 4.2.0 or later');
+    exports.warning('Tasks require a new agent.  Upgrade your agent or node to 4.2.0 or later');
 }
 //-------------------------------------------------------------------
 // Populate the vault with sensitive data.  Inputs and Endpoints
@@ -4574,6 +4712,7 @@ if (!global['_vsts_task_lib_loaded']) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.commandFromString = exports.TaskCommand = void 0;
 //
 // Command Format:
 //    ##vso[artifact.command key=value;key=value]user message
@@ -4651,17 +4790,17 @@ function commandFromString(commandLine) {
 }
 exports.commandFromString = commandFromString;
 function escapedata(s) {
-    return s.replace(/%/g, '%25')
+    return s.replace(/%/g, '%AZP25')
         .replace(/\r/g, '%0D')
         .replace(/\n/g, '%0A');
 }
 function unescapedata(s) {
     return s.replace(/%0D/g, '\r')
         .replace(/%0A/g, '\n')
-        .replace(/%25/g, '%');
+        .replace(/%AZP25/g, '%');
 }
 function escape(s) {
-    return s.replace(/%/g, '%25')
+    return s.replace(/%/g, '%AZP25')
         .replace(/\r/g, '%0D')
         .replace(/\n/g, '%0A')
         .replace(/]/g, '%5D')
@@ -4672,7 +4811,7 @@ function unescape(s) {
         .replace(/%0A/g, '\n')
         .replace(/%5D/g, ']')
         .replace(/%3B/g, ';')
-        .replace(/%25/g, '%');
+        .replace(/%AZP25/g, '%');
 }
 
 
@@ -4687,9 +4826,9 @@ var __extends = (this && this.__extends) || (function () {
     var extendStatics = function (d, b) {
         extendStatics = Object.setPrototypeOf ||
             ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-            function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+            function (d, b) { for (var p in b) if (Object.prototype.hasOwnProperty.call(b, p)) d[p] = b[p]; };
         return extendStatics(d, b);
-    }
+    };
     return function (d, b) {
         extendStatics(d, b);
         function __() { this.constructor = d; }
@@ -4697,6 +4836,7 @@ var __extends = (this && this.__extends) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.ToolRunner = void 0;
 var Q = __nccwpck_require__(6172);
 var os = __nccwpck_require__(2087);
 var events = __nccwpck_require__(8614);
@@ -4727,8 +4867,13 @@ var ToolRunner = /** @class */ (function (_super) {
         var arg = '';
         var append = function (c) {
             // we only escape double quotes.
-            if (escaped && c !== '"') {
-                arg += '\\';
+            if (escaped) {
+                if (c !== '"') {
+                    arg += '\\';
+                }
+                else {
+                    arg.slice(0, -1);
+                }
             }
             arg += c;
             escaped = false;
@@ -5195,6 +5340,7 @@ var ToolRunner = /** @class */ (function (_super) {
     };
     ToolRunner.prototype.execWithPiping = function (pipeOutputToTool, options) {
         var _this = this;
+        var _a, _b, _c, _d;
         var defer = Q.defer();
         this._debug('exec tool: ' + this.toolPath);
         this._debug('arguments:');
@@ -5253,19 +5399,20 @@ var ToolRunner = /** @class */ (function (_super) {
             });
         }
         //pipe stdout of first tool to stdin of second tool
-        cpFirst.stdout.on('data', function (data) {
+        (_a = cpFirst.stdout) === null || _a === void 0 ? void 0 : _a.on('data', function (data) {
+            var _a;
             try {
                 if (fileStream) {
                     fileStream.write(data);
                 }
-                cp.stdin.write(data);
+                (_a = cp.stdin) === null || _a === void 0 ? void 0 : _a.write(data);
             }
             catch (err) {
                 _this._debug('Failed to pipe output of ' + toolPathFirst + ' to ' + toolPath);
                 _this._debug(toolPath + ' might have exited due to errors prematurely. Verify the arguments passed are valid.');
             }
         });
-        cpFirst.stderr.on('data', function (data) {
+        (_b = cpFirst.stderr) === null || _b === void 0 ? void 0 : _b.on('data', function (data) {
             if (fileStream) {
                 fileStream.write(data);
             }
@@ -5276,17 +5423,19 @@ var ToolRunner = /** @class */ (function (_super) {
             }
         });
         cpFirst.on('error', function (err) {
+            var _a;
             waitingEvents--; //first process is complete with errors
             if (fileStream) {
                 fileStream.end();
             }
-            cp.stdin.end();
+            (_a = cp.stdin) === null || _a === void 0 ? void 0 : _a.end();
             error = new Error(toolPathFirst + ' failed. ' + err.message);
             if (waitingEvents == 0) {
                 defer.reject(error);
             }
         });
         cpFirst.on('close', function (code, signal) {
+            var _a;
             waitingEvents--; //first process is complete
             if (code != 0 && !optionsNonNull.ignoreReturnCode) {
                 successFirst = false;
@@ -5297,7 +5446,7 @@ var ToolRunner = /** @class */ (function (_super) {
             if (fileStream) {
                 fileStream.end();
             }
-            cp.stdin.end();
+            (_a = cp.stdin) === null || _a === void 0 ? void 0 : _a.end();
             if (waitingEvents == 0) {
                 if (error) {
                     defer.reject(error);
@@ -5308,7 +5457,7 @@ var ToolRunner = /** @class */ (function (_super) {
             }
         });
         var stdbuffer = '';
-        cp.stdout.on('data', function (data) {
+        (_c = cp.stdout) === null || _c === void 0 ? void 0 : _c.on('data', function (data) {
             _this.emit('stdout', data);
             if (!optionsNonNull.silent) {
                 optionsNonNull.outStream.write(data);
@@ -5318,7 +5467,7 @@ var ToolRunner = /** @class */ (function (_super) {
             });
         });
         var errbuffer = '';
-        cp.stderr.on('data', function (data) {
+        (_d = cp.stderr) === null || _d === void 0 ? void 0 : _d.on('data', function (data) {
             _this.emit('stderr', data);
             success = !optionsNonNull.failOnStdErr;
             if (!optionsNonNull.silent) {
@@ -5442,6 +5591,7 @@ var ToolRunner = /** @class */ (function (_super) {
      */
     ToolRunner.prototype.exec = function (options) {
         var _this = this;
+        var _a, _b, _c;
         if (this.pipeOutputToTool) {
             return this.execWithPiping(this.pipeOutputToTool, options);
         }
@@ -5464,13 +5614,13 @@ var ToolRunner = /** @class */ (function (_super) {
         // it is possible for the child process to end its last line without a new line.
         // because stdout is buffered, this causes the last line to not get sent to the parent
         // stream. Adding this event forces a flush before the child streams are closed.
-        cp.stdout.on('finish', function () {
+        (_a = cp.stdout) === null || _a === void 0 ? void 0 : _a.on('finish', function () {
             if (!optionsNonNull.silent) {
                 optionsNonNull.outStream.write(os.EOL);
             }
         });
         var stdbuffer = '';
-        cp.stdout.on('data', function (data) {
+        (_b = cp.stdout) === null || _b === void 0 ? void 0 : _b.on('data', function (data) {
             _this.emit('stdout', data);
             if (!optionsNonNull.silent) {
                 optionsNonNull.outStream.write(data);
@@ -5480,7 +5630,7 @@ var ToolRunner = /** @class */ (function (_super) {
             });
         });
         var errbuffer = '';
-        cp.stderr.on('data', function (data) {
+        (_c = cp.stderr) === null || _c === void 0 ? void 0 : _c.on('data', function (data) {
             state.processStderr = true;
             _this.emit('stderr', data);
             if (!optionsNonNull.silent) {
@@ -5648,6 +5798,7 @@ var ExecState = /** @class */ (function (_super) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.Vault = void 0;
 var fs = __nccwpck_require__(5747);
 var path = __nccwpck_require__(5622);
 var crypto = __nccwpck_require__(6417);
@@ -6014,6 +6165,2027 @@ module.exports = function (xs, fn) {
 var isArray = Array.isArray || function (xs) {
     return Object.prototype.toString.call(xs) === '[object Array]';
 };
+
+
+/***/ }),
+
+/***/ 6863:
+/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
+
+module.exports = realpath
+realpath.realpath = realpath
+realpath.sync = realpathSync
+realpath.realpathSync = realpathSync
+realpath.monkeypatch = monkeypatch
+realpath.unmonkeypatch = unmonkeypatch
+
+var fs = __nccwpck_require__(5747)
+var origRealpath = fs.realpath
+var origRealpathSync = fs.realpathSync
+
+var version = process.version
+var ok = /^v[0-5]\./.test(version)
+var old = __nccwpck_require__(1734)
+
+function newError (er) {
+  return er && er.syscall === 'realpath' && (
+    er.code === 'ELOOP' ||
+    er.code === 'ENOMEM' ||
+    er.code === 'ENAMETOOLONG'
+  )
+}
+
+function realpath (p, cache, cb) {
+  if (ok) {
+    return origRealpath(p, cache, cb)
+  }
+
+  if (typeof cache === 'function') {
+    cb = cache
+    cache = null
+  }
+  origRealpath(p, cache, function (er, result) {
+    if (newError(er)) {
+      old.realpath(p, cache, cb)
+    } else {
+      cb(er, result)
+    }
+  })
+}
+
+function realpathSync (p, cache) {
+  if (ok) {
+    return origRealpathSync(p, cache)
+  }
+
+  try {
+    return origRealpathSync(p, cache)
+  } catch (er) {
+    if (newError(er)) {
+      return old.realpathSync(p, cache)
+    } else {
+      throw er
+    }
+  }
+}
+
+function monkeypatch () {
+  fs.realpath = realpath
+  fs.realpathSync = realpathSync
+}
+
+function unmonkeypatch () {
+  fs.realpath = origRealpath
+  fs.realpathSync = origRealpathSync
+}
+
+
+/***/ }),
+
+/***/ 1734:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+// Copyright Joyent, Inc. and other Node contributors.
+//
+// Permission is hereby granted, free of charge, to any person obtaining a
+// copy of this software and associated documentation files (the
+// "Software"), to deal in the Software without restriction, including
+// without limitation the rights to use, copy, modify, merge, publish,
+// distribute, sublicense, and/or sell copies of the Software, and to permit
+// persons to whom the Software is furnished to do so, subject to the
+// following conditions:
+//
+// The above copyright notice and this permission notice shall be included
+// in all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+// OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN
+// NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+// DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
+// OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
+// USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+var pathModule = __nccwpck_require__(5622);
+var isWindows = process.platform === 'win32';
+var fs = __nccwpck_require__(5747);
+
+// JavaScript implementation of realpath, ported from node pre-v6
+
+var DEBUG = process.env.NODE_DEBUG && /fs/.test(process.env.NODE_DEBUG);
+
+function rethrow() {
+  // Only enable in debug mode. A backtrace uses ~1000 bytes of heap space and
+  // is fairly slow to generate.
+  var callback;
+  if (DEBUG) {
+    var backtrace = new Error;
+    callback = debugCallback;
+  } else
+    callback = missingCallback;
+
+  return callback;
+
+  function debugCallback(err) {
+    if (err) {
+      backtrace.message = err.message;
+      err = backtrace;
+      missingCallback(err);
+    }
+  }
+
+  function missingCallback(err) {
+    if (err) {
+      if (process.throwDeprecation)
+        throw err;  // Forgot a callback but don't know where? Use NODE_DEBUG=fs
+      else if (!process.noDeprecation) {
+        var msg = 'fs: missing callback ' + (err.stack || err.message);
+        if (process.traceDeprecation)
+          console.trace(msg);
+        else
+          console.error(msg);
+      }
+    }
+  }
+}
+
+function maybeCallback(cb) {
+  return typeof cb === 'function' ? cb : rethrow();
+}
+
+var normalize = pathModule.normalize;
+
+// Regexp that finds the next partion of a (partial) path
+// result is [base_with_slash, base], e.g. ['somedir/', 'somedir']
+if (isWindows) {
+  var nextPartRe = /(.*?)(?:[\/\\]+|$)/g;
+} else {
+  var nextPartRe = /(.*?)(?:[\/]+|$)/g;
+}
+
+// Regex to find the device root, including trailing slash. E.g. 'c:\\'.
+if (isWindows) {
+  var splitRootRe = /^(?:[a-zA-Z]:|[\\\/]{2}[^\\\/]+[\\\/][^\\\/]+)?[\\\/]*/;
+} else {
+  var splitRootRe = /^[\/]*/;
+}
+
+exports.realpathSync = function realpathSync(p, cache) {
+  // make p is absolute
+  p = pathModule.resolve(p);
+
+  if (cache && Object.prototype.hasOwnProperty.call(cache, p)) {
+    return cache[p];
+  }
+
+  var original = p,
+      seenLinks = {},
+      knownHard = {};
+
+  // current character position in p
+  var pos;
+  // the partial path so far, including a trailing slash if any
+  var current;
+  // the partial path without a trailing slash (except when pointing at a root)
+  var base;
+  // the partial path scanned in the previous round, with slash
+  var previous;
+
+  start();
+
+  function start() {
+    // Skip over roots
+    var m = splitRootRe.exec(p);
+    pos = m[0].length;
+    current = m[0];
+    base = m[0];
+    previous = '';
+
+    // On windows, check that the root exists. On unix there is no need.
+    if (isWindows && !knownHard[base]) {
+      fs.lstatSync(base);
+      knownHard[base] = true;
+    }
+  }
+
+  // walk down the path, swapping out linked pathparts for their real
+  // values
+  // NB: p.length changes.
+  while (pos < p.length) {
+    // find the next part
+    nextPartRe.lastIndex = pos;
+    var result = nextPartRe.exec(p);
+    previous = current;
+    current += result[0];
+    base = previous + result[1];
+    pos = nextPartRe.lastIndex;
+
+    // continue if not a symlink
+    if (knownHard[base] || (cache && cache[base] === base)) {
+      continue;
+    }
+
+    var resolvedLink;
+    if (cache && Object.prototype.hasOwnProperty.call(cache, base)) {
+      // some known symbolic link.  no need to stat again.
+      resolvedLink = cache[base];
+    } else {
+      var stat = fs.lstatSync(base);
+      if (!stat.isSymbolicLink()) {
+        knownHard[base] = true;
+        if (cache) cache[base] = base;
+        continue;
+      }
+
+      // read the link if it wasn't read before
+      // dev/ino always return 0 on windows, so skip the check.
+      var linkTarget = null;
+      if (!isWindows) {
+        var id = stat.dev.toString(32) + ':' + stat.ino.toString(32);
+        if (seenLinks.hasOwnProperty(id)) {
+          linkTarget = seenLinks[id];
+        }
+      }
+      if (linkTarget === null) {
+        fs.statSync(base);
+        linkTarget = fs.readlinkSync(base);
+      }
+      resolvedLink = pathModule.resolve(previous, linkTarget);
+      // track this, if given a cache.
+      if (cache) cache[base] = resolvedLink;
+      if (!isWindows) seenLinks[id] = linkTarget;
+    }
+
+    // resolve the link, then start over
+    p = pathModule.resolve(resolvedLink, p.slice(pos));
+    start();
+  }
+
+  if (cache) cache[original] = p;
+
+  return p;
+};
+
+
+exports.realpath = function realpath(p, cache, cb) {
+  if (typeof cb !== 'function') {
+    cb = maybeCallback(cache);
+    cache = null;
+  }
+
+  // make p is absolute
+  p = pathModule.resolve(p);
+
+  if (cache && Object.prototype.hasOwnProperty.call(cache, p)) {
+    return process.nextTick(cb.bind(null, null, cache[p]));
+  }
+
+  var original = p,
+      seenLinks = {},
+      knownHard = {};
+
+  // current character position in p
+  var pos;
+  // the partial path so far, including a trailing slash if any
+  var current;
+  // the partial path without a trailing slash (except when pointing at a root)
+  var base;
+  // the partial path scanned in the previous round, with slash
+  var previous;
+
+  start();
+
+  function start() {
+    // Skip over roots
+    var m = splitRootRe.exec(p);
+    pos = m[0].length;
+    current = m[0];
+    base = m[0];
+    previous = '';
+
+    // On windows, check that the root exists. On unix there is no need.
+    if (isWindows && !knownHard[base]) {
+      fs.lstat(base, function(err) {
+        if (err) return cb(err);
+        knownHard[base] = true;
+        LOOP();
+      });
+    } else {
+      process.nextTick(LOOP);
+    }
+  }
+
+  // walk down the path, swapping out linked pathparts for their real
+  // values
+  function LOOP() {
+    // stop if scanned past end of path
+    if (pos >= p.length) {
+      if (cache) cache[original] = p;
+      return cb(null, p);
+    }
+
+    // find the next part
+    nextPartRe.lastIndex = pos;
+    var result = nextPartRe.exec(p);
+    previous = current;
+    current += result[0];
+    base = previous + result[1];
+    pos = nextPartRe.lastIndex;
+
+    // continue if not a symlink
+    if (knownHard[base] || (cache && cache[base] === base)) {
+      return process.nextTick(LOOP);
+    }
+
+    if (cache && Object.prototype.hasOwnProperty.call(cache, base)) {
+      // known symbolic link.  no need to stat again.
+      return gotResolvedLink(cache[base]);
+    }
+
+    return fs.lstat(base, gotStat);
+  }
+
+  function gotStat(err, stat) {
+    if (err) return cb(err);
+
+    // if not a symlink, skip to the next path part
+    if (!stat.isSymbolicLink()) {
+      knownHard[base] = true;
+      if (cache) cache[base] = base;
+      return process.nextTick(LOOP);
+    }
+
+    // stat & read the link if not read before
+    // call gotTarget as soon as the link target is known
+    // dev/ino always return 0 on windows, so skip the check.
+    if (!isWindows) {
+      var id = stat.dev.toString(32) + ':' + stat.ino.toString(32);
+      if (seenLinks.hasOwnProperty(id)) {
+        return gotTarget(null, seenLinks[id], base);
+      }
+    }
+    fs.stat(base, function(err) {
+      if (err) return cb(err);
+
+      fs.readlink(base, function(err, target) {
+        if (!isWindows) seenLinks[id] = target;
+        gotTarget(err, target);
+      });
+    });
+  }
+
+  function gotTarget(err, target, base) {
+    if (err) return cb(err);
+
+    var resolvedLink = pathModule.resolve(previous, target);
+    if (cache) cache[base] = resolvedLink;
+    gotResolvedLink(resolvedLink);
+  }
+
+  function gotResolvedLink(resolvedLink) {
+    // resolve the link, then start over
+    p = pathModule.resolve(resolvedLink, p.slice(pos));
+    start();
+  }
+};
+
+
+/***/ }),
+
+/***/ 7625:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+exports.setopts = setopts
+exports.ownProp = ownProp
+exports.makeAbs = makeAbs
+exports.finish = finish
+exports.mark = mark
+exports.isIgnored = isIgnored
+exports.childrenIgnored = childrenIgnored
+
+function ownProp (obj, field) {
+  return Object.prototype.hasOwnProperty.call(obj, field)
+}
+
+var path = __nccwpck_require__(5622)
+var minimatch = __nccwpck_require__(3973)
+var isAbsolute = __nccwpck_require__(8714)
+var Minimatch = minimatch.Minimatch
+
+function alphasort (a, b) {
+  return a.localeCompare(b, 'en')
+}
+
+function setupIgnores (self, options) {
+  self.ignore = options.ignore || []
+
+  if (!Array.isArray(self.ignore))
+    self.ignore = [self.ignore]
+
+  if (self.ignore.length) {
+    self.ignore = self.ignore.map(ignoreMap)
+  }
+}
+
+// ignore patterns are always in dot:true mode.
+function ignoreMap (pattern) {
+  var gmatcher = null
+  if (pattern.slice(-3) === '/**') {
+    var gpattern = pattern.replace(/(\/\*\*)+$/, '')
+    gmatcher = new Minimatch(gpattern, { dot: true })
+  }
+
+  return {
+    matcher: new Minimatch(pattern, { dot: true }),
+    gmatcher: gmatcher
+  }
+}
+
+function setopts (self, pattern, options) {
+  if (!options)
+    options = {}
+
+  // base-matching: just use globstar for that.
+  if (options.matchBase && -1 === pattern.indexOf("/")) {
+    if (options.noglobstar) {
+      throw new Error("base matching requires globstar")
+    }
+    pattern = "**/" + pattern
+  }
+
+  self.silent = !!options.silent
+  self.pattern = pattern
+  self.strict = options.strict !== false
+  self.realpath = !!options.realpath
+  self.realpathCache = options.realpathCache || Object.create(null)
+  self.follow = !!options.follow
+  self.dot = !!options.dot
+  self.mark = !!options.mark
+  self.nodir = !!options.nodir
+  if (self.nodir)
+    self.mark = true
+  self.sync = !!options.sync
+  self.nounique = !!options.nounique
+  self.nonull = !!options.nonull
+  self.nosort = !!options.nosort
+  self.nocase = !!options.nocase
+  self.stat = !!options.stat
+  self.noprocess = !!options.noprocess
+  self.absolute = !!options.absolute
+
+  self.maxLength = options.maxLength || Infinity
+  self.cache = options.cache || Object.create(null)
+  self.statCache = options.statCache || Object.create(null)
+  self.symlinks = options.symlinks || Object.create(null)
+
+  setupIgnores(self, options)
+
+  self.changedCwd = false
+  var cwd = process.cwd()
+  if (!ownProp(options, "cwd"))
+    self.cwd = cwd
+  else {
+    self.cwd = path.resolve(options.cwd)
+    self.changedCwd = self.cwd !== cwd
+  }
+
+  self.root = options.root || path.resolve(self.cwd, "/")
+  self.root = path.resolve(self.root)
+  if (process.platform === "win32")
+    self.root = self.root.replace(/\\/g, "/")
+
+  // TODO: is an absolute `cwd` supposed to be resolved against `root`?
+  // e.g. { cwd: '/test', root: __dirname } === path.join(__dirname, '/test')
+  self.cwdAbs = isAbsolute(self.cwd) ? self.cwd : makeAbs(self, self.cwd)
+  if (process.platform === "win32")
+    self.cwdAbs = self.cwdAbs.replace(/\\/g, "/")
+  self.nomount = !!options.nomount
+
+  // disable comments and negation in Minimatch.
+  // Note that they are not supported in Glob itself anyway.
+  options.nonegate = true
+  options.nocomment = true
+
+  self.minimatch = new Minimatch(pattern, options)
+  self.options = self.minimatch.options
+}
+
+function finish (self) {
+  var nou = self.nounique
+  var all = nou ? [] : Object.create(null)
+
+  for (var i = 0, l = self.matches.length; i < l; i ++) {
+    var matches = self.matches[i]
+    if (!matches || Object.keys(matches).length === 0) {
+      if (self.nonull) {
+        // do like the shell, and spit out the literal glob
+        var literal = self.minimatch.globSet[i]
+        if (nou)
+          all.push(literal)
+        else
+          all[literal] = true
+      }
+    } else {
+      // had matches
+      var m = Object.keys(matches)
+      if (nou)
+        all.push.apply(all, m)
+      else
+        m.forEach(function (m) {
+          all[m] = true
+        })
+    }
+  }
+
+  if (!nou)
+    all = Object.keys(all)
+
+  if (!self.nosort)
+    all = all.sort(alphasort)
+
+  // at *some* point we statted all of these
+  if (self.mark) {
+    for (var i = 0; i < all.length; i++) {
+      all[i] = self._mark(all[i])
+    }
+    if (self.nodir) {
+      all = all.filter(function (e) {
+        var notDir = !(/\/$/.test(e))
+        var c = self.cache[e] || self.cache[makeAbs(self, e)]
+        if (notDir && c)
+          notDir = c !== 'DIR' && !Array.isArray(c)
+        return notDir
+      })
+    }
+  }
+
+  if (self.ignore.length)
+    all = all.filter(function(m) {
+      return !isIgnored(self, m)
+    })
+
+  self.found = all
+}
+
+function mark (self, p) {
+  var abs = makeAbs(self, p)
+  var c = self.cache[abs]
+  var m = p
+  if (c) {
+    var isDir = c === 'DIR' || Array.isArray(c)
+    var slash = p.slice(-1) === '/'
+
+    if (isDir && !slash)
+      m += '/'
+    else if (!isDir && slash)
+      m = m.slice(0, -1)
+
+    if (m !== p) {
+      var mabs = makeAbs(self, m)
+      self.statCache[mabs] = self.statCache[abs]
+      self.cache[mabs] = self.cache[abs]
+    }
+  }
+
+  return m
+}
+
+// lotta situps...
+function makeAbs (self, f) {
+  var abs = f
+  if (f.charAt(0) === '/') {
+    abs = path.join(self.root, f)
+  } else if (isAbsolute(f) || f === '') {
+    abs = f
+  } else if (self.changedCwd) {
+    abs = path.resolve(self.cwd, f)
+  } else {
+    abs = path.resolve(f)
+  }
+
+  if (process.platform === 'win32')
+    abs = abs.replace(/\\/g, '/')
+
+  return abs
+}
+
+
+// Return true, if pattern ends with globstar '**', for the accompanying parent directory.
+// Ex:- If node_modules/** is the pattern, add 'node_modules' to ignore list along with it's contents
+function isIgnored (self, path) {
+  if (!self.ignore.length)
+    return false
+
+  return self.ignore.some(function(item) {
+    return item.matcher.match(path) || !!(item.gmatcher && item.gmatcher.match(path))
+  })
+}
+
+function childrenIgnored (self, path) {
+  if (!self.ignore.length)
+    return false
+
+  return self.ignore.some(function(item) {
+    return !!(item.gmatcher && item.gmatcher.match(path))
+  })
+}
+
+
+/***/ }),
+
+/***/ 1957:
+/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
+
+// Approach:
+//
+// 1. Get the minimatch set
+// 2. For each pattern in the set, PROCESS(pattern, false)
+// 3. Store matches per-set, then uniq them
+//
+// PROCESS(pattern, inGlobStar)
+// Get the first [n] items from pattern that are all strings
+// Join these together.  This is PREFIX.
+//   If there is no more remaining, then stat(PREFIX) and
+//   add to matches if it succeeds.  END.
+//
+// If inGlobStar and PREFIX is symlink and points to dir
+//   set ENTRIES = []
+// else readdir(PREFIX) as ENTRIES
+//   If fail, END
+//
+// with ENTRIES
+//   If pattern[n] is GLOBSTAR
+//     // handle the case where the globstar match is empty
+//     // by pruning it out, and testing the resulting pattern
+//     PROCESS(pattern[0..n] + pattern[n+1 .. $], false)
+//     // handle other cases.
+//     for ENTRY in ENTRIES (not dotfiles)
+//       // attach globstar + tail onto the entry
+//       // Mark that this entry is a globstar match
+//       PROCESS(pattern[0..n] + ENTRY + pattern[n .. $], true)
+//
+//   else // not globstar
+//     for ENTRY in ENTRIES (not dotfiles, unless pattern[n] is dot)
+//       Test ENTRY against pattern[n]
+//       If fails, continue
+//       If passes, PROCESS(pattern[0..n] + item + pattern[n+1 .. $])
+//
+// Caveat:
+//   Cache all stats and readdirs results to minimize syscall.  Since all
+//   we ever care about is existence and directory-ness, we can just keep
+//   `true` for files, and [children,...] for directories, or `false` for
+//   things that don't exist.
+
+module.exports = glob
+
+var fs = __nccwpck_require__(5747)
+var rp = __nccwpck_require__(6863)
+var minimatch = __nccwpck_require__(3973)
+var Minimatch = minimatch.Minimatch
+var inherits = __nccwpck_require__(4124)
+var EE = __nccwpck_require__(8614).EventEmitter
+var path = __nccwpck_require__(5622)
+var assert = __nccwpck_require__(2357)
+var isAbsolute = __nccwpck_require__(8714)
+var globSync = __nccwpck_require__(9010)
+var common = __nccwpck_require__(7625)
+var setopts = common.setopts
+var ownProp = common.ownProp
+var inflight = __nccwpck_require__(2492)
+var util = __nccwpck_require__(1669)
+var childrenIgnored = common.childrenIgnored
+var isIgnored = common.isIgnored
+
+var once = __nccwpck_require__(1223)
+
+function glob (pattern, options, cb) {
+  if (typeof options === 'function') cb = options, options = {}
+  if (!options) options = {}
+
+  if (options.sync) {
+    if (cb)
+      throw new TypeError('callback provided to sync glob')
+    return globSync(pattern, options)
+  }
+
+  return new Glob(pattern, options, cb)
+}
+
+glob.sync = globSync
+var GlobSync = glob.GlobSync = globSync.GlobSync
+
+// old api surface
+glob.glob = glob
+
+function extend (origin, add) {
+  if (add === null || typeof add !== 'object') {
+    return origin
+  }
+
+  var keys = Object.keys(add)
+  var i = keys.length
+  while (i--) {
+    origin[keys[i]] = add[keys[i]]
+  }
+  return origin
+}
+
+glob.hasMagic = function (pattern, options_) {
+  var options = extend({}, options_)
+  options.noprocess = true
+
+  var g = new Glob(pattern, options)
+  var set = g.minimatch.set
+
+  if (!pattern)
+    return false
+
+  if (set.length > 1)
+    return true
+
+  for (var j = 0; j < set[0].length; j++) {
+    if (typeof set[0][j] !== 'string')
+      return true
+  }
+
+  return false
+}
+
+glob.Glob = Glob
+inherits(Glob, EE)
+function Glob (pattern, options, cb) {
+  if (typeof options === 'function') {
+    cb = options
+    options = null
+  }
+
+  if (options && options.sync) {
+    if (cb)
+      throw new TypeError('callback provided to sync glob')
+    return new GlobSync(pattern, options)
+  }
+
+  if (!(this instanceof Glob))
+    return new Glob(pattern, options, cb)
+
+  setopts(this, pattern, options)
+  this._didRealPath = false
+
+  // process each pattern in the minimatch set
+  var n = this.minimatch.set.length
+
+  // The matches are stored as {<filename>: true,...} so that
+  // duplicates are automagically pruned.
+  // Later, we do an Object.keys() on these.
+  // Keep them as a list so we can fill in when nonull is set.
+  this.matches = new Array(n)
+
+  if (typeof cb === 'function') {
+    cb = once(cb)
+    this.on('error', cb)
+    this.on('end', function (matches) {
+      cb(null, matches)
+    })
+  }
+
+  var self = this
+  this._processing = 0
+
+  this._emitQueue = []
+  this._processQueue = []
+  this.paused = false
+
+  if (this.noprocess)
+    return this
+
+  if (n === 0)
+    return done()
+
+  var sync = true
+  for (var i = 0; i < n; i ++) {
+    this._process(this.minimatch.set[i], i, false, done)
+  }
+  sync = false
+
+  function done () {
+    --self._processing
+    if (self._processing <= 0) {
+      if (sync) {
+        process.nextTick(function () {
+          self._finish()
+        })
+      } else {
+        self._finish()
+      }
+    }
+  }
+}
+
+Glob.prototype._finish = function () {
+  assert(this instanceof Glob)
+  if (this.aborted)
+    return
+
+  if (this.realpath && !this._didRealpath)
+    return this._realpath()
+
+  common.finish(this)
+  this.emit('end', this.found)
+}
+
+Glob.prototype._realpath = function () {
+  if (this._didRealpath)
+    return
+
+  this._didRealpath = true
+
+  var n = this.matches.length
+  if (n === 0)
+    return this._finish()
+
+  var self = this
+  for (var i = 0; i < this.matches.length; i++)
+    this._realpathSet(i, next)
+
+  function next () {
+    if (--n === 0)
+      self._finish()
+  }
+}
+
+Glob.prototype._realpathSet = function (index, cb) {
+  var matchset = this.matches[index]
+  if (!matchset)
+    return cb()
+
+  var found = Object.keys(matchset)
+  var self = this
+  var n = found.length
+
+  if (n === 0)
+    return cb()
+
+  var set = this.matches[index] = Object.create(null)
+  found.forEach(function (p, i) {
+    // If there's a problem with the stat, then it means that
+    // one or more of the links in the realpath couldn't be
+    // resolved.  just return the abs value in that case.
+    p = self._makeAbs(p)
+    rp.realpath(p, self.realpathCache, function (er, real) {
+      if (!er)
+        set[real] = true
+      else if (er.syscall === 'stat')
+        set[p] = true
+      else
+        self.emit('error', er) // srsly wtf right here
+
+      if (--n === 0) {
+        self.matches[index] = set
+        cb()
+      }
+    })
+  })
+}
+
+Glob.prototype._mark = function (p) {
+  return common.mark(this, p)
+}
+
+Glob.prototype._makeAbs = function (f) {
+  return common.makeAbs(this, f)
+}
+
+Glob.prototype.abort = function () {
+  this.aborted = true
+  this.emit('abort')
+}
+
+Glob.prototype.pause = function () {
+  if (!this.paused) {
+    this.paused = true
+    this.emit('pause')
+  }
+}
+
+Glob.prototype.resume = function () {
+  if (this.paused) {
+    this.emit('resume')
+    this.paused = false
+    if (this._emitQueue.length) {
+      var eq = this._emitQueue.slice(0)
+      this._emitQueue.length = 0
+      for (var i = 0; i < eq.length; i ++) {
+        var e = eq[i]
+        this._emitMatch(e[0], e[1])
+      }
+    }
+    if (this._processQueue.length) {
+      var pq = this._processQueue.slice(0)
+      this._processQueue.length = 0
+      for (var i = 0; i < pq.length; i ++) {
+        var p = pq[i]
+        this._processing--
+        this._process(p[0], p[1], p[2], p[3])
+      }
+    }
+  }
+}
+
+Glob.prototype._process = function (pattern, index, inGlobStar, cb) {
+  assert(this instanceof Glob)
+  assert(typeof cb === 'function')
+
+  if (this.aborted)
+    return
+
+  this._processing++
+  if (this.paused) {
+    this._processQueue.push([pattern, index, inGlobStar, cb])
+    return
+  }
+
+  //console.error('PROCESS %d', this._processing, pattern)
+
+  // Get the first [n] parts of pattern that are all strings.
+  var n = 0
+  while (typeof pattern[n] === 'string') {
+    n ++
+  }
+  // now n is the index of the first one that is *not* a string.
+
+  // see if there's anything else
+  var prefix
+  switch (n) {
+    // if not, then this is rather simple
+    case pattern.length:
+      this._processSimple(pattern.join('/'), index, cb)
+      return
+
+    case 0:
+      // pattern *starts* with some non-trivial item.
+      // going to readdir(cwd), but not include the prefix in matches.
+      prefix = null
+      break
+
+    default:
+      // pattern has some string bits in the front.
+      // whatever it starts with, whether that's 'absolute' like /foo/bar,
+      // or 'relative' like '../baz'
+      prefix = pattern.slice(0, n).join('/')
+      break
+  }
+
+  var remain = pattern.slice(n)
+
+  // get the list of entries.
+  var read
+  if (prefix === null)
+    read = '.'
+  else if (isAbsolute(prefix) || isAbsolute(pattern.join('/'))) {
+    if (!prefix || !isAbsolute(prefix))
+      prefix = '/' + prefix
+    read = prefix
+  } else
+    read = prefix
+
+  var abs = this._makeAbs(read)
+
+  //if ignored, skip _processing
+  if (childrenIgnored(this, read))
+    return cb()
+
+  var isGlobStar = remain[0] === minimatch.GLOBSTAR
+  if (isGlobStar)
+    this._processGlobStar(prefix, read, abs, remain, index, inGlobStar, cb)
+  else
+    this._processReaddir(prefix, read, abs, remain, index, inGlobStar, cb)
+}
+
+Glob.prototype._processReaddir = function (prefix, read, abs, remain, index, inGlobStar, cb) {
+  var self = this
+  this._readdir(abs, inGlobStar, function (er, entries) {
+    return self._processReaddir2(prefix, read, abs, remain, index, inGlobStar, entries, cb)
+  })
+}
+
+Glob.prototype._processReaddir2 = function (prefix, read, abs, remain, index, inGlobStar, entries, cb) {
+
+  // if the abs isn't a dir, then nothing can match!
+  if (!entries)
+    return cb()
+
+  // It will only match dot entries if it starts with a dot, or if
+  // dot is set.  Stuff like @(.foo|.bar) isn't allowed.
+  var pn = remain[0]
+  var negate = !!this.minimatch.negate
+  var rawGlob = pn._glob
+  var dotOk = this.dot || rawGlob.charAt(0) === '.'
+
+  var matchedEntries = []
+  for (var i = 0; i < entries.length; i++) {
+    var e = entries[i]
+    if (e.charAt(0) !== '.' || dotOk) {
+      var m
+      if (negate && !prefix) {
+        m = !e.match(pn)
+      } else {
+        m = e.match(pn)
+      }
+      if (m)
+        matchedEntries.push(e)
+    }
+  }
+
+  //console.error('prd2', prefix, entries, remain[0]._glob, matchedEntries)
+
+  var len = matchedEntries.length
+  // If there are no matched entries, then nothing matches.
+  if (len === 0)
+    return cb()
+
+  // if this is the last remaining pattern bit, then no need for
+  // an additional stat *unless* the user has specified mark or
+  // stat explicitly.  We know they exist, since readdir returned
+  // them.
+
+  if (remain.length === 1 && !this.mark && !this.stat) {
+    if (!this.matches[index])
+      this.matches[index] = Object.create(null)
+
+    for (var i = 0; i < len; i ++) {
+      var e = matchedEntries[i]
+      if (prefix) {
+        if (prefix !== '/')
+          e = prefix + '/' + e
+        else
+          e = prefix + e
+      }
+
+      if (e.charAt(0) === '/' && !this.nomount) {
+        e = path.join(this.root, e)
+      }
+      this._emitMatch(index, e)
+    }
+    // This was the last one, and no stats were needed
+    return cb()
+  }
+
+  // now test all matched entries as stand-ins for that part
+  // of the pattern.
+  remain.shift()
+  for (var i = 0; i < len; i ++) {
+    var e = matchedEntries[i]
+    var newPattern
+    if (prefix) {
+      if (prefix !== '/')
+        e = prefix + '/' + e
+      else
+        e = prefix + e
+    }
+    this._process([e].concat(remain), index, inGlobStar, cb)
+  }
+  cb()
+}
+
+Glob.prototype._emitMatch = function (index, e) {
+  if (this.aborted)
+    return
+
+  if (isIgnored(this, e))
+    return
+
+  if (this.paused) {
+    this._emitQueue.push([index, e])
+    return
+  }
+
+  var abs = isAbsolute(e) ? e : this._makeAbs(e)
+
+  if (this.mark)
+    e = this._mark(e)
+
+  if (this.absolute)
+    e = abs
+
+  if (this.matches[index][e])
+    return
+
+  if (this.nodir) {
+    var c = this.cache[abs]
+    if (c === 'DIR' || Array.isArray(c))
+      return
+  }
+
+  this.matches[index][e] = true
+
+  var st = this.statCache[abs]
+  if (st)
+    this.emit('stat', e, st)
+
+  this.emit('match', e)
+}
+
+Glob.prototype._readdirInGlobStar = function (abs, cb) {
+  if (this.aborted)
+    return
+
+  // follow all symlinked directories forever
+  // just proceed as if this is a non-globstar situation
+  if (this.follow)
+    return this._readdir(abs, false, cb)
+
+  var lstatkey = 'lstat\0' + abs
+  var self = this
+  var lstatcb = inflight(lstatkey, lstatcb_)
+
+  if (lstatcb)
+    fs.lstat(abs, lstatcb)
+
+  function lstatcb_ (er, lstat) {
+    if (er && er.code === 'ENOENT')
+      return cb()
+
+    var isSym = lstat && lstat.isSymbolicLink()
+    self.symlinks[abs] = isSym
+
+    // If it's not a symlink or a dir, then it's definitely a regular file.
+    // don't bother doing a readdir in that case.
+    if (!isSym && lstat && !lstat.isDirectory()) {
+      self.cache[abs] = 'FILE'
+      cb()
+    } else
+      self._readdir(abs, false, cb)
+  }
+}
+
+Glob.prototype._readdir = function (abs, inGlobStar, cb) {
+  if (this.aborted)
+    return
+
+  cb = inflight('readdir\0'+abs+'\0'+inGlobStar, cb)
+  if (!cb)
+    return
+
+  //console.error('RD %j %j', +inGlobStar, abs)
+  if (inGlobStar && !ownProp(this.symlinks, abs))
+    return this._readdirInGlobStar(abs, cb)
+
+  if (ownProp(this.cache, abs)) {
+    var c = this.cache[abs]
+    if (!c || c === 'FILE')
+      return cb()
+
+    if (Array.isArray(c))
+      return cb(null, c)
+  }
+
+  var self = this
+  fs.readdir(abs, readdirCb(this, abs, cb))
+}
+
+function readdirCb (self, abs, cb) {
+  return function (er, entries) {
+    if (er)
+      self._readdirError(abs, er, cb)
+    else
+      self._readdirEntries(abs, entries, cb)
+  }
+}
+
+Glob.prototype._readdirEntries = function (abs, entries, cb) {
+  if (this.aborted)
+    return
+
+  // if we haven't asked to stat everything, then just
+  // assume that everything in there exists, so we can avoid
+  // having to stat it a second time.
+  if (!this.mark && !this.stat) {
+    for (var i = 0; i < entries.length; i ++) {
+      var e = entries[i]
+      if (abs === '/')
+        e = abs + e
+      else
+        e = abs + '/' + e
+      this.cache[e] = true
+    }
+  }
+
+  this.cache[abs] = entries
+  return cb(null, entries)
+}
+
+Glob.prototype._readdirError = function (f, er, cb) {
+  if (this.aborted)
+    return
+
+  // handle errors, and cache the information
+  switch (er.code) {
+    case 'ENOTSUP': // https://github.com/isaacs/node-glob/issues/205
+    case 'ENOTDIR': // totally normal. means it *does* exist.
+      var abs = this._makeAbs(f)
+      this.cache[abs] = 'FILE'
+      if (abs === this.cwdAbs) {
+        var error = new Error(er.code + ' invalid cwd ' + this.cwd)
+        error.path = this.cwd
+        error.code = er.code
+        this.emit('error', error)
+        this.abort()
+      }
+      break
+
+    case 'ENOENT': // not terribly unusual
+    case 'ELOOP':
+    case 'ENAMETOOLONG':
+    case 'UNKNOWN':
+      this.cache[this._makeAbs(f)] = false
+      break
+
+    default: // some unusual error.  Treat as failure.
+      this.cache[this._makeAbs(f)] = false
+      if (this.strict) {
+        this.emit('error', er)
+        // If the error is handled, then we abort
+        // if not, we threw out of here
+        this.abort()
+      }
+      if (!this.silent)
+        console.error('glob error', er)
+      break
+  }
+
+  return cb()
+}
+
+Glob.prototype._processGlobStar = function (prefix, read, abs, remain, index, inGlobStar, cb) {
+  var self = this
+  this._readdir(abs, inGlobStar, function (er, entries) {
+    self._processGlobStar2(prefix, read, abs, remain, index, inGlobStar, entries, cb)
+  })
+}
+
+
+Glob.prototype._processGlobStar2 = function (prefix, read, abs, remain, index, inGlobStar, entries, cb) {
+  //console.error('pgs2', prefix, remain[0], entries)
+
+  // no entries means not a dir, so it can never have matches
+  // foo.txt/** doesn't match foo.txt
+  if (!entries)
+    return cb()
+
+  // test without the globstar, and with every child both below
+  // and replacing the globstar.
+  var remainWithoutGlobStar = remain.slice(1)
+  var gspref = prefix ? [ prefix ] : []
+  var noGlobStar = gspref.concat(remainWithoutGlobStar)
+
+  // the noGlobStar pattern exits the inGlobStar state
+  this._process(noGlobStar, index, false, cb)
+
+  var isSym = this.symlinks[abs]
+  var len = entries.length
+
+  // If it's a symlink, and we're in a globstar, then stop
+  if (isSym && inGlobStar)
+    return cb()
+
+  for (var i = 0; i < len; i++) {
+    var e = entries[i]
+    if (e.charAt(0) === '.' && !this.dot)
+      continue
+
+    // these two cases enter the inGlobStar state
+    var instead = gspref.concat(entries[i], remainWithoutGlobStar)
+    this._process(instead, index, true, cb)
+
+    var below = gspref.concat(entries[i], remain)
+    this._process(below, index, true, cb)
+  }
+
+  cb()
+}
+
+Glob.prototype._processSimple = function (prefix, index, cb) {
+  // XXX review this.  Shouldn't it be doing the mounting etc
+  // before doing stat?  kinda weird?
+  var self = this
+  this._stat(prefix, function (er, exists) {
+    self._processSimple2(prefix, index, er, exists, cb)
+  })
+}
+Glob.prototype._processSimple2 = function (prefix, index, er, exists, cb) {
+
+  //console.error('ps2', prefix, exists)
+
+  if (!this.matches[index])
+    this.matches[index] = Object.create(null)
+
+  // If it doesn't exist, then just mark the lack of results
+  if (!exists)
+    return cb()
+
+  if (prefix && isAbsolute(prefix) && !this.nomount) {
+    var trail = /[\/\\]$/.test(prefix)
+    if (prefix.charAt(0) === '/') {
+      prefix = path.join(this.root, prefix)
+    } else {
+      prefix = path.resolve(this.root, prefix)
+      if (trail)
+        prefix += '/'
+    }
+  }
+
+  if (process.platform === 'win32')
+    prefix = prefix.replace(/\\/g, '/')
+
+  // Mark this as a match
+  this._emitMatch(index, prefix)
+  cb()
+}
+
+// Returns either 'DIR', 'FILE', or false
+Glob.prototype._stat = function (f, cb) {
+  var abs = this._makeAbs(f)
+  var needDir = f.slice(-1) === '/'
+
+  if (f.length > this.maxLength)
+    return cb()
+
+  if (!this.stat && ownProp(this.cache, abs)) {
+    var c = this.cache[abs]
+
+    if (Array.isArray(c))
+      c = 'DIR'
+
+    // It exists, but maybe not how we need it
+    if (!needDir || c === 'DIR')
+      return cb(null, c)
+
+    if (needDir && c === 'FILE')
+      return cb()
+
+    // otherwise we have to stat, because maybe c=true
+    // if we know it exists, but not what it is.
+  }
+
+  var exists
+  var stat = this.statCache[abs]
+  if (stat !== undefined) {
+    if (stat === false)
+      return cb(null, stat)
+    else {
+      var type = stat.isDirectory() ? 'DIR' : 'FILE'
+      if (needDir && type === 'FILE')
+        return cb()
+      else
+        return cb(null, type, stat)
+    }
+  }
+
+  var self = this
+  var statcb = inflight('stat\0' + abs, lstatcb_)
+  if (statcb)
+    fs.lstat(abs, statcb)
+
+  function lstatcb_ (er, lstat) {
+    if (lstat && lstat.isSymbolicLink()) {
+      // If it's a symlink, then treat it as the target, unless
+      // the target does not exist, then treat it as a file.
+      return fs.stat(abs, function (er, stat) {
+        if (er)
+          self._stat2(f, abs, null, lstat, cb)
+        else
+          self._stat2(f, abs, er, stat, cb)
+      })
+    } else {
+      self._stat2(f, abs, er, lstat, cb)
+    }
+  }
+}
+
+Glob.prototype._stat2 = function (f, abs, er, stat, cb) {
+  if (er && (er.code === 'ENOENT' || er.code === 'ENOTDIR')) {
+    this.statCache[abs] = false
+    return cb()
+  }
+
+  var needDir = f.slice(-1) === '/'
+  this.statCache[abs] = stat
+
+  if (abs.slice(-1) === '/' && stat && !stat.isDirectory())
+    return cb(null, false, stat)
+
+  var c = true
+  if (stat)
+    c = stat.isDirectory() ? 'DIR' : 'FILE'
+  this.cache[abs] = this.cache[abs] || c
+
+  if (needDir && c === 'FILE')
+    return cb()
+
+  return cb(null, c, stat)
+}
+
+
+/***/ }),
+
+/***/ 9010:
+/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
+
+module.exports = globSync
+globSync.GlobSync = GlobSync
+
+var fs = __nccwpck_require__(5747)
+var rp = __nccwpck_require__(6863)
+var minimatch = __nccwpck_require__(3973)
+var Minimatch = minimatch.Minimatch
+var Glob = __nccwpck_require__(1957).Glob
+var util = __nccwpck_require__(1669)
+var path = __nccwpck_require__(5622)
+var assert = __nccwpck_require__(2357)
+var isAbsolute = __nccwpck_require__(8714)
+var common = __nccwpck_require__(7625)
+var setopts = common.setopts
+var ownProp = common.ownProp
+var childrenIgnored = common.childrenIgnored
+var isIgnored = common.isIgnored
+
+function globSync (pattern, options) {
+  if (typeof options === 'function' || arguments.length === 3)
+    throw new TypeError('callback provided to sync glob\n'+
+                        'See: https://github.com/isaacs/node-glob/issues/167')
+
+  return new GlobSync(pattern, options).found
+}
+
+function GlobSync (pattern, options) {
+  if (!pattern)
+    throw new Error('must provide pattern')
+
+  if (typeof options === 'function' || arguments.length === 3)
+    throw new TypeError('callback provided to sync glob\n'+
+                        'See: https://github.com/isaacs/node-glob/issues/167')
+
+  if (!(this instanceof GlobSync))
+    return new GlobSync(pattern, options)
+
+  setopts(this, pattern, options)
+
+  if (this.noprocess)
+    return this
+
+  var n = this.minimatch.set.length
+  this.matches = new Array(n)
+  for (var i = 0; i < n; i ++) {
+    this._process(this.minimatch.set[i], i, false)
+  }
+  this._finish()
+}
+
+GlobSync.prototype._finish = function () {
+  assert(this instanceof GlobSync)
+  if (this.realpath) {
+    var self = this
+    this.matches.forEach(function (matchset, index) {
+      var set = self.matches[index] = Object.create(null)
+      for (var p in matchset) {
+        try {
+          p = self._makeAbs(p)
+          var real = rp.realpathSync(p, self.realpathCache)
+          set[real] = true
+        } catch (er) {
+          if (er.syscall === 'stat')
+            set[self._makeAbs(p)] = true
+          else
+            throw er
+        }
+      }
+    })
+  }
+  common.finish(this)
+}
+
+
+GlobSync.prototype._process = function (pattern, index, inGlobStar) {
+  assert(this instanceof GlobSync)
+
+  // Get the first [n] parts of pattern that are all strings.
+  var n = 0
+  while (typeof pattern[n] === 'string') {
+    n ++
+  }
+  // now n is the index of the first one that is *not* a string.
+
+  // See if there's anything else
+  var prefix
+  switch (n) {
+    // if not, then this is rather simple
+    case pattern.length:
+      this._processSimple(pattern.join('/'), index)
+      return
+
+    case 0:
+      // pattern *starts* with some non-trivial item.
+      // going to readdir(cwd), but not include the prefix in matches.
+      prefix = null
+      break
+
+    default:
+      // pattern has some string bits in the front.
+      // whatever it starts with, whether that's 'absolute' like /foo/bar,
+      // or 'relative' like '../baz'
+      prefix = pattern.slice(0, n).join('/')
+      break
+  }
+
+  var remain = pattern.slice(n)
+
+  // get the list of entries.
+  var read
+  if (prefix === null)
+    read = '.'
+  else if (isAbsolute(prefix) || isAbsolute(pattern.join('/'))) {
+    if (!prefix || !isAbsolute(prefix))
+      prefix = '/' + prefix
+    read = prefix
+  } else
+    read = prefix
+
+  var abs = this._makeAbs(read)
+
+  //if ignored, skip processing
+  if (childrenIgnored(this, read))
+    return
+
+  var isGlobStar = remain[0] === minimatch.GLOBSTAR
+  if (isGlobStar)
+    this._processGlobStar(prefix, read, abs, remain, index, inGlobStar)
+  else
+    this._processReaddir(prefix, read, abs, remain, index, inGlobStar)
+}
+
+
+GlobSync.prototype._processReaddir = function (prefix, read, abs, remain, index, inGlobStar) {
+  var entries = this._readdir(abs, inGlobStar)
+
+  // if the abs isn't a dir, then nothing can match!
+  if (!entries)
+    return
+
+  // It will only match dot entries if it starts with a dot, or if
+  // dot is set.  Stuff like @(.foo|.bar) isn't allowed.
+  var pn = remain[0]
+  var negate = !!this.minimatch.negate
+  var rawGlob = pn._glob
+  var dotOk = this.dot || rawGlob.charAt(0) === '.'
+
+  var matchedEntries = []
+  for (var i = 0; i < entries.length; i++) {
+    var e = entries[i]
+    if (e.charAt(0) !== '.' || dotOk) {
+      var m
+      if (negate && !prefix) {
+        m = !e.match(pn)
+      } else {
+        m = e.match(pn)
+      }
+      if (m)
+        matchedEntries.push(e)
+    }
+  }
+
+  var len = matchedEntries.length
+  // If there are no matched entries, then nothing matches.
+  if (len === 0)
+    return
+
+  // if this is the last remaining pattern bit, then no need for
+  // an additional stat *unless* the user has specified mark or
+  // stat explicitly.  We know they exist, since readdir returned
+  // them.
+
+  if (remain.length === 1 && !this.mark && !this.stat) {
+    if (!this.matches[index])
+      this.matches[index] = Object.create(null)
+
+    for (var i = 0; i < len; i ++) {
+      var e = matchedEntries[i]
+      if (prefix) {
+        if (prefix.slice(-1) !== '/')
+          e = prefix + '/' + e
+        else
+          e = prefix + e
+      }
+
+      if (e.charAt(0) === '/' && !this.nomount) {
+        e = path.join(this.root, e)
+      }
+      this._emitMatch(index, e)
+    }
+    // This was the last one, and no stats were needed
+    return
+  }
+
+  // now test all matched entries as stand-ins for that part
+  // of the pattern.
+  remain.shift()
+  for (var i = 0; i < len; i ++) {
+    var e = matchedEntries[i]
+    var newPattern
+    if (prefix)
+      newPattern = [prefix, e]
+    else
+      newPattern = [e]
+    this._process(newPattern.concat(remain), index, inGlobStar)
+  }
+}
+
+
+GlobSync.prototype._emitMatch = function (index, e) {
+  if (isIgnored(this, e))
+    return
+
+  var abs = this._makeAbs(e)
+
+  if (this.mark)
+    e = this._mark(e)
+
+  if (this.absolute) {
+    e = abs
+  }
+
+  if (this.matches[index][e])
+    return
+
+  if (this.nodir) {
+    var c = this.cache[abs]
+    if (c === 'DIR' || Array.isArray(c))
+      return
+  }
+
+  this.matches[index][e] = true
+
+  if (this.stat)
+    this._stat(e)
+}
+
+
+GlobSync.prototype._readdirInGlobStar = function (abs) {
+  // follow all symlinked directories forever
+  // just proceed as if this is a non-globstar situation
+  if (this.follow)
+    return this._readdir(abs, false)
+
+  var entries
+  var lstat
+  var stat
+  try {
+    lstat = fs.lstatSync(abs)
+  } catch (er) {
+    if (er.code === 'ENOENT') {
+      // lstat failed, doesn't exist
+      return null
+    }
+  }
+
+  var isSym = lstat && lstat.isSymbolicLink()
+  this.symlinks[abs] = isSym
+
+  // If it's not a symlink or a dir, then it's definitely a regular file.
+  // don't bother doing a readdir in that case.
+  if (!isSym && lstat && !lstat.isDirectory())
+    this.cache[abs] = 'FILE'
+  else
+    entries = this._readdir(abs, false)
+
+  return entries
+}
+
+GlobSync.prototype._readdir = function (abs, inGlobStar) {
+  var entries
+
+  if (inGlobStar && !ownProp(this.symlinks, abs))
+    return this._readdirInGlobStar(abs)
+
+  if (ownProp(this.cache, abs)) {
+    var c = this.cache[abs]
+    if (!c || c === 'FILE')
+      return null
+
+    if (Array.isArray(c))
+      return c
+  }
+
+  try {
+    return this._readdirEntries(abs, fs.readdirSync(abs))
+  } catch (er) {
+    this._readdirError(abs, er)
+    return null
+  }
+}
+
+GlobSync.prototype._readdirEntries = function (abs, entries) {
+  // if we haven't asked to stat everything, then just
+  // assume that everything in there exists, so we can avoid
+  // having to stat it a second time.
+  if (!this.mark && !this.stat) {
+    for (var i = 0; i < entries.length; i ++) {
+      var e = entries[i]
+      if (abs === '/')
+        e = abs + e
+      else
+        e = abs + '/' + e
+      this.cache[e] = true
+    }
+  }
+
+  this.cache[abs] = entries
+
+  // mark and cache dir-ness
+  return entries
+}
+
+GlobSync.prototype._readdirError = function (f, er) {
+  // handle errors, and cache the information
+  switch (er.code) {
+    case 'ENOTSUP': // https://github.com/isaacs/node-glob/issues/205
+    case 'ENOTDIR': // totally normal. means it *does* exist.
+      var abs = this._makeAbs(f)
+      this.cache[abs] = 'FILE'
+      if (abs === this.cwdAbs) {
+        var error = new Error(er.code + ' invalid cwd ' + this.cwd)
+        error.path = this.cwd
+        error.code = er.code
+        throw error
+      }
+      break
+
+    case 'ENOENT': // not terribly unusual
+    case 'ELOOP':
+    case 'ENAMETOOLONG':
+    case 'UNKNOWN':
+      this.cache[this._makeAbs(f)] = false
+      break
+
+    default: // some unusual error.  Treat as failure.
+      this.cache[this._makeAbs(f)] = false
+      if (this.strict)
+        throw er
+      if (!this.silent)
+        console.error('glob error', er)
+      break
+  }
+}
+
+GlobSync.prototype._processGlobStar = function (prefix, read, abs, remain, index, inGlobStar) {
+
+  var entries = this._readdir(abs, inGlobStar)
+
+  // no entries means not a dir, so it can never have matches
+  // foo.txt/** doesn't match foo.txt
+  if (!entries)
+    return
+
+  // test without the globstar, and with every child both below
+  // and replacing the globstar.
+  var remainWithoutGlobStar = remain.slice(1)
+  var gspref = prefix ? [ prefix ] : []
+  var noGlobStar = gspref.concat(remainWithoutGlobStar)
+
+  // the noGlobStar pattern exits the inGlobStar state
+  this._process(noGlobStar, index, false)
+
+  var len = entries.length
+  var isSym = this.symlinks[abs]
+
+  // If it's a symlink, and we're in a globstar, then stop
+  if (isSym && inGlobStar)
+    return
+
+  for (var i = 0; i < len; i++) {
+    var e = entries[i]
+    if (e.charAt(0) === '.' && !this.dot)
+      continue
+
+    // these two cases enter the inGlobStar state
+    var instead = gspref.concat(entries[i], remainWithoutGlobStar)
+    this._process(instead, index, true)
+
+    var below = gspref.concat(entries[i], remain)
+    this._process(below, index, true)
+  }
+}
+
+GlobSync.prototype._processSimple = function (prefix, index) {
+  // XXX review this.  Shouldn't it be doing the mounting etc
+  // before doing stat?  kinda weird?
+  var exists = this._stat(prefix)
+
+  if (!this.matches[index])
+    this.matches[index] = Object.create(null)
+
+  // If it doesn't exist, then just mark the lack of results
+  if (!exists)
+    return
+
+  if (prefix && isAbsolute(prefix) && !this.nomount) {
+    var trail = /[\/\\]$/.test(prefix)
+    if (prefix.charAt(0) === '/') {
+      prefix = path.join(this.root, prefix)
+    } else {
+      prefix = path.resolve(this.root, prefix)
+      if (trail)
+        prefix += '/'
+    }
+  }
+
+  if (process.platform === 'win32')
+    prefix = prefix.replace(/\\/g, '/')
+
+  // Mark this as a match
+  this._emitMatch(index, prefix)
+}
+
+// Returns either 'DIR', 'FILE', or false
+GlobSync.prototype._stat = function (f) {
+  var abs = this._makeAbs(f)
+  var needDir = f.slice(-1) === '/'
+
+  if (f.length > this.maxLength)
+    return false
+
+  if (!this.stat && ownProp(this.cache, abs)) {
+    var c = this.cache[abs]
+
+    if (Array.isArray(c))
+      c = 'DIR'
+
+    // It exists, but maybe not how we need it
+    if (!needDir || c === 'DIR')
+      return c
+
+    if (needDir && c === 'FILE')
+      return false
+
+    // otherwise we have to stat, because maybe c=true
+    // if we know it exists, but not what it is.
+  }
+
+  var exists
+  var stat = this.statCache[abs]
+  if (!stat) {
+    var lstat
+    try {
+      lstat = fs.lstatSync(abs)
+    } catch (er) {
+      if (er && (er.code === 'ENOENT' || er.code === 'ENOTDIR')) {
+        this.statCache[abs] = false
+        return false
+      }
+    }
+
+    if (lstat && lstat.isSymbolicLink()) {
+      try {
+        stat = fs.statSync(abs)
+      } catch (er) {
+        stat = lstat
+      }
+    } else {
+      stat = lstat
+    }
+  }
+
+  this.statCache[abs] = stat
+
+  var c = true
+  if (stat)
+    c = stat.isDirectory() ? 'DIR' : 'FILE'
+
+  this.cache[abs] = this.cache[abs] || c
+
+  if (needDir && c === 'FILE')
+    return false
+
+  return c
+}
+
+GlobSync.prototype._mark = function (p) {
+  return common.mark(this, p)
+}
+
+GlobSync.prototype._makeAbs = function (f) {
+  return common.makeAbs(this, f)
+}
+
+
+/***/ }),
+
+/***/ 2492:
+/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
+
+var wrappy = __nccwpck_require__(2940)
+var reqs = Object.create(null)
+var once = __nccwpck_require__(1223)
+
+module.exports = wrappy(inflight)
+
+function inflight (key, cb) {
+  if (reqs[key]) {
+    reqs[key].push(cb)
+    return null
+  } else {
+    reqs[key] = [cb]
+    return makeres(key)
+  }
+}
+
+function makeres (key) {
+  return once(function RES () {
+    var cbs = reqs[key]
+    var len = cbs.length
+    var args = slice(arguments)
+
+    // XXX It's somewhat ambiguous whether a new callback added in this
+    // pass should be queued for later execution if something in the
+    // list of callbacks throws, or if it should just be discarded.
+    // However, it's such an edge case that it hardly matters, and either
+    // choice is likely as surprising as the other.
+    // As it happens, we do go ahead and schedule it for later execution.
+    try {
+      for (var i = 0; i < len; i++) {
+        cbs[i].apply(null, args)
+      }
+    } finally {
+      if (cbs.length > len) {
+        // added more in the interim.
+        // de-zalgo, just in case, but don't call again.
+        cbs.splice(0, len)
+        process.nextTick(function () {
+          RES.apply(null, args)
+        })
+      } else {
+        delete reqs[key]
+      }
+    }
+  })
+}
+
+function slice (args) {
+  var length = args.length
+  var array = []
+
+  for (var i = 0; i < length; i++) array[i] = args[i]
+  return array
+}
+
+
+/***/ }),
+
+/***/ 4124:
+/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
+
+try {
+  var util = __nccwpck_require__(1669);
+  /* istanbul ignore next */
+  if (typeof util.inherits !== 'function') throw '';
+  module.exports = util.inherits;
+} catch (e) {
+  /* istanbul ignore next */
+  module.exports = __nccwpck_require__(8544);
+}
+
+
+/***/ }),
+
+/***/ 8544:
+/***/ ((module) => {
+
+if (typeof Object.create === 'function') {
+  // implementation from standard node.js 'util' module
+  module.exports = function inherits(ctor, superCtor) {
+    if (superCtor) {
+      ctor.super_ = superCtor
+      ctor.prototype = Object.create(superCtor.prototype, {
+        constructor: {
+          value: ctor,
+          enumerable: false,
+          writable: true,
+          configurable: true
+        }
+      })
+    }
+  };
+} else {
+  // old school shim for old browsers
+  module.exports = function inherits(ctor, superCtor) {
+    if (superCtor) {
+      ctor.super_ = superCtor
+      var TempCtor = function () {}
+      TempCtor.prototype = superCtor.prototype
+      ctor.prototype = new TempCtor()
+      ctor.prototype.constructor = ctor
+    }
+  }
+}
 
 
 /***/ }),
@@ -6944,6 +9116,83 @@ function globUnescape (s) {
 function regExpEscape (s) {
   return s.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&')
 }
+
+
+/***/ }),
+
+/***/ 1223:
+/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
+
+var wrappy = __nccwpck_require__(2940)
+module.exports = wrappy(once)
+module.exports.strict = wrappy(onceStrict)
+
+once.proto = once(function () {
+  Object.defineProperty(Function.prototype, 'once', {
+    value: function () {
+      return once(this)
+    },
+    configurable: true
+  })
+
+  Object.defineProperty(Function.prototype, 'onceStrict', {
+    value: function () {
+      return onceStrict(this)
+    },
+    configurable: true
+  })
+})
+
+function once (fn) {
+  var f = function () {
+    if (f.called) return f.value
+    f.called = true
+    return f.value = fn.apply(this, arguments)
+  }
+  f.called = false
+  return f
+}
+
+function onceStrict (fn) {
+  var f = function () {
+    if (f.called)
+      throw new Error(f.onceError)
+    f.called = true
+    return f.value = fn.apply(this, arguments)
+  }
+  var name = fn.name || 'Function wrapped with `once`'
+  f.onceError = name + " shouldn't be called more than once"
+  f.called = false
+  return f
+}
+
+
+/***/ }),
+
+/***/ 8714:
+/***/ ((module) => {
+
+"use strict";
+
+
+function posix(path) {
+	return path.charAt(0) === '/';
+}
+
+function win32(path) {
+	// https://github.com/nodejs/node/blob/b3fcc245fb25539909ef1d5eaa01dbf92e168633/lib/path.js#L56
+	var splitDeviceRe = /^([a-zA-Z]:|[\\\/]{2}[^\\\/]+[\\\/]+[^\\\/]+)?([\\\/])?([\s\S]*?)$/;
+	var result = splitDeviceRe.exec(path);
+	var device = result[1] || '';
+	var isUnc = Boolean(device && device.charAt(1) !== ':');
+
+	// UNC paths are always absolute
+	return Boolean(result[2] || isUnc);
+}
+
+module.exports = process.platform === 'win32' ? win32 : posix;
+module.exports.posix = posix;
+module.exports.win32 = win32;
 
 
 /***/ }),
@@ -9000,6 +11249,42 @@ return Q;
 
 /***/ }),
 
+/***/ 5123:
+/***/ ((module) => {
+
+module.exports = [
+  'cat',
+  'cd',
+  'chmod',
+  'cp',
+  'dirs',
+  'echo',
+  'exec',
+  'find',
+  'grep',
+  'head',
+  'ln',
+  'ls',
+  'mkdir',
+  'mv',
+  'pwd',
+  'rm',
+  'sed',
+  'set',
+  'sort',
+  'tail',
+  'tempdir',
+  'test',
+  'to',
+  'toEnd',
+  'touch',
+  'uniq',
+  'which',
+];
+
+
+/***/ }),
+
 /***/ 3516:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -9008,126 +11293,95 @@ return Q;
 // Unix shell commands on top of Node's API
 //
 // Copyright (c) 2012 Artur Adib
-// http://github.com/arturadib/shelljs
+// http://github.com/shelljs/shelljs
 //
 
+function __ncc_wildcard$0 (arg) {
+  if (arg === "cat.js" || arg === "cat") return __nccwpck_require__(271);
+  else if (arg === "cd.js" || arg === "cd") return __nccwpck_require__(2051);
+  else if (arg === "chmod.js" || arg === "chmod") return __nccwpck_require__(4975);
+  else if (arg === "common.js" || arg === "common") return __nccwpck_require__(3687);
+  else if (arg === "cp.js" || arg === "cp") return __nccwpck_require__(4932);
+  else if (arg === "dirs.js" || arg === "dirs") return __nccwpck_require__(1178);
+  else if (arg === "echo.js" || arg === "echo") return __nccwpck_require__(243);
+  else if (arg === "error.js" || arg === "error") return __nccwpck_require__(232);
+  else if (arg === "exec-child.js" || arg === "exec-child") return __nccwpck_require__(9607);
+  else if (arg === "exec.js" || arg === "exec") return __nccwpck_require__(896);
+  else if (arg === "find.js" || arg === "find") return __nccwpck_require__(7838);
+  else if (arg === "grep.js" || arg === "grep") return __nccwpck_require__(7417);
+  else if (arg === "head.js" || arg === "head") return __nccwpck_require__(6613);
+  else if (arg === "ln.js" || arg === "ln") return __nccwpck_require__(5787);
+  else if (arg === "ls.js" || arg === "ls") return __nccwpck_require__(5561);
+  else if (arg === "mkdir.js" || arg === "mkdir") return __nccwpck_require__(2695);
+  else if (arg === "mv.js" || arg === "mv") return __nccwpck_require__(9849);
+  else if (arg === "popd.js" || arg === "popd") return __nccwpck_require__(227);
+  else if (arg === "pushd.js" || arg === "pushd") return __nccwpck_require__(4177);
+  else if (arg === "pwd.js" || arg === "pwd") return __nccwpck_require__(8553);
+  else if (arg === "rm.js" || arg === "rm") return __nccwpck_require__(2830);
+  else if (arg === "sed.js" || arg === "sed") return __nccwpck_require__(5899);
+  else if (arg === "set.js" || arg === "set") return __nccwpck_require__(1411);
+  else if (arg === "sort.js" || arg === "sort") return __nccwpck_require__(2116);
+  else if (arg === "tail.js" || arg === "tail") return __nccwpck_require__(2284);
+  else if (arg === "tempdir.js" || arg === "tempdir") return __nccwpck_require__(6150);
+  else if (arg === "test.js" || arg === "test") return __nccwpck_require__(9723);
+  else if (arg === "to.js" || arg === "to") return __nccwpck_require__(1961);
+  else if (arg === "toEnd.js" || arg === "toEnd") return __nccwpck_require__(3736);
+  else if (arg === "touch.js" || arg === "touch") return __nccwpck_require__(8358);
+  else if (arg === "uniq.js" || arg === "uniq") return __nccwpck_require__(7286);
+  else if (arg === "which.js" || arg === "which") return __nccwpck_require__(4766);
+}
 var common = __nccwpck_require__(3687);
-
 
 //@
 //@ All commands run synchronously, unless otherwise stated.
+//@ All commands accept standard bash globbing characters (`*`, `?`, etc.),
+//@ compatible with the [node `glob` module](https://github.com/isaacs/node-glob).
+//@
+//@ For less-commonly used commands and features, please check out our [wiki
+//@ page](https://github.com/shelljs/shelljs/wiki).
 //@
 
-//@include ./src/cd
-var _cd = __nccwpck_require__(2051);
-exports.cd = common.wrap('cd', _cd);
+// Include the docs for all the default commands
+//@commands
 
-//@include ./src/pwd
-var _pwd = __nccwpck_require__(8553);
-exports.pwd = common.wrap('pwd', _pwd);
-
-//@include ./src/ls
-var _ls = __nccwpck_require__(5561);
-exports.ls = common.wrap('ls', _ls);
-
-//@include ./src/find
-var _find = __nccwpck_require__(7838);
-exports.find = common.wrap('find', _find);
-
-//@include ./src/cp
-var _cp = __nccwpck_require__(4932);
-exports.cp = common.wrap('cp', _cp);
-
-//@include ./src/rm
-var _rm = __nccwpck_require__(2830);
-exports.rm = common.wrap('rm', _rm);
-
-//@include ./src/mv
-var _mv = __nccwpck_require__(9849);
-exports.mv = common.wrap('mv', _mv);
-
-//@include ./src/mkdir
-var _mkdir = __nccwpck_require__(2695);
-exports.mkdir = common.wrap('mkdir', _mkdir);
-
-//@include ./src/test
-var _test = __nccwpck_require__(9723);
-exports.test = common.wrap('test', _test);
-
-//@include ./src/cat
-var _cat = __nccwpck_require__(271);
-exports.cat = common.wrap('cat', _cat);
-
-//@include ./src/to
-var _to = __nccwpck_require__(1961);
-String.prototype.to = common.wrap('to', _to);
-
-//@include ./src/toEnd
-var _toEnd = __nccwpck_require__(3736);
-String.prototype.toEnd = common.wrap('toEnd', _toEnd);
-
-//@include ./src/sed
-var _sed = __nccwpck_require__(5899);
-exports.sed = common.wrap('sed', _sed);
-
-//@include ./src/grep
-var _grep = __nccwpck_require__(7417);
-exports.grep = common.wrap('grep', _grep);
-
-//@include ./src/which
-var _which = __nccwpck_require__(4766);
-exports.which = common.wrap('which', _which);
-
-//@include ./src/echo
-var _echo = __nccwpck_require__(243);
-exports.echo = _echo; // don't common.wrap() as it could parse '-options'
-
-//@include ./src/dirs
-var _dirs = __nccwpck_require__(1178)/* .dirs */ .cq;
-exports.dirs = common.wrap("dirs", _dirs);
-var _pushd = __nccwpck_require__(1178)/* .pushd */ .lv;
-exports.pushd = common.wrap('pushd', _pushd);
-var _popd = __nccwpck_require__(1178)/* .popd */ .P$;
-exports.popd = common.wrap("popd", _popd);
-
-//@include ./src/ln
-var _ln = __nccwpck_require__(5787);
-exports.ln = common.wrap('ln', _ln);
+// Load all default commands
+__nccwpck_require__(5123).forEach(function (command) {
+  __ncc_wildcard$0(command);
+});
 
 //@
 //@ ### exit(code)
-//@ Exits the current process with the given exit code.
+//@
+//@ Exits the current process with the given exit `code`.
 exports.exit = process.exit;
+
+//@include ./src/error
+exports.error = __nccwpck_require__(232);
+
+//@include ./src/common
+exports.ShellString = common.ShellString;
 
 //@
 //@ ### env['VAR_NAME']
-//@ Object containing environment variables (both getter and setter). Shortcut to process.env.
+//@
+//@ Object containing environment variables (both getter and setter). Shortcut
+//@ to `process.env`.
 exports.env = process.env;
 
-//@include ./src/exec
-var _exec = __nccwpck_require__(896);
-exports.exec = common.wrap('exec', _exec, {notUnix:true});
-
-//@include ./src/chmod
-var _chmod = __nccwpck_require__(4975);
-exports.chmod = common.wrap('chmod', _chmod);
-
-
-
 //@
-//@ ## Non-Unix commands
+//@ ### Pipes
 //@
-
-//@include ./src/tempdir
-var _tempDir = __nccwpck_require__(6150);
-exports.tempdir = common.wrap('tempdir', _tempDir);
-
-
-//@include ./src/error
-var _error = __nccwpck_require__(232);
-exports.error = _error;
-
-
+//@ Examples:
+//@
+//@ ```javascript
+//@ grep('foo', 'file1.txt', 'file2.txt').sed(/o/g, 'a').to('output.txt');
+//@ echo('files with o\'s in the name:\n' + ls().grep('o'));
+//@ cat('test.js').exec('node'); // pipe to exec() call
+//@ ```
+//@
+//@ Commands can send their output to another command in a pipe-like fashion.
+//@ `sed`, `grep`, `cat`, `exec`, `to`, and `toEnd` can appear on the right-hand
+//@ side of a pipe. Pipes can be chained.
 
 //@
 //@ ## Configuration
@@ -9137,13 +11391,15 @@ exports.config = common.config;
 
 //@
 //@ ### config.silent
+//@
 //@ Example:
 //@
 //@ ```javascript
-//@ var silentState = config.silent; // save old silent state
-//@ config.silent = true;
+//@ var sh = require('shelljs');
+//@ var silentState = sh.config.silent; // save old silent state
+//@ sh.config.silent = true;
 //@ /* ... */
-//@ config.silent = silentState; // restore old silent state
+//@ sh.config.silent = silentState; // restore old silent state
 //@ ```
 //@
 //@ Suppresses all command output if `true`, except for `echo()` calls.
@@ -9151,15 +11407,77 @@ exports.config = common.config;
 
 //@
 //@ ### config.fatal
+//@
 //@ Example:
 //@
 //@ ```javascript
-//@ config.fatal = true;
-//@ cp('this_file_does_not_exist', '/dev/null'); // dies here
+//@ require('shelljs/global');
+//@ config.fatal = true; // or set('-e');
+//@ cp('this_file_does_not_exist', '/dev/null'); // throws Error here
 //@ /* more commands... */
 //@ ```
 //@
-//@ If `true` the script will die on errors. Default is `false`.
+//@ If `true`, the script will throw a Javascript error when any shell.js
+//@ command encounters an error. Default is `false`. This is analogous to
+//@ Bash's `set -e`.
+
+//@
+//@ ### config.verbose
+//@
+//@ Example:
+//@
+//@ ```javascript
+//@ config.verbose = true; // or set('-v');
+//@ cd('dir/');
+//@ rm('-rf', 'foo.txt', 'bar.txt');
+//@ exec('echo hello');
+//@ ```
+//@
+//@ Will print each command as follows:
+//@
+//@ ```
+//@ cd dir/
+//@ rm -rf foo.txt bar.txt
+//@ exec echo hello
+//@ ```
+
+//@
+//@ ### config.globOptions
+//@
+//@ Example:
+//@
+//@ ```javascript
+//@ config.globOptions = {nodir: true};
+//@ ```
+//@
+//@ Use this value for calls to `glob.sync()` instead of the default options.
+
+//@
+//@ ### config.reset()
+//@
+//@ Example:
+//@
+//@ ```javascript
+//@ var shell = require('shelljs');
+//@ // Make changes to shell.config, and do stuff...
+//@ /* ... */
+//@ shell.config.reset(); // reset to original state
+//@ // Do more stuff, but with original settings
+//@ /* ... */
+//@ ```
+//@
+//@ Reset `shell.config` to the defaults:
+//@
+//@ ```javascript
+//@ {
+//@   fatal: false,
+//@   globOptions: {},
+//@   maxdepth: 255,
+//@   noglob: false,
+//@   silent: false,
+//@   verbose: false,
+//@ }
+//@ ```
 
 
 /***/ }),
@@ -9170,9 +11488,20 @@ exports.config = common.config;
 var common = __nccwpck_require__(3687);
 var fs = __nccwpck_require__(5747);
 
+common.register('cat', _cat, {
+  canReceivePipe: true,
+  cmdOptions: {
+    'n': 'number',
+  },
+});
+
 //@
-//@ ### cat(file [, file ...])
-//@ ### cat(file_array)
+//@ ### cat([options,] file [, file ...])
+//@ ### cat([options,] file_array)
+//@
+//@ Available options:
+//@
+//@ + `-n`: number all output lines
 //@
 //@ Examples:
 //@
@@ -9184,32 +11513,54 @@ var fs = __nccwpck_require__(5747);
 //@
 //@ Returns a string containing the given file, or a concatenated string
 //@ containing the files if more than one file is given (a new line character is
-//@ introduced between each file). Wildcard `*` accepted.
+//@ introduced between each file).
 function _cat(options, files) {
-  var cat = '';
+  var cat = common.readFromPipe();
 
-  if (!files)
-    common.error('no paths given');
+  if (!files && !cat) common.error('no paths given');
 
-  if (typeof files === 'string')
-    files = [].slice.call(arguments, 1);
-  // if it's array leave it as it is
+  files = [].slice.call(arguments, 1);
 
-  files = common.expand(files);
-
-  files.forEach(function(file) {
-    if (!fs.existsSync(file))
+  files.forEach(function (file) {
+    if (!fs.existsSync(file)) {
       common.error('no such file or directory: ' + file);
+    } else if (common.statFollowLinks(file).isDirectory()) {
+      common.error(file + ': Is a directory');
+    }
 
-    cat += fs.readFileSync(file, 'utf8') + '\n';
+    cat += fs.readFileSync(file, 'utf8');
   });
 
-  if (cat[cat.length-1] === '\n')
-    cat = cat.substring(0, cat.length-1);
+  if (options.number) {
+    cat = addNumbers(cat);
+  }
 
-  return common.ShellString(cat);
+  return cat;
 }
 module.exports = _cat;
+
+function addNumbers(cat) {
+  var lines = cat.split('\n');
+  var lastLine = lines.pop();
+
+  lines = lines.map(function (line, i) {
+    return numberedLine(i + 1, line);
+  });
+
+  if (lastLine.length) {
+    lastLine = numberedLine(lines.length + 1, lastLine);
+  }
+  lines.push(lastLine);
+
+  return lines.join('\n');
+}
+
+function numberedLine(n, line) {
+  // GNU cat use six pad start number + tab. See http://lingrok.org/xref/coreutils/src/cat.c#57
+  // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/padStart
+  var number = ('     ' + n).slice(-6) + '\t';
+  return number + line;
+}
 
 
 /***/ }),
@@ -9217,23 +11568,43 @@ module.exports = _cat;
 /***/ 2051:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
-var fs = __nccwpck_require__(5747);
+var os = __nccwpck_require__(2087);
 var common = __nccwpck_require__(3687);
 
+common.register('cd', _cd, {});
+
 //@
-//@ ### cd('dir')
-//@ Changes to directory `dir` for the duration of the script
+//@ ### cd([dir])
+//@
+//@ Changes to directory `dir` for the duration of the script. Changes to home
+//@ directory if no argument is supplied.
 function _cd(options, dir) {
-  if (!dir)
-    common.error('directory not specified');
+  if (!dir) dir = os.homedir();
 
-  if (!fs.existsSync(dir))
-    common.error('no such file or directory: ' + dir);
+  if (dir === '-') {
+    if (!process.env.OLDPWD) {
+      common.error('could not find previous directory');
+    } else {
+      dir = process.env.OLDPWD;
+    }
+  }
 
-  if (!fs.statSync(dir).isDirectory())
-    common.error('not a directory: ' + dir);
-
-  process.chdir(dir);
+  try {
+    var curDir = process.cwd();
+    process.chdir(dir);
+    process.env.OLDPWD = curDir;
+  } catch (e) {
+    // something went wrong, let's figure out the error
+    var err;
+    try {
+      common.statFollowLinks(dir); // if this succeeds, it must be some sort of file
+      err = 'not a directory: ' + dir;
+    } catch (e2) {
+      err = 'no such file or directory: ' + dir;
+    }
+    if (err) common.error(err);
+  }
+  return '';
 }
 module.exports = _cd;
 
@@ -9249,40 +11620,42 @@ var path = __nccwpck_require__(5622);
 
 var PERMS = (function (base) {
   return {
-    OTHER_EXEC  : base.EXEC,
-    OTHER_WRITE : base.WRITE,
-    OTHER_READ  : base.READ,
+    OTHER_EXEC: base.EXEC,
+    OTHER_WRITE: base.WRITE,
+    OTHER_READ: base.READ,
 
-    GROUP_EXEC  : base.EXEC  << 3,
-    GROUP_WRITE : base.WRITE << 3,
-    GROUP_READ  : base.READ << 3,
+    GROUP_EXEC: base.EXEC << 3,
+    GROUP_WRITE: base.WRITE << 3,
+    GROUP_READ: base.READ << 3,
 
-    OWNER_EXEC  : base.EXEC << 6,
-    OWNER_WRITE : base.WRITE << 6,
-    OWNER_READ  : base.READ << 6,
+    OWNER_EXEC: base.EXEC << 6,
+    OWNER_WRITE: base.WRITE << 6,
+    OWNER_READ: base.READ << 6,
 
-    // Literal octal numbers are apparently not allowed in "strict" javascript.  Using parseInt is
-    // the preferred way, else a jshint warning is thrown.
-    STICKY      : parseInt('01000', 8),
-    SETGID      : parseInt('02000', 8),
-    SETUID      : parseInt('04000', 8),
+    // Literal octal numbers are apparently not allowed in "strict" javascript.
+    STICKY: parseInt('01000', 8),
+    SETGID: parseInt('02000', 8),
+    SETUID: parseInt('04000', 8),
 
-    TYPE_MASK   : parseInt('0770000', 8)
+    TYPE_MASK: parseInt('0770000', 8),
   };
-})({
-  EXEC  : 1,
-  WRITE : 2,
-  READ  : 4
+}({
+  EXEC: 1,
+  WRITE: 2,
+  READ: 4,
+}));
+
+common.register('chmod', _chmod, {
 });
 
 //@
-//@ ### chmod(octal_mode || octal_string, file)
-//@ ### chmod(symbolic_mode, file)
+//@ ### chmod([options,] octal_mode || octal_string, file)
+//@ ### chmod([options,] symbolic_mode, file)
 //@
 //@ Available options:
 //@
 //@ + `-v`: output a diagnostic for every file processed//@
-//@ + `-c`: like verbose but report only when a change is made//@
+//@ + `-c`: like verbose, but report only when a change is made//@
 //@ + `-R`: change files and directories recursively//@
 //@
 //@ Examples:
@@ -9291,6 +11664,7 @@ var PERMS = (function (base) {
 //@ chmod(755, '/Users/brandon');
 //@ chmod('755', '/Users/brandon'); // same as above
 //@ chmod('u+x', '/Users/brandon');
+//@ chmod('-R', 'a-w', '/Users/brandon');
 //@ ```
 //@
 //@ Alters the permissions of a file or directory by either specifying the
@@ -9298,20 +11672,17 @@ var PERMS = (function (base) {
 //@ This command tries to mimic the POSIX behavior as much as possible.
 //@ Notable exceptions:
 //@
-//@ + In symbolic modes, 'a-r' and '-r' are identical.  No consideration is
-//@   given to the umask.
-//@ + There is no "quiet" option since default behavior is to run silent.
+//@ + In symbolic modes, `a-r` and `-r` are identical.  No consideration is
+//@   given to the `umask`.
+//@ + There is no "quiet" option, since default behavior is to run silent.
 function _chmod(options, mode, filePattern) {
   if (!filePattern) {
     if (options.length > 0 && options.charAt(0) === '-') {
       // Special case where the specified file permissions started with - to subtract perms, which
       // get picked up by the option parser as command flags.
       // If we are down by one argument and options starts with -, shift everything over.
-      filePattern = mode;
-      mode = options;
-      options = '';
-    }
-    else {
+      [].unshift.call(arguments, '');
+    } else {
       common.error('You must specify a file.');
     }
   }
@@ -9319,19 +11690,18 @@ function _chmod(options, mode, filePattern) {
   options = common.parseOptions(options, {
     'R': 'recursive',
     'c': 'changes',
-    'v': 'verbose'
+    'v': 'verbose',
   });
 
-  if (typeof filePattern === 'string') {
-    filePattern = [ filePattern ];
-  }
+  filePattern = [].slice.call(arguments, 2);
 
   var files;
 
+  // TODO: replace this with a call to common.expand()
   if (options.recursive) {
     files = [];
-    common.expand(filePattern).forEach(function addFile(expandedFile) {
-      var stat = fs.lstatSync(expandedFile);
+    filePattern.forEach(function addFile(expandedFile) {
+      var stat = common.statNoFollowLinks(expandedFile);
 
       if (!stat.isSymbolicLink()) {
         files.push(expandedFile);
@@ -9343,9 +11713,8 @@ function _chmod(options, mode, filePattern) {
         }
       }
     });
-  }
-  else {
-    files = common.expand(filePattern);
+  } else {
+    files = filePattern;
   }
 
   files.forEach(function innerChmod(file) {
@@ -9355,11 +11724,13 @@ function _chmod(options, mode, filePattern) {
     }
 
     // When recursing, don't follow symlinks.
-    if (options.recursive && fs.lstatSync(file).isSymbolicLink()) {
+    if (options.recursive && common.statNoFollowLinks(file).isSymbolicLink()) {
       return;
     }
 
-    var perms = fs.statSync(file).mode;
+    var stat = common.statFollowLinks(file);
+    var isDir = stat.isDirectory();
+    var perms = stat.mode;
     var type = perms & PERMS.TYPE_MASK;
 
     var newPerms = perms;
@@ -9367,7 +11738,6 @@ function _chmod(options, mode, filePattern) {
     if (isNaN(parseInt(mode, 8))) {
       // parse options
       mode.split(',').forEach(function (symbolicMode) {
-        /*jshint regexdash:true */
         var pattern = /([ugoa]*)([=\+-])([rwxXst]*)/i;
         var matches = pattern.exec(symbolicMode);
 
@@ -9376,15 +11746,20 @@ function _chmod(options, mode, filePattern) {
           var operator = matches[2];
           var change = matches[3];
 
-          var changeOwner = applyTo.indexOf('u') != -1 || applyTo === 'a' || applyTo === '';
-          var changeGroup = applyTo.indexOf('g') != -1 || applyTo === 'a' || applyTo === '';
-          var changeOther = applyTo.indexOf('o') != -1 || applyTo === 'a' || applyTo === '';
+          var changeOwner = applyTo.indexOf('u') !== -1 || applyTo === 'a' || applyTo === '';
+          var changeGroup = applyTo.indexOf('g') !== -1 || applyTo === 'a' || applyTo === '';
+          var changeOther = applyTo.indexOf('o') !== -1 || applyTo === 'a' || applyTo === '';
 
-          var changeRead   = change.indexOf('r') != -1;
-          var changeWrite  = change.indexOf('w') != -1;
-          var changeExec   = change.indexOf('x') != -1;
-          var changeSticky = change.indexOf('t') != -1;
-          var changeSetuid = change.indexOf('s') != -1;
+          var changeRead = change.indexOf('r') !== -1;
+          var changeWrite = change.indexOf('w') !== -1;
+          var changeExec = change.indexOf('x') !== -1;
+          var changeExecDir = change.indexOf('X') !== -1;
+          var changeSticky = change.indexOf('t') !== -1;
+          var changeSetuid = change.indexOf('s') !== -1;
+
+          if (changeExecDir && isDir) {
+            changeExec = true;
+          }
 
           var mask = 0;
           if (changeOwner) {
@@ -9414,41 +11789,45 @@ function _chmod(options, mode, filePattern) {
             case '=':
               newPerms = type + mask;
 
-              // According to POSIX, when using = to explicitly set the permissions, setuid and setgid can never be cleared.
-              if (fs.statSync(file).isDirectory()) {
+              // According to POSIX, when using = to explicitly set the
+              // permissions, setuid and setgid can never be cleared.
+              if (common.statFollowLinks(file).isDirectory()) {
                 newPerms |= (PERMS.SETUID + PERMS.SETGID) & perms;
               }
               break;
+            default:
+              common.error('Could not recognize operator: `' + operator + '`');
           }
 
           if (options.verbose) {
-            log(file + ' -> ' + newPerms.toString(8));
+            console.log(file + ' -> ' + newPerms.toString(8));
           }
 
-          if (perms != newPerms) {
+          if (perms !== newPerms) {
             if (!options.verbose && options.changes) {
-              log(file + ' -> ' + newPerms.toString(8));
+              console.log(file + ' -> ' + newPerms.toString(8));
             }
             fs.chmodSync(file, newPerms);
+            perms = newPerms; // for the next round of changes!
           }
-        }
-        else {
+        } else {
           common.error('Invalid symbolic mode change: ' + symbolicMode);
         }
       });
-    }
-    else {
+    } else {
       // they gave us a full number
       newPerms = type + parseInt(mode, 8);
 
-      // POSIX rules are that setuid and setgid can only be added using numeric form, but not cleared.
-      if (fs.statSync(file).isDirectory()) {
+      // POSIX rules are that setuid and setgid can only be added using numeric
+      // form, but not cleared.
+      if (common.statFollowLinks(file).isDirectory()) {
         newPerms |= (PERMS.SETUID + PERMS.SETGID) & perms;
       }
 
       fs.chmodSync(file, newPerms);
     }
   });
+  return '';
 }
 module.exports = _chmod;
 
@@ -9458,89 +11837,225 @@ module.exports = _chmod;
 /***/ 3687:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
+"use strict";
+// Ignore warning about 'new String()'
+/* eslint no-new-wrappers: 0 */
+
+
 var os = __nccwpck_require__(2087);
 var fs = __nccwpck_require__(5747);
-var _ls = __nccwpck_require__(5561);
+var glob = __nccwpck_require__(1957);
+var shell = __nccwpck_require__(3516);
 
-// Module globals
-var config = {
+var shellMethods = Object.create(shell);
+
+exports.extend = Object.assign;
+
+// Check if we're running under electron
+var isElectron = Boolean(process.versions.electron);
+
+// Module globals (assume no execPath by default)
+var DEFAULT_CONFIG = {
+  fatal: false,
+  globOptions: {},
+  maxdepth: 255,
+  noglob: false,
   silent: false,
-  fatal: false
+  verbose: false,
+  execPath: null,
+  bufLength: 64 * 1024, // 64KB
 };
+
+var config = {
+  reset: function () {
+    Object.assign(this, DEFAULT_CONFIG);
+    if (!isElectron) {
+      this.execPath = process.execPath;
+    }
+  },
+  resetForTesting: function () {
+    this.reset();
+    this.silent = true;
+  },
+};
+
+config.reset();
 exports.config = config;
 
+// Note: commands should generally consider these as read-only values.
 var state = {
   error: null,
+  errorCode: 0,
   currentCmd: 'shell.js',
-  tempDir: null
 };
 exports.state = state;
 
-var platform = os.type().match(/^Win/) ? 'win' : 'unix';
-exports.platform = platform;
+delete process.env.OLDPWD; // initially, there's no previous directory
+
+// Reliably test if something is any sort of javascript object
+function isObject(a) {
+  return typeof a === 'object' && a !== null;
+}
+exports.isObject = isObject;
 
 function log() {
-  if (!config.silent)
-    console.log.apply(this, arguments);
+  /* istanbul ignore next */
+  if (!config.silent) {
+    console.error.apply(console, arguments);
+  }
 }
 exports.log = log;
 
-// Shows error message. Throws unless _continue or config.fatal are true
-function error(msg, _continue) {
-  if (state.error === null)
-    state.error = '';
-  state.error += state.currentCmd + ': ' + msg + '\n';
+// Converts strings to be equivalent across all platforms. Primarily responsible
+// for making sure we use '/' instead of '\' as path separators, but this may be
+// expanded in the future if necessary
+function convertErrorOutput(msg) {
+  if (typeof msg !== 'string') {
+    throw new TypeError('input must be a string');
+  }
+  return msg.replace(/\\/g, '/');
+}
+exports.convertErrorOutput = convertErrorOutput;
 
-  if (msg.length > 0)
-    log(state.error);
+// Shows error message. Throws if config.fatal is true
+function error(msg, _code, options) {
+  // Validate input
+  if (typeof msg !== 'string') throw new Error('msg must be a string');
 
-  if (config.fatal)
-    process.exit(1);
+  var DEFAULT_OPTIONS = {
+    continue: false,
+    code: 1,
+    prefix: state.currentCmd + ': ',
+    silent: false,
+  };
 
-  if (!_continue)
-    throw '';
+  if (typeof _code === 'number' && isObject(options)) {
+    options.code = _code;
+  } else if (isObject(_code)) { // no 'code'
+    options = _code;
+  } else if (typeof _code === 'number') { // no 'options'
+    options = { code: _code };
+  } else if (typeof _code !== 'number') { // only 'msg'
+    options = {};
+  }
+  options = Object.assign({}, DEFAULT_OPTIONS, options);
+
+  if (!state.errorCode) state.errorCode = options.code;
+
+  var logEntry = convertErrorOutput(options.prefix + msg);
+  state.error = state.error ? state.error + '\n' : '';
+  state.error += logEntry;
+
+  // Throw an error, or log the entry
+  if (config.fatal) throw new Error(logEntry);
+  if (msg.length > 0 && !options.silent) log(logEntry);
+
+  if (!options.continue) {
+    throw {
+      msg: 'earlyExit',
+      retValue: (new ShellString('', state.error, state.errorCode)),
+    };
+  }
 }
 exports.error = error;
 
-// In the future, when Proxies are default, we can add methods like `.to()` to primitive strings.
-// For now, this is a dummy function to bookmark places we need such strings
-function ShellString(str) {
-  return str;
+//@
+//@ ### ShellString(str)
+//@
+//@ Examples:
+//@
+//@ ```javascript
+//@ var foo = ShellString('hello world');
+//@ ```
+//@
+//@ Turns a regular string into a string-like object similar to what each
+//@ command returns. This has special methods, like `.to()` and `.toEnd()`.
+function ShellString(stdout, stderr, code) {
+  var that;
+  if (stdout instanceof Array) {
+    that = stdout;
+    that.stdout = stdout.join('\n');
+    if (stdout.length > 0) that.stdout += '\n';
+  } else {
+    that = new String(stdout);
+    that.stdout = stdout;
+  }
+  that.stderr = stderr;
+  that.code = code;
+  // A list of all commands that can appear on the right-hand side of a pipe
+  // (populated by calls to common.wrap())
+  pipeMethods.forEach(function (cmd) {
+    that[cmd] = shellMethods[cmd].bind(that);
+  });
+  return that;
 }
+
 exports.ShellString = ShellString;
 
-// Returns {'alice': true, 'bob': false} when passed a dictionary, e.g.:
+// Returns {'alice': true, 'bob': false} when passed a string and dictionary as follows:
 //   parseOptions('-a', {'a':'alice', 'b':'bob'});
-function parseOptions(str, map) {
-  if (!map)
-    error('parseOptions() internal error: no map given');
+// Returns {'reference': 'string-value', 'bob': false} when passed two dictionaries of the form:
+//   parseOptions({'-r': 'string-value'}, {'r':'reference', 'b':'bob'});
+// Throws an error when passed a string that does not start with '-':
+//   parseOptions('a', {'a':'alice'}); // throws
+function parseOptions(opt, map, errorOptions) {
+  // Validate input
+  if (typeof opt !== 'string' && !isObject(opt)) {
+    throw new Error('options must be strings or key-value pairs');
+  } else if (!isObject(map)) {
+    throw new Error('parseOptions() internal error: map must be an object');
+  } else if (errorOptions && !isObject(errorOptions)) {
+    throw new Error('parseOptions() internal error: errorOptions must be object');
+  }
+
+  if (opt === '--') {
+    // This means there are no options.
+    return {};
+  }
 
   // All options are false by default
   var options = {};
-  for (var letter in map)
-    options[map[letter]] = false;
-
-  if (!str)
-    return options; // defaults
-
-  if (typeof str !== 'string')
-    error('parseOptions() internal error: wrong str');
-
-  // e.g. match[1] = 'Rf' for str = '-Rf'
-  var match = str.match(/^\-(.+)/);
-  if (!match)
-    return options;
-
-  // e.g. chars = ['R', 'f']
-  var chars = match[1].split('');
-
-  chars.forEach(function(c) {
-    if (c in map)
-      options[map[c]] = true;
-    else
-      error('option not recognized: '+c);
+  Object.keys(map).forEach(function (letter) {
+    var optName = map[letter];
+    if (optName[0] !== '!') {
+      options[optName] = false;
+    }
   });
 
+  if (opt === '') return options; // defaults
+
+  if (typeof opt === 'string') {
+    if (opt[0] !== '-') {
+      throw new Error("Options string must start with a '-'");
+    }
+
+    // e.g. chars = ['R', 'f']
+    var chars = opt.slice(1).split('');
+
+    chars.forEach(function (c) {
+      if (c in map) {
+        var optionName = map[c];
+        if (optionName[0] === '!') {
+          options[optionName.slice(1)] = false;
+        } else {
+          options[optionName] = true;
+        }
+      } else {
+        error('option not recognized: ' + c, errorOptions || {});
+      }
+    });
+  } else { // opt is an Object
+    Object.keys(opt).forEach(function (key) {
+      // key is a string of the form '-r', '-d', etc.
+      var c = key[1];
+      if (c in map) {
+        var optionName = map[c];
+        options[optionName] = opt[key]; // assign the given value
+      } else {
+        error('option not recognized: ' + c, errorOptions || {});
+      }
+    });
+  }
   return options;
 }
 exports.parseOptions = parseOptions;
@@ -9550,42 +12065,50 @@ exports.parseOptions = parseOptions;
 //   expand(['file*.js']) = ['file1.js', 'file2.js', ...]
 //   (if the files 'file1.js', 'file2.js', etc, exist in the current dir)
 function expand(list) {
+  if (!Array.isArray(list)) {
+    throw new TypeError('must be an array');
+  }
   var expanded = [];
-  list.forEach(function(listEl) {
-    // Wildcard present on directory names ?
-    if(listEl.search(/\*[^\/]*\//) > -1 || listEl.search(/\*\*[^\/]*\//) > -1) {
-      var match = listEl.match(/^([^*]+\/|)(.*)/);
-      var root = match[1];
-      var rest = match[2];
-      var restRegex = rest.replace(/\*\*/g, ".*").replace(/\*/g, "[^\\/]*");
-      restRegex = new RegExp(restRegex);
-      
-      _ls('-R', root).filter(function (e) {
-        return restRegex.test(e);
-      }).forEach(function(file) {
-        expanded.push(file);
-      });
-    }
-    // Wildcard present on file names ?
-    else if (listEl.search(/\*/) > -1) {
-      _ls('', listEl).forEach(function(file) {
-        expanded.push(file);
-      });
-    } else {
+  list.forEach(function (listEl) {
+    // Don't expand non-strings
+    if (typeof listEl !== 'string') {
       expanded.push(listEl);
+    } else {
+      var ret;
+      try {
+        ret = glob.sync(listEl, config.globOptions);
+        // if nothing matched, interpret the string literally
+        ret = ret.length > 0 ? ret : [listEl];
+      } catch (e) {
+        // if glob fails, interpret the string literally
+        ret = [listEl];
+      }
+      expanded = expanded.concat(ret);
     }
   });
   return expanded;
 }
 exports.expand = expand;
 
+// Normalizes Buffer creation, using Buffer.alloc if possible.
+// Also provides a good default buffer length for most use cases.
+var buffer = typeof Buffer.alloc === 'function' ?
+  function (len) {
+    return Buffer.alloc(len || config.bufLength);
+  } :
+  function (len) {
+    return new Buffer(len || config.bufLength);
+  };
+exports.buffer = buffer;
+
 // Normalizes _unlinkSync() across platforms to match Unix behavior, i.e.
 // file can be unlinked even if it's read-only, see https://github.com/joyent/node/issues/3006
 function unlinkSync(file) {
   try {
     fs.unlinkSync(file);
-  } catch(e) {
+  } catch (e) {
     // Try to override file permission
+    /* istanbul ignore next */
     if (e.code === 'EPERM') {
       fs.chmodSync(file, '0666');
       fs.unlinkSync(file);
@@ -9596,64 +12119,131 @@ function unlinkSync(file) {
 }
 exports.unlinkSync = unlinkSync;
 
+// wrappers around common.statFollowLinks and common.statNoFollowLinks that clarify intent
+// and improve readability
+function statFollowLinks() {
+  return fs.statSync.apply(fs, arguments);
+}
+exports.statFollowLinks = statFollowLinks;
+
+function statNoFollowLinks() {
+  return fs.lstatSync.apply(fs, arguments);
+}
+exports.statNoFollowLinks = statNoFollowLinks;
+
 // e.g. 'shelljs_a5f185d0443ca...'
 function randomFileName() {
   function randomHash(count) {
-    if (count === 1)
-      return parseInt(16*Math.random(), 10).toString(16);
-    else {
-      var hash = '';
-      for (var i=0; i<count; i++)
-        hash += randomHash(1);
-      return hash;
+    if (count === 1) {
+      return parseInt(16 * Math.random(), 10).toString(16);
     }
+    var hash = '';
+    for (var i = 0; i < count; i++) {
+      hash += randomHash(1);
+    }
+    return hash;
   }
 
-  return 'shelljs_'+randomHash(20);
+  return 'shelljs_' + randomHash(20);
 }
 exports.randomFileName = randomFileName;
 
-// extend(target_obj, source_obj1 [, source_obj2 ...])
-// Shallow extend, e.g.:
-//    extend({A:1}, {b:2}, {c:3}) returns {A:1, b:2, c:3}
-function extend(target) {
-  var sources = [].slice.call(arguments, 1);
-  sources.forEach(function(source) {
-    for (var key in source)
-      target[key] = source[key];
-  });
-
-  return target;
-}
-exports.extend = extend;
-
-// Common wrapper for all Unix-like commands
+// Common wrapper for all Unix-like commands that performs glob expansion,
+// command-logging, and other nice things
 function wrap(cmd, fn, options) {
-  return function() {
+  options = options || {};
+  return function () {
     var retValue = null;
 
     state.currentCmd = cmd;
     state.error = null;
+    state.errorCode = 0;
 
     try {
       var args = [].slice.call(arguments, 0);
 
-      if (options && options.notUnix) {
+      // Log the command to stderr, if appropriate
+      if (config.verbose) {
+        console.error.apply(console, [cmd].concat(args));
+      }
+
+      // If this is coming from a pipe, let's set the pipedValue (otherwise, set
+      // it to the empty string)
+      state.pipedValue = (this && typeof this.stdout === 'string') ? this.stdout : '';
+
+      if (options.unix === false) { // this branch is for exec()
         retValue = fn.apply(this, args);
-      } else {
-        if (args.length === 0 || typeof args[0] !== 'string' || args[0][0] !== '-')
+      } else { // and this branch is for everything else
+        if (isObject(args[0]) && args[0].constructor.name === 'Object') {
+          // a no-op, allowing the syntax `touch({'-r': file}, ...)`
+        } else if (args.length === 0 || typeof args[0] !== 'string' || args[0].length <= 1 || args[0][0] !== '-') {
           args.unshift(''); // only add dummy option if '-option' not already present
-        retValue = fn.apply(this, args);
+        }
+
+        // flatten out arrays that are arguments, to make the syntax:
+        //    `cp([file1, file2, file3], dest);`
+        // equivalent to:
+        //    `cp(file1, file2, file3, dest);`
+        args = args.reduce(function (accum, cur) {
+          if (Array.isArray(cur)) {
+            return accum.concat(cur);
+          }
+          accum.push(cur);
+          return accum;
+        }, []);
+
+        // Convert ShellStrings (basically just String objects) to regular strings
+        args = args.map(function (arg) {
+          if (isObject(arg) && arg.constructor.name === 'String') {
+            return arg.toString();
+          }
+          return arg;
+        });
+
+        // Expand the '~' if appropriate
+        var homeDir = os.homedir();
+        args = args.map(function (arg) {
+          if (typeof arg === 'string' && arg.slice(0, 2) === '~/' || arg === '~') {
+            return arg.replace(/^~/, homeDir);
+          }
+          return arg;
+        });
+
+        // Perform glob-expansion on all arguments after globStart, but preserve
+        // the arguments before it (like regexes for sed and grep)
+        if (!config.noglob && options.allowGlobbing === true) {
+          args = args.slice(0, options.globStart).concat(expand(args.slice(options.globStart)));
+        }
+
+        try {
+          // parse options if options are provided
+          if (isObject(options.cmdOptions)) {
+            args[0] = parseOptions(args[0], options.cmdOptions);
+          }
+
+          retValue = fn.apply(this, args);
+        } catch (e) {
+          /* istanbul ignore else */
+          if (e.msg === 'earlyExit') {
+            retValue = e.retValue;
+          } else {
+            throw e; // this is probably a bug that should be thrown up the call stack
+          }
+        }
       }
     } catch (e) {
+      /* istanbul ignore next */
       if (!state.error) {
         // If state.error hasn't been set it's an error thrown by Node, not us - probably a bug...
-        console.log('shell.js: internal error');
-        console.log(e.stack || e);
-        process.exit(1);
-      }
-      if (config.fatal)
+        e.name = 'ShellJSInternalError';
         throw e;
+      }
+      if (config.fatal) throw e;
+    }
+
+    if (options.wrapOutput &&
+        (typeof retValue === 'string' || Array.isArray(retValue))) {
+      retValue = new ShellString(retValue, state.error, state.errorCode);
     }
 
     state.currentCmd = 'shell.js';
@@ -9661,6 +12251,61 @@ function wrap(cmd, fn, options) {
   };
 } // wrap
 exports.wrap = wrap;
+
+// This returns all the input that is piped into the current command (or the
+// empty string, if this isn't on the right-hand side of a pipe
+function _readFromPipe() {
+  return state.pipedValue;
+}
+exports.readFromPipe = _readFromPipe;
+
+var DEFAULT_WRAP_OPTIONS = {
+  allowGlobbing: true,
+  canReceivePipe: false,
+  cmdOptions: null,
+  globStart: 1,
+  pipeOnly: false,
+  wrapOutput: true,
+  unix: true,
+};
+
+// This is populated during plugin registration
+var pipeMethods = [];
+
+// Register a new ShellJS command
+function _register(name, implementation, wrapOptions) {
+  wrapOptions = wrapOptions || {};
+
+  // Validate options
+  Object.keys(wrapOptions).forEach(function (option) {
+    if (!DEFAULT_WRAP_OPTIONS.hasOwnProperty(option)) {
+      throw new Error("Unknown option '" + option + "'");
+    }
+    if (typeof wrapOptions[option] !== typeof DEFAULT_WRAP_OPTIONS[option]) {
+      throw new TypeError("Unsupported type '" + typeof wrapOptions[option] +
+        "' for option '" + option + "'");
+    }
+  });
+
+  // If an option isn't specified, use the default
+  wrapOptions = Object.assign({}, DEFAULT_WRAP_OPTIONS, wrapOptions);
+
+  if (shell.hasOwnProperty(name)) {
+    throw new Error('Command `' + name + '` already exists');
+  }
+
+  if (wrapOptions.pipeOnly) {
+    wrapOptions.canReceivePipe = true;
+    shellMethods[name] = wrap(name, implementation, wrapOptions);
+  } else {
+    shell[name] = wrap(name, implementation, wrapOptions);
+  }
+
+  if (wrapOptions.canReceivePipe) {
+    pipeMethods.push(name);
+  }
+}
+exports.register = _register;
 
 
 /***/ }),
@@ -9671,44 +12316,82 @@ exports.wrap = wrap;
 var fs = __nccwpck_require__(5747);
 var path = __nccwpck_require__(5622);
 var common = __nccwpck_require__(3687);
-var os = __nccwpck_require__(2087);
+
+common.register('cp', _cp, {
+  cmdOptions: {
+    'f': '!no_force',
+    'n': 'no_force',
+    'u': 'update',
+    'R': 'recursive',
+    'r': 'recursive',
+    'L': 'followsymlink',
+    'P': 'noFollowsymlink',
+  },
+  wrapOutput: false,
+});
 
 // Buffered file copy, synchronous
 // (Using readFileSync() + writeFileSync() could easily cause a memory overflow
 //  with large files)
-function copyFileSync(srcFile, destFile) {
-  if (!fs.existsSync(srcFile))
+function copyFileSync(srcFile, destFile, options) {
+  if (!fs.existsSync(srcFile)) {
     common.error('copyFileSync: no such file or directory: ' + srcFile);
+  }
 
-  var BUF_LENGTH = 64*1024,
-      buf = new Buffer(BUF_LENGTH),
-      bytesRead = BUF_LENGTH,
-      pos = 0,
-      fdr = null,
-      fdw = null;
+  var isWindows = process.platform === 'win32';
 
+  // Check the mtimes of the files if the '-u' flag is provided
   try {
-    fdr = fs.openSync(srcFile, 'r');
-  } catch(e) {
-    common.error('copyFileSync: could not read src file ('+srcFile+')');
+    if (options.update && common.statFollowLinks(srcFile).mtime < fs.statSync(destFile).mtime) {
+      return;
+    }
+  } catch (e) {
+    // If we're here, destFile probably doesn't exist, so just do a normal copy
   }
 
-  try {
-    fdw = fs.openSync(destFile, 'w');
-  } catch(e) {
-    common.error('copyFileSync: could not write to dest file (code='+e.code+'):'+destFile);
+  if (common.statNoFollowLinks(srcFile).isSymbolicLink() && !options.followsymlink) {
+    try {
+      common.statNoFollowLinks(destFile);
+      common.unlinkSync(destFile); // re-link it
+    } catch (e) {
+      // it doesn't exist, so no work needs to be done
+    }
+
+    var symlinkFull = fs.readlinkSync(srcFile);
+    fs.symlinkSync(symlinkFull, destFile, isWindows ? 'junction' : null);
+  } else {
+    var buf = common.buffer();
+    var bufLength = buf.length;
+    var bytesRead = bufLength;
+    var pos = 0;
+    var fdr = null;
+    var fdw = null;
+
+    try {
+      fdr = fs.openSync(srcFile, 'r');
+    } catch (e) {
+      /* istanbul ignore next */
+      common.error('copyFileSync: could not read src file (' + srcFile + ')');
+    }
+
+    try {
+      fdw = fs.openSync(destFile, 'w');
+    } catch (e) {
+      /* istanbul ignore next */
+      common.error('copyFileSync: could not write to dest file (code=' + e.code + '):' + destFile);
+    }
+
+    while (bytesRead === bufLength) {
+      bytesRead = fs.readSync(fdr, buf, 0, bufLength, pos);
+      fs.writeSync(fdw, buf, 0, bytesRead);
+      pos += bytesRead;
+    }
+
+    fs.closeSync(fdr);
+    fs.closeSync(fdw);
+
+    fs.chmodSync(destFile, common.statFollowLinks(srcFile).mode);
   }
-
-  while (bytesRead === BUF_LENGTH) {
-    bytesRead = fs.readSync(fdr, buf, 0, BUF_LENGTH, pos);
-    fs.writeSync(fdw, buf, 0, bytesRead);
-    pos += bytesRead;
-  }
-
-  fs.closeSync(fdr);
-  fs.closeSync(fdw);
-
-  fs.chmodSync(destFile, fs.statSync(srcFile).mode);
 }
 
 // Recursively copies 'sourceDir' into 'destDir'
@@ -9719,154 +12402,219 @@ function copyFileSync(srcFile, destFile) {
 //
 // Licensed under the MIT License
 // http://www.opensource.org/licenses/mit-license.php
-function cpdirSyncRecursive(sourceDir, destDir, opts) {
+function cpdirSyncRecursive(sourceDir, destDir, currentDepth, opts) {
   if (!opts) opts = {};
 
-  /* Create the directory where all our junk is moving to; read the mode of the source directory and mirror it */
-  var checkDir = fs.statSync(sourceDir);
+  // Ensure there is not a run away recursive copy
+  if (currentDepth >= common.config.maxdepth) return;
+  currentDepth++;
+
+  var isWindows = process.platform === 'win32';
+
+  // Create the directory where all our junk is moving to; read the mode of the
+  // source directory and mirror it
   try {
-    fs.mkdirSync(destDir, checkDir.mode);
+    fs.mkdirSync(destDir);
   } catch (e) {
-    //if the directory already exists, that's okay
+    // if the directory already exists, that's okay
     if (e.code !== 'EEXIST') throw e;
   }
 
   var files = fs.readdirSync(sourceDir);
 
   for (var i = 0; i < files.length; i++) {
-    var srcFile = sourceDir + "/" + files[i];
-    var destFile = destDir + "/" + files[i];
-    var srcFileStat = fs.lstatSync(srcFile);
+    var srcFile = sourceDir + '/' + files[i];
+    var destFile = destDir + '/' + files[i];
+    var srcFileStat = common.statNoFollowLinks(srcFile);
 
-    if (srcFileStat.isDirectory()) {
-      /* recursion this thing right on back. */
-      cpdirSyncRecursive(srcFile, destFile, opts);
-    } else if (srcFileStat.isSymbolicLink()) {
-      var symlinkFull = fs.readlinkSync(srcFile);
-      fs.symlinkSync(symlinkFull, destFile, os.platform() === "win32" ? "junction" : null);
-    } else {
-      /* At this point, we've hit a file actually worth copying... so copy it on over. */
-      if (fs.existsSync(destFile) && !opts.force) {
-        common.log('skipping existing file: ' + files[i]);
-      } else {
-        copyFileSync(srcFile, destFile);
+    var symlinkFull;
+    if (opts.followsymlink) {
+      if (cpcheckcycle(sourceDir, srcFile)) {
+        // Cycle link found.
+        console.error('Cycle link found.');
+        symlinkFull = fs.readlinkSync(srcFile);
+        fs.symlinkSync(symlinkFull, destFile, isWindows ? 'junction' : null);
+        continue;
       }
     }
-
+    if (srcFileStat.isDirectory()) {
+      /* recursion this thing right on back. */
+      cpdirSyncRecursive(srcFile, destFile, currentDepth, opts);
+    } else if (srcFileStat.isSymbolicLink() && !opts.followsymlink) {
+      symlinkFull = fs.readlinkSync(srcFile);
+      try {
+        common.statNoFollowLinks(destFile);
+        common.unlinkSync(destFile); // re-link it
+      } catch (e) {
+        // it doesn't exist, so no work needs to be done
+      }
+      fs.symlinkSync(symlinkFull, destFile, isWindows ? 'junction' : null);
+    } else if (srcFileStat.isSymbolicLink() && opts.followsymlink) {
+      srcFileStat = common.statFollowLinks(srcFile);
+      if (srcFileStat.isDirectory()) {
+        cpdirSyncRecursive(srcFile, destFile, currentDepth, opts);
+      } else {
+        copyFileSync(srcFile, destFile, opts);
+      }
+    } else {
+      /* At this point, we've hit a file actually worth copying... so copy it on over. */
+      if (fs.existsSync(destFile) && opts.no_force) {
+        common.log('skipping existing file: ' + files[i]);
+      } else {
+        copyFileSync(srcFile, destFile, opts);
+      }
+    }
   } // for files
+
+  // finally change the mode for the newly created directory (otherwise, we
+  // couldn't add files to a read-only directory).
+  var checkDir = common.statFollowLinks(sourceDir);
+  fs.chmodSync(destDir, checkDir.mode);
 } // cpdirSyncRecursive
 
+// Checks if cureent file was created recently
+function checkRecentCreated(sources, index) {
+  var lookedSource = sources[index];
+  return sources.slice(0, index).some(function (src) {
+    return path.basename(src) === path.basename(lookedSource);
+  });
+}
+
+function cpcheckcycle(sourceDir, srcFile) {
+  var srcFileStat = common.statNoFollowLinks(srcFile);
+  if (srcFileStat.isSymbolicLink()) {
+    // Do cycle check. For example:
+    //   $ mkdir -p 1/2/3/4
+    //   $ cd  1/2/3/4
+    //   $ ln -s ../../3 link
+    //   $ cd ../../../..
+    //   $ cp -RL 1 copy
+    var cyclecheck = common.statFollowLinks(srcFile);
+    if (cyclecheck.isDirectory()) {
+      var sourcerealpath = fs.realpathSync(sourceDir);
+      var symlinkrealpath = fs.realpathSync(srcFile);
+      var re = new RegExp(symlinkrealpath);
+      if (re.test(sourcerealpath)) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
 
 //@
-//@ ### cp([options ,] source [,source ...], dest)
-//@ ### cp([options ,] source_array, dest)
+//@ ### cp([options,] source [, source ...], dest)
+//@ ### cp([options,] source_array, dest)
+//@
 //@ Available options:
 //@
-//@ + `-f`: force
-//@ + `-r, -R`: recursive
+//@ + `-f`: force (default behavior)
+//@ + `-n`: no-clobber
+//@ + `-u`: only copy if `source` is newer than `dest`
+//@ + `-r`, `-R`: recursive
+//@ + `-L`: follow symlinks
+//@ + `-P`: don't follow symlinks
 //@
 //@ Examples:
 //@
 //@ ```javascript
 //@ cp('file1', 'dir1');
+//@ cp('-R', 'path/to/dir/', '~/newCopy/');
 //@ cp('-Rf', '/tmp/*', '/usr/local/*', '/home/tmp');
 //@ cp('-Rf', ['/tmp/*', '/usr/local/*'], '/home/tmp'); // same as above
 //@ ```
 //@
-//@ Copies files. The wildcard `*` is accepted.
+//@ Copies files.
 function _cp(options, sources, dest) {
-  options = common.parseOptions(options, {
-    'f': 'force',
-    'R': 'recursive',
-    'r': 'recursive'
-  });
+  // If we're missing -R, it actually implies -L (unless -P is explicit)
+  if (options.followsymlink) {
+    options.noFollowsymlink = false;
+  }
+  if (!options.recursive && !options.noFollowsymlink) {
+    options.followsymlink = true;
+  }
 
   // Get sources, dest
   if (arguments.length < 3) {
     common.error('missing <source> and/or <dest>');
-  } else if (arguments.length > 3) {
+  } else {
     sources = [].slice.call(arguments, 1, arguments.length - 1);
     dest = arguments[arguments.length - 1];
-  } else if (typeof sources === 'string') {
-    sources = [sources];
-  } else if ('length' in sources) {
-    sources = sources; // no-op for array
-  } else {
-    common.error('invalid arguments');
   }
 
-  var exists = fs.existsSync(dest),
-      stats = exists && fs.statSync(dest);
+  var destExists = fs.existsSync(dest);
+  var destStat = destExists && common.statFollowLinks(dest);
 
   // Dest is not existing dir, but multiple sources given
-  if ((!exists || !stats.isDirectory()) && sources.length > 1)
+  if ((!destExists || !destStat.isDirectory()) && sources.length > 1) {
     common.error('dest is not a directory (too many sources)');
-
-  // Dest is an existing file, but no -f given
-  if (exists && stats.isFile() && !options.force)
-    common.error('dest file already exists: ' + dest);
-
-  if (options.recursive) {
-    // Recursive allows the shortcut syntax "sourcedir/" for "sourcedir/*"
-    // (see Github issue #15)
-    sources.forEach(function(src, i) {
-      if (src[src.length - 1] === '/')
-        sources[i] += '*';
-    });
-
-    // Create dest
-    try {
-      fs.mkdirSync(dest, parseInt('0777', 8));
-    } catch (e) {
-      // like Unix's cp, keep going even if we can't create dest dir
-    }
   }
 
-  sources = common.expand(sources);
+  // Dest is an existing file, but -n is given
+  if (destExists && destStat.isFile() && options.no_force) {
+    return new common.ShellString('', '', 0);
+  }
 
-  sources.forEach(function(src) {
+  sources.forEach(function (src, srcIndex) {
     if (!fs.existsSync(src)) {
-      common.error('no such file or directory: '+src, true);
+      if (src === '') src = "''"; // if src was empty string, display empty string
+      common.error('no such file or directory: ' + src, { continue: true });
       return; // skip file
     }
-
-    // If here, src exists
-    if (fs.statSync(src).isDirectory()) {
+    var srcStat = common.statFollowLinks(src);
+    if (!options.noFollowsymlink && srcStat.isDirectory()) {
       if (!options.recursive) {
         // Non-Recursive
-        common.log(src + ' is a directory (not copied)');
+        common.error("omitting directory '" + src + "'", { continue: true });
       } else {
         // Recursive
         // 'cp /a/source dest' should create 'source' in 'dest'
-        var newDest = path.join(dest, path.basename(src)),
-            checkDir = fs.statSync(src);
+        var newDest = (destStat && destStat.isDirectory()) ?
+            path.join(dest, path.basename(src)) :
+            dest;
+
         try {
-          fs.mkdirSync(newDest, checkDir.mode);
+          common.statFollowLinks(path.dirname(dest));
+          cpdirSyncRecursive(src, newDest, 0, { no_force: options.no_force, followsymlink: options.followsymlink });
         } catch (e) {
-          //if the directory already exists, that's okay
-          if (e.code !== 'EEXIST') throw e;
+          /* istanbul ignore next */
+          common.error("cannot create directory '" + dest + "': No such file or directory");
         }
-
-        cpdirSyncRecursive(src, newDest, {force: options.force});
       }
-      return; // done with dir
+    } else {
+      // If here, src is a file
+
+      // When copying to '/path/dir':
+      //    thisDest = '/path/dir/file1'
+      var thisDest = dest;
+      if (destStat && destStat.isDirectory()) {
+        thisDest = path.normalize(dest + '/' + path.basename(src));
+      }
+
+      var thisDestExists = fs.existsSync(thisDest);
+      if (thisDestExists && checkRecentCreated(sources, srcIndex)) {
+        // cannot overwrite file created recently in current execution, but we want to continue copying other files
+        if (!options.no_force) {
+          common.error("will not overwrite just-created '" + thisDest + "' with '" + src + "'", { continue: true });
+        }
+        return;
+      }
+
+      if (thisDestExists && options.no_force) {
+        return; // skip file
+      }
+
+      if (path.relative(src, thisDest) === '') {
+        // a file cannot be copied to itself, but we want to continue copying other files
+        common.error("'" + thisDest + "' and '" + src + "' are the same file", { continue: true });
+        return;
+      }
+
+      copyFileSync(src, thisDest, options);
     }
-
-    // If here, src is a file
-
-    // When copying to '/path/dir':
-    //    thisDest = '/path/dir/file1'
-    var thisDest = dest;
-    if (fs.existsSync(dest) && fs.statSync(dest).isDirectory())
-      thisDest = path.normalize(dest + '/' + path.basename(src));
-
-    if (fs.existsSync(thisDest) && !options.force) {
-      common.error('dest file already exists: ' + thisDest, true);
-      return; // skip file
-    }
-
-    copyFileSync(src, thisDest);
   }); // forEach(src)
+
+  return new common.ShellString('', common.state.error, common.state.errorCode);
 }
 module.exports = _cp;
 
@@ -9880,6 +12628,16 @@ var common = __nccwpck_require__(3687);
 var _cd = __nccwpck_require__(2051);
 var path = __nccwpck_require__(5622);
 
+common.register('dirs', _dirs, {
+  wrapOutput: false,
+});
+common.register('pushd', _pushd, {
+  wrapOutput: false,
+});
+common.register('popd', _popd, {
+  wrapOutput: false,
+});
+
 // Pushd/popd/dirs internals
 var _dirStack = [];
 
@@ -9891,9 +12649,8 @@ function _parseStackIndex(index) {
   if (_isStackIndex(index)) {
     if (Math.abs(index) < _dirStack.length + 1) { // +1 for pwd
       return (/^-/).test(index) ? Number(index) - 1 : Number(index);
-    } else {
-      common.error(index + ': directory stack index out of range');
     }
+    common.error(index + ': directory stack index out of range');
   } else {
     common.error(index + ': invalid number');
   }
@@ -9909,10 +12666,11 @@ function _actualDirStack() {
 //@ Available options:
 //@
 //@ + `-n`: Suppresses the normal change of directory when adding directories to the stack, so that only the stack is manipulated.
+//@ + `-q`: Supresses output to the console.
 //@
 //@ Arguments:
 //@
-//@ + `dir`: Makes the current working directory be the top of the stack, and then executes the equivalent of `cd dir`.
+//@ + `dir`: Sets the current working directory to the top of the stack, then executes the equivalent of `cd dir`.
 //@ + `+N`: Brings the Nth directory (counting from the left of the list printed by dirs, starting with zero) to the top of the list by rotating the stack.
 //@ + `-N`: Brings the Nth directory (counting from the right of the list printed by dirs, starting with zero) to the top of the list by rotating the stack.
 //@
@@ -9924,7 +12682,7 @@ function _actualDirStack() {
 //@ pushd('+1');   // Returns /usr /etc
 //@ ```
 //@
-//@ Save the current directory on the top of the directory stack and then cd to `dir`. With no arguments, pushd exchanges the top two directories. Returns an array of paths in the stack.
+//@ Save the current directory on the top of the directory stack and then `cd` to `dir`. With no arguments, `pushd` exchanges the top two directories. Returns an array of paths in the stack.
 function _pushd(options, dir) {
   if (_isStackIndex(options)) {
     dir = options;
@@ -9932,7 +12690,8 @@ function _pushd(options, dir) {
   }
 
   options = common.parseOptions(options, {
-    'n' : 'no-cd'
+    'n': 'no-cd',
+    'q': 'quiet',
   });
 
   var dirs = _actualDirStack();
@@ -9964,16 +12723,18 @@ function _pushd(options, dir) {
   }
 
   _dirStack = dirs;
-  return _dirs('');
+  return _dirs(options.quiet ? '-q' : '');
 }
-exports.lv = _pushd;
+exports.pushd = _pushd;
 
+//@
 //@
 //@ ### popd([options,] ['-N' | '+N'])
 //@
 //@ Available options:
 //@
-//@ + `-n`: Suppresses the normal change of directory when removing directories from the stack, so that only the stack is manipulated.
+//@ + `-n`: Suppress the normal directory change when removing directories from the stack, so that only the stack is manipulated.
+//@ + `-q`: Supresses output to the console.
 //@
 //@ Arguments:
 //@
@@ -9990,7 +12751,7 @@ exports.lv = _pushd;
 //@ echo(process.cwd()); // '/usr'
 //@ ```
 //@
-//@ When no arguments are given, popd removes the top directory from the stack and performs a cd to the new top directory. The elements are numbered from 0 starting at the first directory listed with dirs; i.e., popd is equivalent to popd +0. Returns an array of paths in the stack.
+//@ When no arguments are given, `popd` removes the top directory from the stack and performs a `cd` to the new top directory. The elements are numbered from 0, starting at the first directory listed with dirs (i.e., `popd` is equivalent to `popd +0`). Returns an array of paths in the stack.
 function _popd(options, index) {
   if (_isStackIndex(options)) {
     index = options;
@@ -9998,7 +12759,8 @@ function _popd(options, index) {
   }
 
   options = common.parseOptions(options, {
-    'n' : 'no-cd'
+    'n': 'no-cd',
+    'q': 'quiet',
   });
 
   if (!_dirStack.length) {
@@ -10015,25 +12777,27 @@ function _popd(options, index) {
     _cd('', dir);
   }
 
-  return _dirs('');
+  return _dirs(options.quiet ? '-q' : '');
 }
-exports.P$ = _popd;
+exports.popd = _popd;
 
+//@
 //@
 //@ ### dirs([options | '+N' | '-N'])
 //@
 //@ Available options:
 //@
 //@ + `-c`: Clears the directory stack by deleting all of the elements.
+//@ + `-q`: Supresses output to the console.
 //@
 //@ Arguments:
 //@
 //@ + `+N`: Displays the Nth directory (counting from the left of the list printed by dirs when invoked without options), starting with zero.
 //@ + `-N`: Displays the Nth directory (counting from the right of the list printed by dirs when invoked without options), starting with zero.
 //@
-//@ Display the list of currently remembered directories. Returns an array of paths in the stack, or a single path if +N or -N was specified.
+//@ Display the list of currently remembered directories. Returns an array of paths in the stack, or a single path if `+N` or `-N` was specified.
 //@
-//@ See also: pushd, popd
+//@ See also: `pushd`, `popd`
 function _dirs(options, index) {
   if (_isStackIndex(options)) {
     index = options;
@@ -10041,10 +12805,11 @@ function _dirs(options, index) {
   }
 
   options = common.parseOptions(options, {
-    'c' : 'clear'
+    'c': 'clear',
+    'q': 'quiet',
   });
 
-  if (options['clear']) {
+  if (options.clear) {
     _dirStack = [];
     return _dirStack;
   }
@@ -10058,15 +12823,19 @@ function _dirs(options, index) {
       index = stack.length + index;
     }
 
-    common.log(stack[index]);
+    if (!options.quiet) {
+      common.log(stack[index]);
+    }
     return stack[index];
   }
 
-  common.log(stack.join(' '));
+  if (!options.quiet) {
+    common.log(stack.join(' '));
+  }
 
   return stack;
 }
-exports.cq = _dirs;
+exports.dirs = _dirs;
 
 
 /***/ }),
@@ -10074,25 +12843,68 @@ exports.cq = _dirs;
 /***/ 243:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
+var format = __nccwpck_require__(1669).format;
+
 var common = __nccwpck_require__(3687);
 
+common.register('echo', _echo, {
+  allowGlobbing: false,
+});
+
 //@
-//@ ### echo(string [,string ...])
+//@ ### echo([options,] string [, string ...])
+//@
+//@ Available options:
+//@
+//@ + `-e`: interpret backslash escapes (default)
+//@ + `-n`: remove trailing newline from output
 //@
 //@ Examples:
 //@
 //@ ```javascript
 //@ echo('hello world');
 //@ var str = echo('hello world');
+//@ echo('-n', 'no newline at end');
 //@ ```
 //@
-//@ Prints string to stdout, and returns string with additional utility methods
+//@ Prints `string` to stdout, and returns string with additional utility methods
 //@ like `.to()`.
-function _echo() {
-  var messages = [].slice.call(arguments, 0);
-  console.log.apply(this, messages);
-  return common.ShellString(messages.join(' '));
+function _echo(opts) {
+  // allow strings starting with '-', see issue #20
+  var messages = [].slice.call(arguments, opts ? 0 : 1);
+  var options = {};
+
+  // If the first argument starts with '-', parse it as options string.
+  // If parseOptions throws, it wasn't an options string.
+  try {
+    options = common.parseOptions(messages[0], {
+      'e': 'escapes',
+      'n': 'no_newline',
+    }, {
+      silent: true,
+    });
+
+    // Allow null to be echoed
+    if (messages[0]) {
+      messages.shift();
+    }
+  } catch (_) {
+    // Clear out error if an error occurred
+    common.state.error = null;
+  }
+
+  var output = format.apply(null, messages);
+
+  // Add newline if -n is not passed.
+  if (!options.no_newline) {
+    output += '\n';
+  }
+
+  process.stdout.write(output);
+
+  return output;
 }
+
 module.exports = _echo;
 
 
@@ -10105,12 +12917,64 @@ var common = __nccwpck_require__(3687);
 
 //@
 //@ ### error()
-//@ Tests if error occurred in the last command. Returns `null` if no error occurred,
-//@ otherwise returns string explaining the error
+//@
+//@ Tests if error occurred in the last command. Returns a truthy value if an
+//@ error returned, or a falsy value otherwise.
+//@
+//@ **Note**: do not rely on the
+//@ return value to be an error message. If you need the last error message, use
+//@ the `.stderr` attribute from the last command's return value instead.
 function error() {
   return common.state.error;
-};
+}
 module.exports = error;
+
+
+/***/ }),
+
+/***/ 9607:
+/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
+
+/* module decorator */ module = __nccwpck_require__.nmd(module);
+if (require.main !== module) {
+  throw new Error('This file should not be required');
+}
+
+var childProcess = __nccwpck_require__(3129);
+var fs = __nccwpck_require__(5747);
+
+var paramFilePath = process.argv[2];
+
+var serializedParams = fs.readFileSync(paramFilePath, 'utf8');
+var params = JSON.parse(serializedParams);
+
+var cmd = params.command;
+var execOptions = params.execOptions;
+var pipe = params.pipe;
+var stdoutFile = params.stdoutFile;
+var stderrFile = params.stderrFile;
+
+var c = childProcess.exec(cmd, execOptions, function (err) {
+  if (!err) {
+    process.exitCode = 0;
+  } else if (err.code === undefined) {
+    process.exitCode = 1;
+  } else {
+    process.exitCode = err.code;
+  }
+});
+
+var stdoutStream = fs.createWriteStream(stdoutFile);
+var stderrStream = fs.createWriteStream(stderrFile);
+
+c.stdout.pipe(stdoutStream);
+c.stderr.pipe(stderrStream);
+c.stdout.pipe(process.stdout);
+c.stderr.pipe(process.stderr);
+
+if (pipe) {
+  c.stdin.end(pipe);
+}
 
 
 /***/ }),
@@ -10119,163 +12983,207 @@ module.exports = error;
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 var common = __nccwpck_require__(3687);
-var _tempDir = __nccwpck_require__(6150);
+var _tempDir = __nccwpck_require__(6150).tempDir;
 var _pwd = __nccwpck_require__(8553);
 var path = __nccwpck_require__(5622);
 var fs = __nccwpck_require__(5747);
 var child = __nccwpck_require__(3129);
 
-// Hack to run child_process.exec() synchronously (sync avoids callback hell)
-// Uses a custom wait loop that checks for a flag file, created when the child process is done.
-// (Can't do a wait loop that checks for internal Node variables/messages as
-// Node is single-threaded; callbacks and other internal state changes are done in the
-// event loop).
-function execSync(cmd, opts) {
-  var tempDir = _tempDir();
-  var stdoutFile = path.resolve(tempDir+'/'+common.randomFileName()),
-      codeFile = path.resolve(tempDir+'/'+common.randomFileName()),
-      scriptFile = path.resolve(tempDir+'/'+common.randomFileName()),
-      sleepFile = path.resolve(tempDir+'/'+common.randomFileName());
+var DEFAULT_MAXBUFFER_SIZE = 20 * 1024 * 1024;
+var DEFAULT_ERROR_CODE = 1;
 
-  var options = common.extend({
-    silent: common.config.silent
+common.register('exec', _exec, {
+  unix: false,
+  canReceivePipe: true,
+  wrapOutput: false,
+});
+
+// We use this function to run `exec` synchronously while also providing realtime
+// output.
+function execSync(cmd, opts, pipe) {
+  if (!common.config.execPath) {
+    common.error('Unable to find a path to the node binary. Please manually set config.execPath');
+  }
+
+  var tempDir = _tempDir();
+  var paramsFile = path.resolve(tempDir + '/' + common.randomFileName());
+  var stderrFile = path.resolve(tempDir + '/' + common.randomFileName());
+  var stdoutFile = path.resolve(tempDir + '/' + common.randomFileName());
+
+  opts = common.extend({
+    silent: common.config.silent,
+    cwd: _pwd().toString(),
+    env: process.env,
+    maxBuffer: DEFAULT_MAXBUFFER_SIZE,
+    encoding: 'utf8',
   }, opts);
 
-  var previousStdoutContent = '';
-  // Echoes stdout changes from running process, if not silent
-  function updateStdout() {
-    if (options.silent || !fs.existsSync(stdoutFile))
-      return;
-
-    var stdoutContent = fs.readFileSync(stdoutFile, 'utf8');
-    // No changes since last time?
-    if (stdoutContent.length <= previousStdoutContent.length)
-      return;
-
-    process.stdout.write(stdoutContent.substr(previousStdoutContent.length));
-    previousStdoutContent = stdoutContent;
-  }
-
-  function escape(str) {
-    return (str+'').replace(/([\\"'])/g, "\\$1").replace(/\0/g, "\\0");
-  }
-
-  cmd += ' > '+stdoutFile+' 2>&1'; // works on both win/unix
-
-  var script =
-   "var child = require('child_process')," +
-   "     fs = require('fs');" +
-   "child.exec('"+escape(cmd)+"', {env: process.env, maxBuffer: 20*1024*1024}, function(err) {" +
-   "  fs.writeFileSync('"+escape(codeFile)+"', err ? err.code.toString() : '0');" +
-   "});";
-
-  if (fs.existsSync(scriptFile)) common.unlinkSync(scriptFile);
+  if (fs.existsSync(paramsFile)) common.unlinkSync(paramsFile);
+  if (fs.existsSync(stderrFile)) common.unlinkSync(stderrFile);
   if (fs.existsSync(stdoutFile)) common.unlinkSync(stdoutFile);
-  if (fs.existsSync(codeFile)) common.unlinkSync(codeFile);
 
-  fs.writeFileSync(scriptFile, script);
-  child.exec('"'+process.execPath+'" '+scriptFile, {
-    env: process.env,
-    cwd: _pwd(),
-    maxBuffer: 20*1024*1024
-  });
+  opts.cwd = path.resolve(opts.cwd);
 
-  // The wait loop
-  // sleepFile is used as a dummy I/O op to mitigate unnecessary CPU usage
-  // (tried many I/O sync ops, writeFileSync() seems to be only one that is effective in reducing
-  // CPU usage, though apparently not so much on Windows)
-  while (!fs.existsSync(codeFile)) { updateStdout(); fs.writeFileSync(sleepFile, 'a'); }
-  while (!fs.existsSync(stdoutFile)) { updateStdout(); fs.writeFileSync(sleepFile, 'a'); }
+  var paramsToSerialize = {
+    command: cmd,
+    execOptions: opts,
+    pipe: pipe,
+    stdoutFile: stdoutFile,
+    stderrFile: stderrFile,
+  };
 
-  // At this point codeFile exists, but it's not necessarily flushed yet.
-  // Keep reading it until it is.
-  var code = parseInt('', 10);
-  while (isNaN(code)) {
-    code = parseInt(fs.readFileSync(codeFile, 'utf8'), 10);
+  // Create the files and ensure these are locked down (for read and write) to
+  // the current user. The main concerns here are:
+  //
+  // * If we execute a command which prints sensitive output, then
+  //   stdoutFile/stderrFile must not be readable by other users.
+  // * paramsFile must not be readable by other users, or else they can read it
+  //   to figure out the path for stdoutFile/stderrFile and create these first
+  //   (locked down to their own access), which will crash exec() when it tries
+  //   to write to the files.
+  function writeFileLockedDown(filePath, data) {
+    fs.writeFileSync(filePath, data, {
+      encoding: 'utf8',
+      mode: parseInt('600', 8),
+    });
+  }
+  writeFileLockedDown(stdoutFile, '');
+  writeFileLockedDown(stderrFile, '');
+  writeFileLockedDown(paramsFile, JSON.stringify(paramsToSerialize));
+
+  var execArgs = [
+    __nccwpck_require__.ab + "exec-child.js",
+    paramsFile,
+  ];
+
+  /* istanbul ignore else */
+  if (opts.silent) {
+    opts.stdio = 'ignore';
+  } else {
+    opts.stdio = [0, 1, 2];
   }
 
-  var stdout = fs.readFileSync(stdoutFile, 'utf8');
+  var code = 0;
+
+  // Welcome to the future
+  try {
+    // Bad things if we pass in a `shell` option to child_process.execFileSync,
+    // so we need to explicitly remove it here.
+    delete opts.shell;
+
+    child.execFileSync(common.config.execPath, execArgs, opts);
+  } catch (e) {
+    // Commands with non-zero exit code raise an exception.
+    code = e.status || DEFAULT_ERROR_CODE;
+  }
+
+  // fs.readFileSync uses buffer encoding by default, so call
+  // it without the encoding option if the encoding is 'buffer'.
+  // Also, if the exec timeout is too short for node to start up,
+  // the files will not be created, so these calls will throw.
+  var stdout = '';
+  var stderr = '';
+  if (opts.encoding === 'buffer') {
+    stdout = fs.readFileSync(stdoutFile);
+    stderr = fs.readFileSync(stderrFile);
+  } else {
+    stdout = fs.readFileSync(stdoutFile, opts.encoding);
+    stderr = fs.readFileSync(stderrFile, opts.encoding);
+  }
 
   // No biggie if we can't erase the files now -- they're in a temp dir anyway
-  try { common.unlinkSync(scriptFile); } catch(e) {}
-  try { common.unlinkSync(stdoutFile); } catch(e) {}
-  try { common.unlinkSync(codeFile); } catch(e) {}
-  try { common.unlinkSync(sleepFile); } catch(e) {}
+  // and we locked down permissions (see the note above).
+  try { common.unlinkSync(paramsFile); } catch (e) {}
+  try { common.unlinkSync(stderrFile); } catch (e) {}
+  try { common.unlinkSync(stdoutFile); } catch (e) {}
 
-  // some shell return codes are defined as errors, per http://tldp.org/LDP/abs/html/exitcodes.html
-  if (code === 1 || code === 2 || code >= 126)  {
-      common.error('', true); // unix/shell doesn't really give an error message after non-zero exit codes
+  if (code !== 0) {
+    // Note: `silent` should be unconditionally true to avoid double-printing
+    // the command's stderr, and to avoid printing any stderr when the user has
+    // set `shell.config.silent`.
+    common.error(stderr, code, { continue: true, silent: true });
   }
-  // True if successful, false if not
-  var obj = {
-    code: code,
-    output: stdout
-  };
+  var obj = common.ShellString(stdout, stderr, code);
   return obj;
 } // execSync()
 
 // Wrapper around exec() to enable echoing output to console in real time
-function execAsync(cmd, opts, callback) {
-  var output = '';
-
-  var options = common.extend({
-    silent: common.config.silent
+function execAsync(cmd, opts, pipe, callback) {
+  opts = common.extend({
+    silent: common.config.silent,
+    cwd: _pwd().toString(),
+    env: process.env,
+    maxBuffer: DEFAULT_MAXBUFFER_SIZE,
+    encoding: 'utf8',
   }, opts);
 
-  var c = child.exec(cmd, {env: process.env, maxBuffer: 20*1024*1024}, function(err) {
-    if (callback)
-      callback(err ? err.code : 0, output);
+  var c = child.exec(cmd, opts, function (err, stdout, stderr) {
+    if (callback) {
+      if (!err) {
+        callback(0, stdout, stderr);
+      } else if (err.code === undefined) {
+        // See issue #536
+        /* istanbul ignore next */
+        callback(1, stdout, stderr);
+      } else {
+        callback(err.code, stdout, stderr);
+      }
+    }
   });
 
-  c.stdout.on('data', function(data) {
-    output += data;
-    if (!options.silent)
-      process.stdout.write(data);
-  });
+  if (pipe) c.stdin.end(pipe);
 
-  c.stderr.on('data', function(data) {
-    output += data;
-    if (!options.silent)
-      process.stdout.write(data);
-  });
+  if (!opts.silent) {
+    c.stdout.pipe(process.stdout);
+    c.stderr.pipe(process.stderr);
+  }
 
   return c;
 }
 
 //@
 //@ ### exec(command [, options] [, callback])
-//@ Available options (all `false` by default):
 //@
-//@ + `async`: Asynchronous execution. Defaults to true if a callback is provided.
-//@ + `silent`: Do not echo program output to console.
+//@ Available options:
+//@
+//@ + `async`: Asynchronous execution. If a callback is provided, it will be set to
+//@   `true`, regardless of the passed value (default: `false`).
+//@ + `silent`: Do not echo program output to console (default: `false`).
+//@ + `encoding`: Character encoding to use. Affects the values returned to stdout and stderr, and
+//@   what is written to stdout and stderr when not in silent mode (default: `'utf8'`).
+//@ + and any option available to Node.js's
+//@   [`child_process.exec()`](https://nodejs.org/api/child_process.html#child_process_child_process_exec_command_options_callback)
 //@
 //@ Examples:
 //@
 //@ ```javascript
-//@ var version = exec('node --version', {silent:true}).output;
+//@ var version = exec('node --version', {silent:true}).stdout;
 //@
 //@ var child = exec('some_long_running_process', {async:true});
 //@ child.stdout.on('data', function(data) {
 //@   /* ... do something with data ... */
 //@ });
 //@
-//@ exec('some_long_running_process', function(code, output) {
+//@ exec('some_long_running_process', function(code, stdout, stderr) {
 //@   console.log('Exit code:', code);
-//@   console.log('Program output:', output);
+//@   console.log('Program output:', stdout);
+//@   console.log('Program stderr:', stderr);
 //@ });
 //@ ```
 //@
-//@ Executes the given `command` _synchronously_, unless otherwise specified.
-//@ When in synchronous mode returns the object `{ code:..., output:... }`, containing the program's
-//@ `output` (stdout + stderr)  and its exit `code`. Otherwise returns the child process object, and
-//@ the `callback` gets the arguments `(code, output)`.
+//@ Executes the given `command` _synchronously_, unless otherwise specified.  When in synchronous
+//@ mode, this returns a `ShellString` (compatible with ShellJS v0.6.x, which returns an object
+//@ of the form `{ code:..., stdout:... , stderr:... }`). Otherwise, this returns the child process
+//@ object, and the `callback` receives the arguments `(code, stdout, stderr)`.
 //@
-//@ **Note:** For long-lived processes, it's best to run `exec()` asynchronously as
-//@ the current synchronous implementation uses a lot of CPU. This should be getting
-//@ fixed soon.
+//@ Not seeing the behavior you want? `exec()` runs everything through `sh`
+//@ by default (or `cmd.exe` on Windows), which differs from `bash`. If you
+//@ need bash-specific behavior, try out the `{shell: 'path/to/bash'}` option.
 function _exec(command, options, callback) {
-  if (!command)
-    common.error('must specify command');
+  options = options || {};
+  if (!command) common.error('must specify command');
+
+  var pipe = common.readFromPipe();
 
   // Callback is defined instead of options.
   if (typeof options === 'function') {
@@ -10290,13 +13198,14 @@ function _exec(command, options, callback) {
 
   options = common.extend({
     silent: common.config.silent,
-    async: false
+    async: false,
   }, options);
 
-  if (options.async)
-    return execAsync(command, options, callback);
-  else
-    return execSync(command, options);
+  if (options.async) {
+    return execAsync(command, options, pipe, callback);
+  } else {
+    return execSync(command, options, pipe);
+  }
 }
 module.exports = _exec;
 
@@ -10306,13 +13215,16 @@ module.exports = _exec;
 /***/ 7838:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
-var fs = __nccwpck_require__(5747);
+var path = __nccwpck_require__(5622);
 var common = __nccwpck_require__(3687);
 var _ls = __nccwpck_require__(5561);
 
+common.register('find', _find, {});
+
 //@
-//@ ### find(path [,path ...])
+//@ ### find(path [, path ...])
 //@ ### find(path_array)
+//@
 //@ Examples:
 //@
 //@ ```javascript
@@ -10324,32 +13236,39 @@ var _ls = __nccwpck_require__(5561);
 //@ Returns array of all files (however deep) in the given paths.
 //@
 //@ The main difference from `ls('-R', path)` is that the resulting file names
-//@ include the base directories, e.g. `lib/resources/file1` instead of just `file1`.
+//@ include the base directories (e.g., `lib/resources/file1` instead of just `file1`).
 function _find(options, paths) {
-  if (!paths)
+  if (!paths) {
     common.error('no path specified');
-  else if (typeof paths === 'object')
-    paths = paths; // assume array
-  else if (typeof paths === 'string')
+  } else if (typeof paths === 'string') {
     paths = [].slice.call(arguments, 1);
+  }
 
   var list = [];
 
   function pushFile(file) {
-    if (common.platform === 'win')
+    if (process.platform === 'win32') {
       file = file.replace(/\\/g, '/');
+    }
     list.push(file);
   }
 
-  // why not simply do ls('-R', paths)? because the output wouldn't give the base dirs
-  // to get the base dir in the output, we need instead ls('-R', 'dir/*') for every directory
+  // why not simply do `ls('-R', paths)`? because the output wouldn't give the base dirs
+  // to get the base dir in the output, we need instead `ls('-R', 'dir/*')` for every directory
 
-  paths.forEach(function(file) {
+  paths.forEach(function (file) {
+    var stat;
+    try {
+      stat = common.statFollowLinks(file);
+    } catch (e) {
+      common.error('no such file or directory: ' + file);
+    }
+
     pushFile(file);
 
-    if (fs.statSync(file).isDirectory()) {
-      _ls('-RA', file+'/*').forEach(function(subfile) {
-        pushFile(subfile);
+    if (stat.isDirectory()) {
+      _ls({ recursive: true, all: true }, file).forEach(function (subfile) {
+        pushFile(path.join(file, subfile));
       });
     }
   });
@@ -10367,12 +13286,25 @@ module.exports = _find;
 var common = __nccwpck_require__(3687);
 var fs = __nccwpck_require__(5747);
 
+common.register('grep', _grep, {
+  globStart: 2, // don't glob-expand the regex
+  canReceivePipe: true,
+  cmdOptions: {
+    'v': 'inverse',
+    'l': 'nameOnly',
+    'i': 'ignoreCase',
+  },
+});
+
 //@
-//@ ### grep([options ,] regex_filter, file [, file ...])
-//@ ### grep([options ,] regex_filter, file_array)
+//@ ### grep([options,] regex_filter, file [, file ...])
+//@ ### grep([options,] regex_filter, file_array)
+//@
 //@ Available options:
 //@
-//@ + `-v`: Inverse the sense of the regex and print the lines not matching the criteria.
+//@ + `-v`: Invert `regex_filter` (only print non-matching lines).
+//@ + `-l`: Print only filenames of matching files.
+//@ + `-i`: Ignore case.
 //@
 //@ Examples:
 //@
@@ -10382,40 +13314,162 @@ var fs = __nccwpck_require__(5747);
 //@ ```
 //@
 //@ Reads input string from given files and returns a string containing all lines of the
-//@ file that match the given `regex_filter`. Wildcard `*` accepted.
+//@ file that match the given `regex_filter`.
 function _grep(options, regex, files) {
-  options = common.parseOptions(options, {
-    'v': 'inverse'
-  });
+  // Check if this is coming from a pipe
+  var pipe = common.readFromPipe();
 
-  if (!files)
-    common.error('no paths given');
+  if (!files && !pipe) common.error('no paths given', 2);
 
-  if (typeof files === 'string')
-    files = [].slice.call(arguments, 2);
-  // if it's array leave it as it is
+  files = [].slice.call(arguments, 2);
 
-  files = common.expand(files);
+  if (pipe) {
+    files.unshift('-');
+  }
 
-  var grep = '';
-  files.forEach(function(file) {
-    if (!fs.existsSync(file)) {
-      common.error('no such file or directory: ' + file, true);
+  var grep = [];
+  if (options.ignoreCase) {
+    regex = new RegExp(regex, 'i');
+  }
+  files.forEach(function (file) {
+    if (!fs.existsSync(file) && file !== '-') {
+      common.error('no such file or directory: ' + file, 2, { continue: true });
       return;
     }
 
-    var contents = fs.readFileSync(file, 'utf8'),
-        lines = contents.split(/\r*\n/);
-    lines.forEach(function(line) {
-      var matched = line.match(regex);
-      if ((options.inverse && !matched) || (!options.inverse && matched))
-        grep += line + '\n';
-    });
+    var contents = file === '-' ? pipe : fs.readFileSync(file, 'utf8');
+    if (options.nameOnly) {
+      if (contents.match(regex)) {
+        grep.push(file);
+      }
+    } else {
+      var lines = contents.split('\n');
+      lines.forEach(function (line) {
+        var matched = line.match(regex);
+        if ((options.inverse && !matched) || (!options.inverse && matched)) {
+          grep.push(line);
+        }
+      });
+    }
   });
 
-  return common.ShellString(grep);
+  return grep.join('\n') + '\n';
 }
 module.exports = _grep;
+
+
+/***/ }),
+
+/***/ 6613:
+/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
+
+var common = __nccwpck_require__(3687);
+var fs = __nccwpck_require__(5747);
+
+common.register('head', _head, {
+  canReceivePipe: true,
+  cmdOptions: {
+    'n': 'numLines',
+  },
+});
+
+// Reads |numLines| lines or the entire file, whichever is less.
+function readSomeLines(file, numLines) {
+  var buf = common.buffer();
+  var bufLength = buf.length;
+  var bytesRead = bufLength;
+  var pos = 0;
+
+  var fdr = fs.openSync(file, 'r');
+  var numLinesRead = 0;
+  var ret = '';
+  while (bytesRead === bufLength && numLinesRead < numLines) {
+    bytesRead = fs.readSync(fdr, buf, 0, bufLength, pos);
+    var bufStr = buf.toString('utf8', 0, bytesRead);
+    numLinesRead += bufStr.split('\n').length - 1;
+    ret += bufStr;
+    pos += bytesRead;
+  }
+
+  fs.closeSync(fdr);
+  return ret;
+}
+
+//@
+//@ ### head([{'-n': \<num\>},] file [, file ...])
+//@ ### head([{'-n': \<num\>},] file_array)
+//@
+//@ Available options:
+//@
+//@ + `-n <num>`: Show the first `<num>` lines of the files
+//@
+//@ Examples:
+//@
+//@ ```javascript
+//@ var str = head({'-n': 1}, 'file*.txt');
+//@ var str = head('file1', 'file2');
+//@ var str = head(['file1', 'file2']); // same as above
+//@ ```
+//@
+//@ Read the start of a file.
+function _head(options, files) {
+  var head = [];
+  var pipe = common.readFromPipe();
+
+  if (!files && !pipe) common.error('no paths given');
+
+  var idx = 1;
+  if (options.numLines === true) {
+    idx = 2;
+    options.numLines = Number(arguments[1]);
+  } else if (options.numLines === false) {
+    options.numLines = 10;
+  }
+  files = [].slice.call(arguments, idx);
+
+  if (pipe) {
+    files.unshift('-');
+  }
+
+  var shouldAppendNewline = false;
+  files.forEach(function (file) {
+    if (file !== '-') {
+      if (!fs.existsSync(file)) {
+        common.error('no such file or directory: ' + file, { continue: true });
+        return;
+      } else if (common.statFollowLinks(file).isDirectory()) {
+        common.error("error reading '" + file + "': Is a directory", {
+          continue: true,
+        });
+        return;
+      }
+    }
+
+    var contents;
+    if (file === '-') {
+      contents = pipe;
+    } else if (options.numLines < 0) {
+      contents = fs.readFileSync(file, 'utf8');
+    } else {
+      contents = readSomeLines(file, options.numLines);
+    }
+
+    var lines = contents.split('\n');
+    var hasTrailingNewline = (lines[lines.length - 1] === '');
+    if (hasTrailingNewline) {
+      lines.pop();
+    }
+    shouldAppendNewline = (hasTrailingNewline || options.numLines < lines.length);
+
+    head = head.concat(lines.slice(0, options.numLines));
+  });
+
+  if (shouldAppendNewline) {
+    head.push(''); // to add a trailing newline once we join
+  }
+  return head.join('\n');
+}
+module.exports = _head;
 
 
 /***/ }),
@@ -10426,15 +13480,21 @@ module.exports = _grep;
 var fs = __nccwpck_require__(5747);
 var path = __nccwpck_require__(5622);
 var common = __nccwpck_require__(3687);
-var os = __nccwpck_require__(2087);
+
+common.register('ln', _ln, {
+  cmdOptions: {
+    's': 'symlink',
+    'f': 'force',
+  },
+});
 
 //@
-//@ ### ln(options, source, dest)
-//@ ### ln(source, dest)
+//@ ### ln([options,] source, dest)
+//@
 //@ Available options:
 //@
-//@ + `s`: symlink
-//@ + `f`: force
+//@ + `-s`: symlink
+//@ + `-f`: force
 //@
 //@ Examples:
 //@
@@ -10443,37 +13503,51 @@ var os = __nccwpck_require__(2087);
 //@ ln('-sf', 'file', 'existing');
 //@ ```
 //@
-//@ Links source to dest. Use -f to force the link, should dest already exist.
+//@ Links `source` to `dest`. Use `-f` to force the link, should `dest` already exist.
 function _ln(options, source, dest) {
-  options = common.parseOptions(options, {
-    's': 'symlink',
-    'f': 'force'
-  });
-
   if (!source || !dest) {
     common.error('Missing <source> and/or <dest>');
   }
 
-  source = path.resolve(process.cwd(), String(source));
+  source = String(source);
+  var sourcePath = path.normalize(source).replace(RegExp(path.sep + '$'), '');
+  var isAbsolute = (path.resolve(source) === sourcePath);
   dest = path.resolve(process.cwd(), String(dest));
-
-  if (!fs.existsSync(source)) {
-    common.error('Source file does not exist', true);
-  }
 
   if (fs.existsSync(dest)) {
     if (!options.force) {
-      common.error('Destination file exists', true);
+      common.error('Destination file exists', { continue: true });
     }
 
     fs.unlinkSync(dest);
   }
 
   if (options.symlink) {
-    fs.symlinkSync(source, dest, os.platform() === "win32" ? "junction" : null);
+    var isWindows = process.platform === 'win32';
+    var linkType = isWindows ? 'file' : null;
+    var resolvedSourcePath = isAbsolute ? sourcePath : path.resolve(process.cwd(), path.dirname(dest), source);
+    if (!fs.existsSync(resolvedSourcePath)) {
+      common.error('Source file does not exist', { continue: true });
+    } else if (isWindows && common.statFollowLinks(resolvedSourcePath).isDirectory()) {
+      linkType = 'junction';
+    }
+
+    try {
+      fs.symlinkSync(linkType === 'junction' ? resolvedSourcePath : source, dest, linkType);
+    } catch (err) {
+      common.error(err.message);
+    }
   } else {
-    fs.linkSync(source, dest, os.platform() === "win32" ? "junction" : null);
+    if (!fs.existsSync(source)) {
+      common.error('Source file does not exist', { continue: true });
+    }
+    try {
+      fs.linkSync(source, dest);
+    } catch (err) {
+      common.error(err.message);
+    }
   }
+  return '';
 }
 module.exports = _ln;
 
@@ -10486,16 +13560,35 @@ module.exports = _ln;
 var path = __nccwpck_require__(5622);
 var fs = __nccwpck_require__(5747);
 var common = __nccwpck_require__(3687);
-var _cd = __nccwpck_require__(2051);
-var _pwd = __nccwpck_require__(8553);
+var glob = __nccwpck_require__(1957);
+
+var globPatternRecursive = path.sep + '**';
+
+common.register('ls', _ls, {
+  cmdOptions: {
+    'R': 'recursive',
+    'A': 'all',
+    'L': 'link',
+    'a': 'all_deprecated',
+    'd': 'directory',
+    'l': 'long',
+  },
+});
 
 //@
-//@ ### ls([options ,] path [,path ...])
-//@ ### ls([options ,] path_array)
+//@ ### ls([options,] [path, ...])
+//@ ### ls([options,] path_array)
+//@
 //@ Available options:
 //@
 //@ + `-R`: recursive
 //@ + `-A`: all files (include files beginning with `.`, except for `.` and `..`)
+//@ + `-L`: follow symlinks
+//@ + `-d`: list directories themselves, not their contents
+//@ + `-l`: list objects representing each file, each with fields containing `ls
+//@         -l` output fields. See
+//@         [`fs.Stats`](https://nodejs.org/api/fs.html#fs_class_fs_stats)
+//@         for more info
 //@
 //@ Examples:
 //@
@@ -10503,16 +13596,12 @@ var _pwd = __nccwpck_require__(8553);
 //@ ls('projs/*.js');
 //@ ls('-R', '/users/me', '/tmp');
 //@ ls('-R', ['/users/me', '/tmp']); // same as above
+//@ ls('-l', 'file.txt'); // { name: 'file.txt', mode: 33188, nlink: 1, ...}
 //@ ```
 //@
-//@ Returns array of files in the given path, or in current directory if no path provided.
+//@ Returns array of files in the given `path`, or files in
+//@ the current directory if no `path` is  provided.
 function _ls(options, paths) {
-  options = common.parseOptions(options, {
-    'R': 'recursive',
-    'A': 'all',
-    'a': 'all_deprecated'
-  });
-
   if (options.all_deprecated) {
     // We won't support the -a option as it's hard to image why it's useful
     // (it includes '.' and '..' in addition to '.*' files)
@@ -10521,93 +13610,93 @@ function _ls(options, paths) {
     options.all = true;
   }
 
-  if (!paths)
+  if (!paths) {
     paths = ['.'];
-  else if (typeof paths === 'object')
-    paths = paths; // assume array
-  else if (typeof paths === 'string')
+  } else {
     paths = [].slice.call(arguments, 1);
+  }
 
   var list = [];
 
-  // Conditionally pushes file to list - returns true if pushed, false otherwise
-  // (e.g. prevents hidden files to be included unless explicitly told so)
-  function pushFile(file, query) {
-    // hidden file?
-    if (path.basename(file)[0] === '.') {
-      // not explicitly asking for hidden files?
-      if (!options.all && !(path.basename(query)[0] === '.' && path.basename(query).length > 1))
-        return false;
+  function pushFile(abs, relName, stat) {
+    if (process.platform === 'win32') {
+      relName = relName.replace(/\\/g, '/');
     }
-
-    if (common.platform === 'win')
-      file = file.replace(/\\/g, '/');
-
-    list.push(file);
-    return true;
+    if (options.long) {
+      stat = stat || (options.link ? common.statFollowLinks(abs) : common.statNoFollowLinks(abs));
+      list.push(addLsAttributes(relName, stat));
+    } else {
+      // list.push(path.relative(rel || '.', file));
+      list.push(relName);
+    }
   }
 
-  paths.forEach(function(p) {
-    if (fs.existsSync(p)) {
-      var stats = fs.statSync(p);
-      // Simple file?
-      if (stats.isFile()) {
-        pushFile(p, p);
-        return; // continue
-      }
+  paths.forEach(function (p) {
+    var stat;
 
-      // Simple dir?
-      if (stats.isDirectory()) {
-        // Iterate over p contents
-        fs.readdirSync(p).forEach(function(file) {
-          if (!pushFile(file, p))
-            return;
-
-          // Recursive?
-          if (options.recursive) {
-            var oldDir = _pwd();
-            _cd('', p);
-            if (fs.statSync(file).isDirectory())
-              list = list.concat(_ls('-R'+(options.all?'A':''), file+'/*'));
-            _cd('', oldDir);
+    try {
+      stat = options.link ? common.statFollowLinks(p) : common.statNoFollowLinks(p);
+      // follow links to directories by default
+      if (stat.isSymbolicLink()) {
+        /* istanbul ignore next */
+        // workaround for https://github.com/shelljs/shelljs/issues/795
+        // codecov seems to have a bug that miscalculate this block as uncovered.
+        // but according to nyc report this block does get covered.
+        try {
+          var _stat = common.statFollowLinks(p);
+          if (_stat.isDirectory()) {
+            stat = _stat;
           }
-        });
-        return; // continue
+        } catch (_) {} // bad symlink, treat it like a file
       }
-    }
-
-    // p does not exist - possible wildcard present
-
-    var basename = path.basename(p);
-    var dirname = path.dirname(p);
-    // Wildcard present on an existing dir? (e.g. '/tmp/*.js')
-    if (basename.search(/\*/) > -1 && fs.existsSync(dirname) && fs.statSync(dirname).isDirectory) {
-      // Escape special regular expression chars
-      var regexp = basename.replace(/(\^|\$|\(|\)|<|>|\[|\]|\{|\}|\.|\+|\?)/g, '\\$1');
-      // Translates wildcard into regex
-      regexp = '^' + regexp.replace(/\*/g, '.*') + '$';
-      // Iterate over directory contents
-      fs.readdirSync(dirname).forEach(function(file) {
-        if (file.match(new RegExp(regexp))) {
-          if (!pushFile(path.normalize(dirname+'/'+file), basename))
-            return;
-
-          // Recursive?
-          if (options.recursive) {
-            var pp = dirname + '/' + file;
-            if (fs.lstatSync(pp).isDirectory())
-              list = list.concat(_ls('-R'+(options.all?'A':''), pp+'/*'));
-          } // recursive
-        } // if file matches
-      }); // forEach
+    } catch (e) {
+      common.error('no such file or directory: ' + p, 2, { continue: true });
       return;
     }
 
-    common.error('no such file or directory: ' + p, true);
+    // If the stat succeeded
+    if (stat.isDirectory() && !options.directory) {
+      if (options.recursive) {
+        // use glob, because it's simple
+        glob.sync(p + globPatternRecursive, { dot: options.all, follow: options.link })
+          .forEach(function (item) {
+            // Glob pattern returns the directory itself and needs to be filtered out.
+            if (path.relative(p, item)) {
+              pushFile(item, path.relative(p, item));
+            }
+          });
+      } else if (options.all) {
+        // use fs.readdirSync, because it's fast
+        fs.readdirSync(p).forEach(function (item) {
+          pushFile(path.join(p, item), item);
+        });
+      } else {
+        // use fs.readdirSync and then filter out secret files
+        fs.readdirSync(p).forEach(function (item) {
+          if (item[0] !== '.') {
+            pushFile(path.join(p, item), item);
+          }
+        });
+      }
+    } else {
+      pushFile(p, p, stat);
+    }
   });
 
+  // Add methods, to make this more compatible with ShellStrings
   return list;
 }
+
+function addLsAttributes(pathName, stats) {
+  // Note: this object will contain more information than .toString() returns
+  stats.name = pathName;
+  stats.toString = function () {
+    // Return a string resembling unix's `ls -l` format
+    return [this.mode, this.nlink, this.uid, this.gid, this.size, this.mtime, this.name].join(' ');
+  };
+  return stats;
+}
+
 module.exports = _ls;
 
 
@@ -10620,9 +13709,22 @@ var common = __nccwpck_require__(3687);
 var fs = __nccwpck_require__(5747);
 var path = __nccwpck_require__(5622);
 
-// Recursively creates 'dir'
+common.register('mkdir', _mkdir, {
+  cmdOptions: {
+    'p': 'fullpath',
+  },
+});
+
+// Recursively creates `dir`
 function mkdirSyncRecursive(dir) {
   var baseDir = path.dirname(dir);
+
+  // Prevents some potential problems arising from malformed UNCs or
+  // insufficient permissions.
+  /* istanbul ignore next */
+  if (baseDir === dir) {
+    common.error('dirname() failed: [' + dir + ']');
+  }
 
   // Base dir exists, no recursion necessary
   if (fs.existsSync(baseDir)) {
@@ -10638,11 +13740,12 @@ function mkdirSyncRecursive(dir) {
 }
 
 //@
-//@ ### mkdir([options ,] dir [, dir ...])
-//@ ### mkdir([options ,] dir_array)
+//@ ### mkdir([options,] dir [, dir ...])
+//@ ### mkdir([options,] dir_array)
+//@
 //@ Available options:
 //@
-//@ + `p`: full path (will create intermediate dirs if necessary)
+//@ + `-p`: full path (and create intermediate directories, if necessary)
 //@
 //@ Examples:
 //@
@@ -10653,35 +13756,53 @@ function mkdirSyncRecursive(dir) {
 //@
 //@ Creates directories.
 function _mkdir(options, dirs) {
-  options = common.parseOptions(options, {
-    'p': 'fullpath'
-  });
-  if (!dirs)
-    common.error('no paths given');
+  if (!dirs) common.error('no paths given');
 
-  if (typeof dirs === 'string')
+  if (typeof dirs === 'string') {
     dirs = [].slice.call(arguments, 1);
+  }
   // if it's array leave it as it is
 
-  dirs.forEach(function(dir) {
-    if (fs.existsSync(dir)) {
-      if (!options.fullpath)
-          common.error('path already exists: ' + dir, true);
+  dirs.forEach(function (dir) {
+    try {
+      var stat = common.statNoFollowLinks(dir);
+      if (!options.fullpath) {
+        common.error('path already exists: ' + dir, { continue: true });
+      } else if (stat.isFile()) {
+        common.error('cannot create directory ' + dir + ': File exists', { continue: true });
+      }
       return; // skip dir
+    } catch (e) {
+      // do nothing
     }
 
     // Base dir does not exist, and no -p option given
     var baseDir = path.dirname(dir);
     if (!fs.existsSync(baseDir) && !options.fullpath) {
-      common.error('no such file or directory: ' + baseDir, true);
+      common.error('no such file or directory: ' + baseDir, { continue: true });
       return; // skip dir
     }
 
-    if (options.fullpath)
-      mkdirSyncRecursive(dir);
-    else
-      fs.mkdirSync(dir, parseInt('0777', 8));
+    try {
+      if (options.fullpath) {
+        mkdirSyncRecursive(path.resolve(dir));
+      } else {
+        fs.mkdirSync(dir, parseInt('0777', 8));
+      }
+    } catch (e) {
+      var reason;
+      if (e.code === 'EACCES') {
+        reason = 'Permission denied';
+      } else if (e.code === 'ENOTDIR' || e.code === 'ENOENT') {
+        reason = 'Not a directory';
+      } else {
+        /* istanbul ignore next */
+        throw e;
+      }
+      common.error('cannot create directory ' + dir + ': ' + reason, { continue: true });
+    }
   });
+  return '';
 } // mkdir
 module.exports = _mkdir;
 
@@ -10694,28 +13815,43 @@ module.exports = _mkdir;
 var fs = __nccwpck_require__(5747);
 var path = __nccwpck_require__(5622);
 var common = __nccwpck_require__(3687);
+var cp = __nccwpck_require__(4932);
+var rm = __nccwpck_require__(2830);
+
+common.register('mv', _mv, {
+  cmdOptions: {
+    'f': '!no_force',
+    'n': 'no_force',
+  },
+});
+
+// Checks if cureent file was created recently
+function checkRecentCreated(sources, index) {
+  var lookedSource = sources[index];
+  return sources.slice(0, index).some(function (src) {
+    return path.basename(src) === path.basename(lookedSource);
+  });
+}
 
 //@
-//@ ### mv(source [, source ...], dest')
-//@ ### mv(source_array, dest')
+//@ ### mv([options ,] source [, source ...], dest')
+//@ ### mv([options ,] source_array, dest')
+//@
 //@ Available options:
 //@
-//@ + `f`: force
+//@ + `-f`: force (default behavior)
+//@ + `-n`: no-clobber
 //@
 //@ Examples:
 //@
 //@ ```javascript
-//@ mv('-f', 'file', 'dir/');
+//@ mv('-n', 'file', 'dir/');
 //@ mv('file1', 'file2', 'dir/');
 //@ mv(['file1', 'file2'], 'dir/'); // same as above
 //@ ```
 //@
-//@ Moves files. The wildcard `*` is accepted.
+//@ Moves `source` file(s) to `dest`.
 function _mv(options, sources, dest) {
-  options = common.parseOptions(options, {
-    'f': 'force'
-  });
-
   // Get sources, dest
   if (arguments.length < 3) {
     common.error('missing <source> and/or <dest>');
@@ -10724,28 +13860,27 @@ function _mv(options, sources, dest) {
     dest = arguments[arguments.length - 1];
   } else if (typeof sources === 'string') {
     sources = [sources];
-  } else if ('length' in sources) {
-    sources = sources; // no-op for array
   } else {
+    // TODO(nate): figure out if we actually need this line
     common.error('invalid arguments');
   }
 
-  sources = common.expand(sources);
-
-  var exists = fs.existsSync(dest),
-      stats = exists && fs.statSync(dest);
+  var exists = fs.existsSync(dest);
+  var stats = exists && common.statFollowLinks(dest);
 
   // Dest is not existing dir, but multiple sources given
-  if ((!exists || !stats.isDirectory()) && sources.length > 1)
+  if ((!exists || !stats.isDirectory()) && sources.length > 1) {
     common.error('dest is not a directory (too many sources)');
+  }
 
   // Dest is an existing file, but no -f given
-  if (exists && stats.isFile() && !options.force)
+  if (exists && stats.isFile() && options.no_force) {
     common.error('dest file already exists: ' + dest);
+  }
 
-  sources.forEach(function(src) {
+  sources.forEach(function (src, srcIndex) {
     if (!fs.existsSync(src)) {
-      common.error('no such file or directory: '+src, true);
+      common.error('no such file or directory: ' + src, { continue: true });
       return; // skip file
     }
 
@@ -10754,23 +13889,63 @@ function _mv(options, sources, dest) {
     // When copying to '/path/dir':
     //    thisDest = '/path/dir/file1'
     var thisDest = dest;
-    if (fs.existsSync(dest) && fs.statSync(dest).isDirectory())
+    if (fs.existsSync(dest) && common.statFollowLinks(dest).isDirectory()) {
       thisDest = path.normalize(dest + '/' + path.basename(src));
+    }
 
-    if (fs.existsSync(thisDest) && !options.force) {
-      common.error('dest file already exists: ' + thisDest, true);
+    var thisDestExists = fs.existsSync(thisDest);
+
+    if (thisDestExists && checkRecentCreated(sources, srcIndex)) {
+      // cannot overwrite file created recently in current execution, but we want to continue copying other files
+      if (!options.no_force) {
+        common.error("will not overwrite just-created '" + thisDest + "' with '" + src + "'", { continue: true });
+      }
+      return;
+    }
+
+    if (fs.existsSync(thisDest) && options.no_force) {
+      common.error('dest file already exists: ' + thisDest, { continue: true });
       return; // skip file
     }
 
     if (path.resolve(src) === path.dirname(path.resolve(thisDest))) {
-      common.error('cannot move to self: '+src, true);
+      common.error('cannot move to self: ' + src, { continue: true });
       return; // skip file
     }
 
-    fs.renameSync(src, thisDest);
+    try {
+      fs.renameSync(src, thisDest);
+    } catch (e) {
+      /* istanbul ignore next */
+      if (e.code === 'EXDEV') {
+        // If we're trying to `mv` to an external partition, we'll actually need
+        // to perform a copy and then clean up the original file. If either the
+        // copy or the rm fails with an exception, we should allow this
+        // exception to pass up to the top level.
+        cp('-r', src, thisDest);
+        rm('-rf', src);
+      }
+    }
   }); // forEach(src)
+  return '';
 } // mv
 module.exports = _mv;
+
+
+/***/ }),
+
+/***/ 227:
+/***/ (() => {
+
+// see dirs.js
+
+
+/***/ }),
+
+/***/ 4177:
+/***/ (() => {
+
+// see dirs.js
 
 
 /***/ }),
@@ -10781,12 +13956,17 @@ module.exports = _mv;
 var path = __nccwpck_require__(5622);
 var common = __nccwpck_require__(3687);
 
+common.register('pwd', _pwd, {
+  allowGlobbing: false,
+});
+
 //@
 //@ ### pwd()
+//@
 //@ Returns the current directory.
-function _pwd(options) {
+function _pwd() {
   var pwd = path.resolve(process.cwd());
-  return common.ShellString(pwd);
+  return pwd;
 }
 module.exports = _pwd;
 
@@ -10799,6 +13979,14 @@ module.exports = _pwd;
 var common = __nccwpck_require__(3687);
 var fs = __nccwpck_require__(5747);
 
+common.register('rm', _rm, {
+  cmdOptions: {
+    'f': 'force',
+    'r': 'recursive',
+    'R': 'recursive',
+  },
+});
+
 // Recursively removes 'dir'
 // Adapted from https://github.com/ryanmcgrath/wrench-js
 //
@@ -10807,48 +13995,65 @@ var fs = __nccwpck_require__(5747);
 //
 // Licensed under the MIT License
 // http://www.opensource.org/licenses/mit-license.php
-function rmdirSyncRecursive(dir, force) {
+function rmdirSyncRecursive(dir, force, fromSymlink) {
   var files;
 
   files = fs.readdirSync(dir);
 
   // Loop through and delete everything in the sub-tree after checking it
-  for(var i = 0; i < files.length; i++) {
-    var file = dir + "/" + files[i],
-        currFile = fs.lstatSync(file);
+  for (var i = 0; i < files.length; i++) {
+    var file = dir + '/' + files[i];
+    var currFile = common.statNoFollowLinks(file);
 
-    if(currFile.isDirectory()) { // Recursive function back to the beginning
+    if (currFile.isDirectory()) { // Recursive function back to the beginning
       rmdirSyncRecursive(file, force);
-    }
-
-    else if(currFile.isSymbolicLink()) { // Unlink symlinks
+    } else { // Assume it's a file - perhaps a try/catch belongs here?
       if (force || isWriteable(file)) {
         try {
           common.unlinkSync(file);
         } catch (e) {
-          common.error('could not remove file (code '+e.code+'): ' + file, true);
+          /* istanbul ignore next */
+          common.error('could not remove file (code ' + e.code + '): ' + file, {
+            continue: true,
+          });
         }
       }
     }
-
-    else // Assume it's a file - perhaps a try/catch belongs here?
-      if (force || isWriteable(file)) {
-        try {
-          common.unlinkSync(file);
-        } catch (e) {
-          common.error('could not remove file (code '+e.code+'): ' + file, true);
-        }
-      }
   }
+
+  // if was directory was referenced through a symbolic link,
+  // the contents should be removed, but not the directory itself
+  if (fromSymlink) return;
 
   // Now that we know everything in the sub-tree has been deleted, we can delete the main directory.
   // Huzzah for the shopkeep.
 
   var result;
   try {
-    result = fs.rmdirSync(dir);
-  } catch(e) {
-    common.error('could not remove directory (code '+e.code+'): ' + dir, true);
+    // Retry on windows, sometimes it takes a little time before all the files in the directory are gone
+    var start = Date.now();
+
+    // TODO: replace this with a finite loop
+    for (;;) {
+      try {
+        result = fs.rmdirSync(dir);
+        if (fs.existsSync(dir)) throw { code: 'EAGAIN' };
+        break;
+      } catch (er) {
+        /* istanbul ignore next */
+        // In addition to error codes, also check if the directory still exists and loop again if true
+        if (process.platform === 'win32' && (er.code === 'ENOTEMPTY' || er.code === 'EBUSY' || er.code === 'EPERM' || er.code === 'EAGAIN')) {
+          if (Date.now() - start > 1000) throw er;
+        } else if (er.code === 'ENOENT') {
+          // Directory did not exist, deletion was successful
+          break;
+        } else {
+          throw er;
+        }
+      }
+    }
+  } catch (e) {
+    common.error('could not remove directory (code ' + e.code + '): ' + dir, { continue: true });
   }
 
   return result;
@@ -10861,16 +14066,68 @@ function isWriteable(file) {
   try {
     var __fd = fs.openSync(file, 'a');
     fs.closeSync(__fd);
-  } catch(e) {
+  } catch (e) {
     writePermission = false;
   }
 
   return writePermission;
 }
 
+function handleFile(file, options) {
+  if (options.force || isWriteable(file)) {
+    // -f was passed, or file is writable, so it can be removed
+    common.unlinkSync(file);
+  } else {
+    common.error('permission denied: ' + file, { continue: true });
+  }
+}
+
+function handleDirectory(file, options) {
+  if (options.recursive) {
+    // -r was passed, so directory can be removed
+    rmdirSyncRecursive(file, options.force);
+  } else {
+    common.error('path is a directory', { continue: true });
+  }
+}
+
+function handleSymbolicLink(file, options) {
+  var stats;
+  try {
+    stats = common.statFollowLinks(file);
+  } catch (e) {
+    // symlink is broken, so remove the symlink itself
+    common.unlinkSync(file);
+    return;
+  }
+
+  if (stats.isFile()) {
+    common.unlinkSync(file);
+  } else if (stats.isDirectory()) {
+    if (file[file.length - 1] === '/') {
+      // trailing separator, so remove the contents, not the link
+      if (options.recursive) {
+        // -r was passed, so directory can be removed
+        var fromSymlink = true;
+        rmdirSyncRecursive(file, options.force, fromSymlink);
+      } else {
+        common.error('path is a directory', { continue: true });
+      }
+    } else {
+      // no trailing separator, so remove the link
+      common.unlinkSync(file);
+    }
+  }
+}
+
+function handleFIFO(file) {
+  common.unlinkSync(file);
+}
+
 //@
-//@ ### rm([options ,] file [, file ...])
-//@ ### rm([options ,] file_array)
+//@ ### rm([options,] file [, file ...])
+//@ ### rm([options,] file_array)
+//@
 //@ Available options:
 //@
 //@ + `-f`: force
@@ -10884,61 +14141,40 @@ function isWriteable(file) {
 //@ rm(['some_file.txt', 'another_file.txt']); // same as above
 //@ ```
 //@
-//@ Removes files. The wildcard `*` is accepted.
+//@ Removes files.
 function _rm(options, files) {
-  options = common.parseOptions(options, {
-    'f': 'force',
-    'r': 'recursive',
-    'R': 'recursive'
-  });
-  if (!files)
-    common.error('no paths given');
+  if (!files) common.error('no paths given');
 
-  if (typeof files === 'string')
-    files = [].slice.call(arguments, 1);
-  // if it's array leave it as it is
+  // Convert to array
+  files = [].slice.call(arguments, 1);
 
-  files = common.expand(files);
-
-  files.forEach(function(file) {
-    if (!fs.existsSync(file)) {
+  files.forEach(function (file) {
+    var lstats;
+    try {
+      var filepath = (file[file.length - 1] === '/')
+        ? file.slice(0, -1) // remove the '/' so lstatSync can detect symlinks
+        : file;
+      lstats = common.statNoFollowLinks(filepath); // test for existence
+    } catch (e) {
       // Path does not exist, no force flag given
-      if (!options.force)
-        common.error('no such file or directory: '+file, true);
-
+      if (!options.force) {
+        common.error('no such file or directory: ' + file, { continue: true });
+      }
       return; // skip file
     }
 
     // If here, path exists
-
-    var stats = fs.lstatSync(file);
-    if (stats.isFile() || stats.isSymbolicLink()) {
-
-      // Do not check for file writing permissions
-      if (options.force) {
-        common.unlinkSync(file);
-        return;
-      }
-
-      if (isWriteable(file))
-        common.unlinkSync(file);
-      else
-        common.error('permission denied: '+file, true);
-
-      return;
-    } // simple file
-
-    // Path is an existing directory, but no -r flag given
-    if (stats.isDirectory() && !options.recursive) {
-      common.error('path is a directory', true);
-      return; // skip path
-    }
-
-    // Recursively remove existing directory
-    if (stats.isDirectory() && options.recursive) {
-      rmdirSyncRecursive(file, options.force);
+    if (lstats.isFile()) {
+      handleFile(file, options);
+    } else if (lstats.isDirectory()) {
+      handleDirectory(file, options);
+    } else if (lstats.isSymbolicLink()) {
+      handleSymbolicLink(file, options);
+    } else if (lstats.isFIFO()) {
+      handleFIFO(file);
     }
   }); // forEach(file)
+  return '';
 } // rm
 module.exports = _rm;
 
@@ -10951,11 +14187,21 @@ module.exports = _rm;
 var common = __nccwpck_require__(3687);
 var fs = __nccwpck_require__(5747);
 
+common.register('sed', _sed, {
+  globStart: 3, // don't glob-expand regexes
+  canReceivePipe: true,
+  cmdOptions: {
+    'i': 'inplace',
+  },
+});
+
 //@
-//@ ### sed([options ,] search_regex, replacement, file)
+//@ ### sed([options,] search_regex, replacement, file [, file ...])
+//@ ### sed([options,] search_regex, replacement, file_array)
+//@
 //@ Available options:
 //@
-//@ + `-i`: Replace contents of 'file' in-place. _Note that no backups will be created!_
+//@ + `-i`: Replace contents of `file` in-place. _Note that no backups will be created!_
 //@
 //@ Examples:
 //@
@@ -10964,33 +14210,321 @@ var fs = __nccwpck_require__(5747);
 //@ sed(/.*DELETE_THIS_LINE.*\n/, '', 'source.js');
 //@ ```
 //@
-//@ Reads an input string from `file` and performs a JavaScript `replace()` on the input
-//@ using the given search regex and replacement string or function. Returns the new string after replacement.
-function _sed(options, regex, replacement, file) {
-  options = common.parseOptions(options, {
-    'i': 'inplace'
+//@ Reads an input string from `file`s, and performs a JavaScript `replace()` on the input
+//@ using the given `search_regex` and `replacement` string or function. Returns the new string after replacement.
+//@
+//@ Note:
+//@
+//@ Like unix `sed`, ShellJS `sed` supports capture groups. Capture groups are specified
+//@ using the `$n` syntax:
+//@
+//@ ```javascript
+//@ sed(/(\w+)\s(\w+)/, '$2, $1', 'file.txt');
+//@ ```
+function _sed(options, regex, replacement, files) {
+  // Check if this is coming from a pipe
+  var pipe = common.readFromPipe();
+
+  if (typeof replacement !== 'string' && typeof replacement !== 'function') {
+    if (typeof replacement === 'number') {
+      replacement = replacement.toString(); // fallback
+    } else {
+      common.error('invalid replacement string');
+    }
+  }
+
+  // Convert all search strings to RegExp
+  if (typeof regex === 'string') {
+    regex = RegExp(regex);
+  }
+
+  if (!files && !pipe) {
+    common.error('no files given');
+  }
+
+  files = [].slice.call(arguments, 3);
+
+  if (pipe) {
+    files.unshift('-');
+  }
+
+  var sed = [];
+  files.forEach(function (file) {
+    if (!fs.existsSync(file) && file !== '-') {
+      common.error('no such file or directory: ' + file, 2, { continue: true });
+      return;
+    }
+
+    var contents = file === '-' ? pipe : fs.readFileSync(file, 'utf8');
+    var lines = contents.split('\n');
+    var result = lines.map(function (line) {
+      return line.replace(regex, replacement);
+    }).join('\n');
+
+    sed.push(result);
+
+    if (options.inplace) {
+      fs.writeFileSync(file, result, 'utf8');
+    }
   });
 
-  if (typeof replacement === 'string' || typeof replacement === 'function')
-    replacement = replacement; // no-op
-  else if (typeof replacement === 'number')
-    replacement = replacement.toString(); // fallback
-  else
-    common.error('invalid replacement string');
-
-  if (!file)
-    common.error('no file given');
-
-  if (!fs.existsSync(file))
-    common.error('no such file or directory: ' + file);
-
-  var result = fs.readFileSync(file, 'utf8').replace(regex, replacement);
-  if (options.inplace)
-    fs.writeFileSync(file, result, 'utf8');
-
-  return common.ShellString(result);
+  return sed.join('\n');
 }
 module.exports = _sed;
+
+
+/***/ }),
+
+/***/ 1411:
+/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
+
+var common = __nccwpck_require__(3687);
+
+common.register('set', _set, {
+  allowGlobbing: false,
+  wrapOutput: false,
+});
+
+//@
+//@ ### set(options)
+//@
+//@ Available options:
+//@
+//@ + `+/-e`: exit upon error (`config.fatal`)
+//@ + `+/-v`: verbose: show all commands (`config.verbose`)
+//@ + `+/-f`: disable filename expansion (globbing)
+//@
+//@ Examples:
+//@
+//@ ```javascript
+//@ set('-e'); // exit upon first error
+//@ set('+e'); // this undoes a "set('-e')"
+//@ ```
+//@
+//@ Sets global configuration variables.
+function _set(options) {
+  if (!options) {
+    var args = [].slice.call(arguments, 0);
+    if (args.length < 2) common.error('must provide an argument');
+    options = args[1];
+  }
+  var negate = (options[0] === '+');
+  if (negate) {
+    options = '-' + options.slice(1); // parseOptions needs a '-' prefix
+  }
+  options = common.parseOptions(options, {
+    'e': 'fatal',
+    'v': 'verbose',
+    'f': 'noglob',
+  });
+
+  if (negate) {
+    Object.keys(options).forEach(function (key) {
+      options[key] = !options[key];
+    });
+  }
+
+  Object.keys(options).forEach(function (key) {
+    // Only change the global config if `negate` is false and the option is true
+    // or if `negate` is true and the option is false (aka negate !== option)
+    if (negate !== options[key]) {
+      common.config[key] = options[key];
+    }
+  });
+  return;
+}
+module.exports = _set;
+
+
+/***/ }),
+
+/***/ 2116:
+/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
+
+var common = __nccwpck_require__(3687);
+var fs = __nccwpck_require__(5747);
+
+common.register('sort', _sort, {
+  canReceivePipe: true,
+  cmdOptions: {
+    'r': 'reverse',
+    'n': 'numerical',
+  },
+});
+
+// parse out the number prefix of a line
+function parseNumber(str) {
+  var match = str.match(/^\s*(\d*)\s*(.*)$/);
+  return { num: Number(match[1]), value: match[2] };
+}
+
+// compare two strings case-insensitively, but examine case for strings that are
+// case-insensitive equivalent
+function unixCmp(a, b) {
+  var aLower = a.toLowerCase();
+  var bLower = b.toLowerCase();
+  return (aLower === bLower ?
+      -1 * a.localeCompare(b) : // unix sort treats case opposite how javascript does
+      aLower.localeCompare(bLower));
+}
+
+// compare two strings in the fashion that unix sort's -n option works
+function numericalCmp(a, b) {
+  var objA = parseNumber(a);
+  var objB = parseNumber(b);
+  if (objA.hasOwnProperty('num') && objB.hasOwnProperty('num')) {
+    return ((objA.num !== objB.num) ?
+        (objA.num - objB.num) :
+        unixCmp(objA.value, objB.value));
+  } else {
+    return unixCmp(objA.value, objB.value);
+  }
+}
+
+//@
+//@ ### sort([options,] file [, file ...])
+//@ ### sort([options,] file_array)
+//@
+//@ Available options:
+//@
+//@ + `-r`: Reverse the results
+//@ + `-n`: Compare according to numerical value
+//@
+//@ Examples:
+//@
+//@ ```javascript
+//@ sort('foo.txt', 'bar.txt');
+//@ sort('-r', 'foo.txt');
+//@ ```
+//@
+//@ Return the contents of the `file`s, sorted line-by-line. Sorting multiple
+//@ files mixes their content (just as unix `sort` does).
+function _sort(options, files) {
+  // Check if this is coming from a pipe
+  var pipe = common.readFromPipe();
+
+  if (!files && !pipe) common.error('no files given');
+
+  files = [].slice.call(arguments, 1);
+
+  if (pipe) {
+    files.unshift('-');
+  }
+
+  var lines = files.reduce(function (accum, file) {
+    if (file !== '-') {
+      if (!fs.existsSync(file)) {
+        common.error('no such file or directory: ' + file, { continue: true });
+        return accum;
+      } else if (common.statFollowLinks(file).isDirectory()) {
+        common.error('read failed: ' + file + ': Is a directory', {
+          continue: true,
+        });
+        return accum;
+      }
+    }
+
+    var contents = file === '-' ? pipe : fs.readFileSync(file, 'utf8');
+    return accum.concat(contents.trimRight().split('\n'));
+  }, []);
+
+  var sorted = lines.sort(options.numerical ? numericalCmp : unixCmp);
+
+  if (options.reverse) {
+    sorted = sorted.reverse();
+  }
+
+  return sorted.join('\n') + '\n';
+}
+
+module.exports = _sort;
+
+
+/***/ }),
+
+/***/ 2284:
+/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
+
+var common = __nccwpck_require__(3687);
+var fs = __nccwpck_require__(5747);
+
+common.register('tail', _tail, {
+  canReceivePipe: true,
+  cmdOptions: {
+    'n': 'numLines',
+  },
+});
+
+//@
+//@ ### tail([{'-n': \<num\>},] file [, file ...])
+//@ ### tail([{'-n': \<num\>},] file_array)
+//@
+//@ Available options:
+//@
+//@ + `-n <num>`: Show the last `<num>` lines of `file`s
+//@
+//@ Examples:
+//@
+//@ ```javascript
+//@ var str = tail({'-n': 1}, 'file*.txt');
+//@ var str = tail('file1', 'file2');
+//@ var str = tail(['file1', 'file2']); // same as above
+//@ ```
+//@
+//@ Read the end of a `file`.
+function _tail(options, files) {
+  var tail = [];
+  var pipe = common.readFromPipe();
+
+  if (!files && !pipe) common.error('no paths given');
+
+  var idx = 1;
+  if (options.numLines === true) {
+    idx = 2;
+    options.numLines = Number(arguments[1]);
+  } else if (options.numLines === false) {
+    options.numLines = 10;
+  }
+  options.numLines = -1 * Math.abs(options.numLines);
+  files = [].slice.call(arguments, idx);
+
+  if (pipe) {
+    files.unshift('-');
+  }
+
+  var shouldAppendNewline = false;
+  files.forEach(function (file) {
+    if (file !== '-') {
+      if (!fs.existsSync(file)) {
+        common.error('no such file or directory: ' + file, { continue: true });
+        return;
+      } else if (common.statFollowLinks(file).isDirectory()) {
+        common.error("error reading '" + file + "': Is a directory", {
+          continue: true,
+        });
+        return;
+      }
+    }
+
+    var contents = file === '-' ? pipe : fs.readFileSync(file, 'utf8');
+
+    var lines = contents.split('\n');
+    if (lines[lines.length - 1] === '') {
+      lines.pop();
+      shouldAppendNewline = true;
+    } else {
+      shouldAppendNewline = false;
+    }
+
+    tail = tail.concat(lines.slice(options.numLines));
+  });
+
+  if (shouldAppendNewline) {
+    tail.push(''); // to add a trailing newline once we join
+  }
+  return tail.join('\n');
+}
+module.exports = _tail;
 
 
 /***/ }),
@@ -11002,24 +14536,30 @@ var common = __nccwpck_require__(3687);
 var os = __nccwpck_require__(2087);
 var fs = __nccwpck_require__(5747);
 
+common.register('tempdir', _tempDir, {
+  allowGlobbing: false,
+  wrapOutput: false,
+});
+
 // Returns false if 'dir' is not a writeable directory, 'dir' otherwise
 function writeableDir(dir) {
-  if (!dir || !fs.existsSync(dir))
-    return false;
+  if (!dir || !fs.existsSync(dir)) return false;
 
-  if (!fs.statSync(dir).isDirectory())
-    return false;
+  if (!common.statFollowLinks(dir).isDirectory()) return false;
 
-  var testFile = dir+'/'+common.randomFileName();
+  var testFile = dir + '/' + common.randomFileName();
   try {
     fs.writeFileSync(testFile, ' ');
     common.unlinkSync(testFile);
     return dir;
   } catch (e) {
+    /* istanbul ignore next */
     return false;
   }
 }
 
+// Variable to cache the tempdir value for successive lookups.
+var cachedTempDir;
 
 //@
 //@ ### tempdir()
@@ -11033,15 +14573,13 @@ function writeableDir(dir) {
 //@ Searches and returns string containing a writeable, platform-dependent temporary directory.
 //@ Follows Python's [tempfile algorithm](http://docs.python.org/library/tempfile.html#tempfile.tempdir).
 function _tempDir() {
-  var state = common.state;
-  if (state.tempDir)
-    return state.tempDir; // from cache
+  if (cachedTempDir) return cachedTempDir;
 
-  state.tempDir = writeableDir(os.tempDir && os.tempDir()) || // node 0.8+
-                  writeableDir(process.env['TMPDIR']) ||
-                  writeableDir(process.env['TEMP']) ||
-                  writeableDir(process.env['TMP']) ||
-                  writeableDir(process.env['Wimp$ScrapDir']) || // RiscOS
+  cachedTempDir = writeableDir(os.tmpdir()) ||
+                  writeableDir(process.env.TMPDIR) ||
+                  writeableDir(process.env.TEMP) ||
+                  writeableDir(process.env.TMP) ||
+                  writeableDir(process.env.Wimp$ScrapDir) || // RiscOS
                   writeableDir('C:\\TEMP') || // Windows
                   writeableDir('C:\\TMP') || // Windows
                   writeableDir('\\TEMP') || // Windows
@@ -11051,9 +14589,24 @@ function _tempDir() {
                   writeableDir('/usr/tmp') ||
                   writeableDir('.'); // last resort
 
-  return state.tempDir;
+  return cachedTempDir;
 }
-module.exports = _tempDir;
+
+// Indicates if the tempdir value is currently cached. This is exposed for tests
+// only. The return value should only be tested for truthiness.
+function isCached() {
+  return cachedTempDir;
+}
+
+// Clears the cached tempDir value, if one is cached. This is exposed for tests
+// only.
+function clearCache() {
+  cachedTempDir = undefined;
+}
+
+module.exports.tempDir = _tempDir;
+module.exports.isCached = isCached;
+module.exports.clearCache = clearCache;
 
 
 /***/ }),
@@ -11064,8 +14617,25 @@ module.exports = _tempDir;
 var common = __nccwpck_require__(3687);
 var fs = __nccwpck_require__(5747);
 
+common.register('test', _test, {
+  cmdOptions: {
+    'b': 'block',
+    'c': 'character',
+    'd': 'directory',
+    'e': 'exists',
+    'f': 'file',
+    'L': 'link',
+    'p': 'pipe',
+    'S': 'socket',
+  },
+  wrapOutput: false,
+  allowGlobbing: false,
+});
+
+
 //@
 //@ ### test(expression)
+//@
 //@ Available expression primaries:
 //@
 //@ + `'-b', 'path'`: true if path is a block device
@@ -11073,7 +14643,7 @@ var fs = __nccwpck_require__(5747);
 //@ + `'-d', 'path'`: true if path is a directory
 //@ + `'-e', 'path'`: true if path exists
 //@ + `'-f', 'path'`: true if path is a regular file
-//@ + `'-L', 'path'`: true if path is a symboilc link
+//@ + `'-L', 'path'`: true if path is a symbolic link
 //@ + `'-p', 'path'`: true if path is a pipe (FIFO)
 //@ + `'-S', 'path'`: true if path is a socket
 //@
@@ -11084,66 +14654,49 @@ var fs = __nccwpck_require__(5747);
 //@ if (!test('-f', path)) continue; // skip if it's a regular file
 //@ ```
 //@
-//@ Evaluates expression using the available primaries and returns corresponding value.
+//@ Evaluates `expression` using the available primaries and returns corresponding value.
 function _test(options, path) {
-  if (!path)
-    common.error('no path given');
-
-  // hack - only works with unary primaries
-  options = common.parseOptions(options, {
-    'b': 'block',
-    'c': 'character',
-    'd': 'directory',
-    'e': 'exists',
-    'f': 'file',
-    'L': 'link',
-    'p': 'pipe',
-    'S': 'socket'
-  });
+  if (!path) common.error('no path given');
 
   var canInterpret = false;
-  for (var key in options)
+  Object.keys(options).forEach(function (key) {
     if (options[key] === true) {
       canInterpret = true;
-      break;
     }
+  });
 
-  if (!canInterpret)
-    common.error('could not interpret expression');
+  if (!canInterpret) common.error('could not interpret expression');
 
   if (options.link) {
     try {
-      return fs.lstatSync(path).isSymbolicLink();
-    } catch(e) {
+      return common.statNoFollowLinks(path).isSymbolicLink();
+    } catch (e) {
       return false;
     }
   }
 
-  if (!fs.existsSync(path))
-    return false;
+  if (!fs.existsSync(path)) return false;
 
-  if (options.exists)
-    return true;
+  if (options.exists) return true;
 
-  var stats = fs.statSync(path);
+  var stats = common.statFollowLinks(path);
 
-  if (options.block)
-    return stats.isBlockDevice();
+  if (options.block) return stats.isBlockDevice();
 
-  if (options.character)
-    return stats.isCharacterDevice();
+  if (options.character) return stats.isCharacterDevice();
 
-  if (options.directory)
-    return stats.isDirectory();
+  if (options.directory) return stats.isDirectory();
 
-  if (options.file)
-    return stats.isFile();
+  if (options.file) return stats.isFile();
 
-  if (options.pipe)
-    return stats.isFIFO();
+  /* istanbul ignore next */
+  if (options.pipe) return stats.isFIFO();
 
-  if (options.socket)
-    return stats.isSocket();
+  /* istanbul ignore next */
+  if (options.socket) return stats.isSocket();
+
+  /* istanbul ignore next */
+  return false; // fallback
 } // test
 module.exports = _test;
 
@@ -11157,8 +14710,13 @@ var common = __nccwpck_require__(3687);
 var fs = __nccwpck_require__(5747);
 var path = __nccwpck_require__(5622);
 
+common.register('to', _to, {
+  pipeOnly: true,
+  wrapOutput: false,
+});
+
 //@
-//@ ### 'string'.to(file)
+//@ ### ShellString.prototype.to(file)
 //@
 //@ Examples:
 //@
@@ -11166,19 +14724,22 @@ var path = __nccwpck_require__(5622);
 //@ cat('input.txt').to('output.txt');
 //@ ```
 //@
-//@ Analogous to the redirection operator `>` in Unix, but works with JavaScript strings (such as
-//@ those returned by `cat`, `grep`, etc). _Like Unix redirections, `to()` will overwrite any existing file!_
+//@ Analogous to the redirection operator `>` in Unix, but works with
+//@ `ShellStrings` (such as those returned by `cat`, `grep`, etc.). _Like Unix
+//@ redirections, `to()` will overwrite any existing file!_
 function _to(options, file) {
-  if (!file)
-    common.error('wrong arguments');
+  if (!file) common.error('wrong arguments');
 
-  if (!fs.existsSync( path.dirname(file) ))
-      common.error('no such file or directory: ' + path.dirname(file));
+  if (!fs.existsSync(path.dirname(file))) {
+    common.error('no such file or directory: ' + path.dirname(file));
+  }
 
   try {
-    fs.writeFileSync(file, this.toString(), 'utf8');
-  } catch(e) {
-    common.error('could not write to file (code '+e.code+'): '+file, true);
+    fs.writeFileSync(file, this.stdout || this.toString(), 'utf8');
+    return this;
+  } catch (e) {
+    /* istanbul ignore next */
+    common.error('could not write to file (code ' + e.code + '): ' + file, { continue: true });
   }
 }
 module.exports = _to;
@@ -11193,8 +14754,13 @@ var common = __nccwpck_require__(3687);
 var fs = __nccwpck_require__(5747);
 var path = __nccwpck_require__(5622);
 
+common.register('toEnd', _toEnd, {
+  pipeOnly: true,
+  wrapOutput: false,
+});
+
 //@
-//@ ### 'string'.toEnd(file)
+//@ ### ShellString.prototype.toEnd(file)
 //@
 //@ Examples:
 //@
@@ -11202,22 +14768,241 @@ var path = __nccwpck_require__(5622);
 //@ cat('input.txt').toEnd('output.txt');
 //@ ```
 //@
-//@ Analogous to the redirect-and-append operator `>>` in Unix, but works with JavaScript strings (such as
-//@ those returned by `cat`, `grep`, etc).
+//@ Analogous to the redirect-and-append operator `>>` in Unix, but works with
+//@ `ShellStrings` (such as those returned by `cat`, `grep`, etc.).
 function _toEnd(options, file) {
-  if (!file)
-    common.error('wrong arguments');
+  if (!file) common.error('wrong arguments');
 
-  if (!fs.existsSync( path.dirname(file) ))
-      common.error('no such file or directory: ' + path.dirname(file));
+  if (!fs.existsSync(path.dirname(file))) {
+    common.error('no such file or directory: ' + path.dirname(file));
+  }
 
   try {
-    fs.appendFileSync(file, this.toString(), 'utf8');
-  } catch(e) {
-    common.error('could not append to file (code '+e.code+'): '+file, true);
+    fs.appendFileSync(file, this.stdout || this.toString(), 'utf8');
+    return this;
+  } catch (e) {
+    /* istanbul ignore next */
+    common.error('could not append to file (code ' + e.code + '): ' + file, { continue: true });
   }
 }
 module.exports = _toEnd;
+
+
+/***/ }),
+
+/***/ 8358:
+/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
+
+var common = __nccwpck_require__(3687);
+var fs = __nccwpck_require__(5747);
+
+common.register('touch', _touch, {
+  cmdOptions: {
+    'a': 'atime_only',
+    'c': 'no_create',
+    'd': 'date',
+    'm': 'mtime_only',
+    'r': 'reference',
+  },
+});
+
+//@
+//@ ### touch([options,] file [, file ...])
+//@ ### touch([options,] file_array)
+//@
+//@ Available options:
+//@
+//@ + `-a`: Change only the access time
+//@ + `-c`: Do not create any files
+//@ + `-m`: Change only the modification time
+//@ + `-d DATE`: Parse `DATE` and use it instead of current time
+//@ + `-r FILE`: Use `FILE`'s times instead of current time
+//@
+//@ Examples:
+//@
+//@ ```javascript
+//@ touch('source.js');
+//@ touch('-c', '/path/to/some/dir/source.js');
+//@ touch({ '-r': FILE }, '/path/to/some/dir/source.js');
+//@ ```
+//@
+//@ Update the access and modification times of each `FILE` to the current time.
+//@ A `FILE` argument that does not exist is created empty, unless `-c` is supplied.
+//@ This is a partial implementation of [`touch(1)`](http://linux.die.net/man/1/touch).
+function _touch(opts, files) {
+  if (!files) {
+    common.error('no files given');
+  } else if (typeof files === 'string') {
+    files = [].slice.call(arguments, 1);
+  } else {
+    common.error('file arg should be a string file path or an Array of string file paths');
+  }
+
+  files.forEach(function (f) {
+    touchFile(opts, f);
+  });
+  return '';
+}
+
+function touchFile(opts, file) {
+  var stat = tryStatFile(file);
+
+  if (stat && stat.isDirectory()) {
+    // don't error just exit
+    return;
+  }
+
+  // if the file doesn't already exist and the user has specified --no-create then
+  // this script is finished
+  if (!stat && opts.no_create) {
+    return;
+  }
+
+  // open the file and then close it. this will create it if it doesn't exist but will
+  // not truncate the file
+  fs.closeSync(fs.openSync(file, 'a'));
+
+  //
+  // Set timestamps
+  //
+
+  // setup some defaults
+  var now = new Date();
+  var mtime = opts.date || now;
+  var atime = opts.date || now;
+
+  // use reference file
+  if (opts.reference) {
+    var refStat = tryStatFile(opts.reference);
+    if (!refStat) {
+      common.error('failed to get attributess of ' + opts.reference);
+    }
+    mtime = refStat.mtime;
+    atime = refStat.atime;
+  } else if (opts.date) {
+    mtime = opts.date;
+    atime = opts.date;
+  }
+
+  if (opts.atime_only && opts.mtime_only) {
+    // keep the new values of mtime and atime like GNU
+  } else if (opts.atime_only) {
+    mtime = stat.mtime;
+  } else if (opts.mtime_only) {
+    atime = stat.atime;
+  }
+
+  fs.utimesSync(file, atime, mtime);
+}
+
+module.exports = _touch;
+
+function tryStatFile(filePath) {
+  try {
+    return common.statFollowLinks(filePath);
+  } catch (e) {
+    return null;
+  }
+}
+
+
+/***/ }),
+
+/***/ 7286:
+/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
+
+var common = __nccwpck_require__(3687);
+var fs = __nccwpck_require__(5747);
+
+// add c spaces to the left of str
+function lpad(c, str) {
+  var res = '' + str;
+  if (res.length < c) {
+    res = Array((c - res.length) + 1).join(' ') + res;
+  }
+  return res;
+}
+
+common.register('uniq', _uniq, {
+  canReceivePipe: true,
+  cmdOptions: {
+    'i': 'ignoreCase',
+    'c': 'count',
+    'd': 'duplicates',
+  },
+});
+
+//@
+//@ ### uniq([options,] [input, [output]])
+//@
+//@ Available options:
+//@
+//@ + `-i`: Ignore case while comparing
+//@ + `-c`: Prefix lines by the number of occurrences
+//@ + `-d`: Only print duplicate lines, one for each group of identical lines
+//@
+//@ Examples:
+//@
+//@ ```javascript
+//@ uniq('foo.txt');
+//@ uniq('-i', 'foo.txt');
+//@ uniq('-cd', 'foo.txt', 'bar.txt');
+//@ ```
+//@
+//@ Filter adjacent matching lines from `input`.
+function _uniq(options, input, output) {
+  // Check if this is coming from a pipe
+  var pipe = common.readFromPipe();
+
+  if (!pipe) {
+    if (!input) common.error('no input given');
+
+    if (!fs.existsSync(input)) {
+      common.error(input + ': No such file or directory');
+    } else if (common.statFollowLinks(input).isDirectory()) {
+      common.error("error reading '" + input + "'");
+    }
+  }
+  if (output && fs.existsSync(output) && common.statFollowLinks(output).isDirectory()) {
+    common.error(output + ': Is a directory');
+  }
+
+  var lines = (input ? fs.readFileSync(input, 'utf8') : pipe).
+              trimRight().
+              split('\n');
+
+  var compare = function (a, b) {
+    return options.ignoreCase ?
+           a.toLocaleLowerCase().localeCompare(b.toLocaleLowerCase()) :
+           a.localeCompare(b);
+  };
+  var uniqed = lines.reduceRight(function (res, e) {
+    // Perform uniq -c on the input
+    if (res.length === 0) {
+      return [{ count: 1, ln: e }];
+    } else if (compare(res[0].ln, e) === 0) {
+      return [{ count: res[0].count + 1, ln: e }].concat(res.slice(1));
+    } else {
+      return [{ count: 1, ln: e }].concat(res);
+    }
+  }, []).filter(function (obj) {
+                 // Do we want only duplicated objects?
+    return options.duplicates ? obj.count > 1 : true;
+  }).map(function (obj) {
+                 // Are we tracking the counts of each line?
+    return (options.count ? (lpad(7, obj.count) + ' ') : '') + obj.ln;
+  }).join('\n') + '\n';
+
+  if (output) {
+    (new common.ShellString(uniqed)).to(output);
+    // if uniq writes to output, nothing is passed to the next command in the pipeline (if any)
+    return '';
+  } else {
+    return uniqed;
+  }
+}
+
+module.exports = _uniq;
 
 
 /***/ }),
@@ -11229,21 +15014,44 @@ var common = __nccwpck_require__(3687);
 var fs = __nccwpck_require__(5747);
 var path = __nccwpck_require__(5622);
 
-// Cross-platform method for splitting environment PATH variables
-function splitPath(p) {
-  for (i=1;i<2;i++) {}
+common.register('which', _which, {
+  allowGlobbing: false,
+  cmdOptions: {
+    'a': 'all',
+  },
+});
 
-  if (!p)
-    return [];
+// XP's system default value for `PATHEXT` system variable, just in case it's not
+// set on Windows.
+var XP_DEFAULT_PATHEXT = '.com;.exe;.bat;.cmd;.vbs;.vbe;.js;.jse;.wsf;.wsh';
 
-  if (common.platform === 'win')
-    return p.split(';');
-  else
-    return p.split(':');
+// For earlier versions of NodeJS that doesn't have a list of constants (< v6)
+var FILE_EXECUTABLE_MODE = 1;
+
+function isWindowsPlatform() {
+  return process.platform === 'win32';
 }
 
-function checkPath(path) {
-  return fs.existsSync(path) && fs.statSync(path).isDirectory() == false;
+// Cross-platform method for splitting environment `PATH` variables
+function splitPath(p) {
+  return p ? p.split(path.delimiter) : [];
+}
+
+// Tests are running all cases for this func but it stays uncovered by codecov due to unknown reason
+/* istanbul ignore next */
+function isExecutable(pathName) {
+  try {
+    // TODO(node-support): replace with fs.constants.X_OK once remove support for node < v6
+    fs.accessSync(pathName, FILE_EXECUTABLE_MODE);
+  } catch (err) {
+    return false;
+  }
+  return true;
+}
+
+function checkPath(pathName) {
+  return fs.existsSync(pathName) && !common.statFollowLinks(pathName).isDirectory()
+    && (isWindowsPlatform() || isExecutable(pathName));
 }
 
 //@
@@ -11255,57 +15063,69 @@ function checkPath(path) {
 //@ var nodeExec = which('node');
 //@ ```
 //@
-//@ Searches for `command` in the system's PATH. On Windows looks for `.exe`, `.cmd`, and `.bat` extensions.
-//@ Returns string containing the absolute path to the command.
+//@ Searches for `command` in the system's `PATH`. On Windows, this uses the
+//@ `PATHEXT` variable to append the extension if it's not already executable.
+//@ Returns string containing the absolute path to `command`.
 function _which(options, cmd) {
-  if (!cmd)
-    common.error('must specify command');
+  if (!cmd) common.error('must specify command');
 
-  var pathEnv = process.env.path || process.env.Path || process.env.PATH,
-      pathArray = splitPath(pathEnv),
-      where = null;
+  var isWindows = isWindowsPlatform();
+  var pathArray = splitPath(process.env.PATH);
+
+  var queryMatches = [];
 
   // No relative/absolute paths provided?
-  if (cmd.search(/\//) === -1) {
-    // Search for command in PATH
-    pathArray.forEach(function(dir) {
-      if (where)
-        return; // already found it
+  if (cmd.indexOf('/') === -1) {
+    // Assume that there are no extensions to append to queries (this is the
+    // case for unix)
+    var pathExtArray = [''];
+    if (isWindows) {
+      // In case the PATHEXT variable is somehow not set (e.g.
+      // child_process.spawn with an empty environment), use the XP default.
+      var pathExtEnv = process.env.PATHEXT || XP_DEFAULT_PATHEXT;
+      pathExtArray = splitPath(pathExtEnv.toUpperCase());
+    }
 
-      var attempt = path.resolve(dir + '/' + cmd);
-      if (checkPath(attempt)) {
-        where = attempt;
-        return;
+    // Search for command in PATH
+    for (var k = 0; k < pathArray.length; k++) {
+      // already found it
+      if (queryMatches.length > 0 && !options.all) break;
+
+      var attempt = path.resolve(pathArray[k], cmd);
+
+      if (isWindows) {
+        attempt = attempt.toUpperCase();
       }
 
-      if (common.platform === 'win') {
-        var baseAttempt = attempt;
-        attempt = baseAttempt + '.exe';
+      var match = attempt.match(/\.[^<>:"/\|?*.]+$/);
+      if (match && pathExtArray.indexOf(match[0]) >= 0) { // this is Windows-only
+        // The user typed a query with the file extension, like
+        // `which('node.exe')`
         if (checkPath(attempt)) {
-          where = attempt;
-          return;
+          queryMatches.push(attempt);
+          break;
         }
-        attempt = baseAttempt + '.cmd';
-        if (checkPath(attempt)) {
-          where = attempt;
-          return;
+      } else { // All-platforms
+        // Cycle through the PATHEXT array, and check each extension
+        // Note: the array is always [''] on Unix
+        for (var i = 0; i < pathExtArray.length; i++) {
+          var ext = pathExtArray[i];
+          var newAttempt = attempt + ext;
+          if (checkPath(newAttempt)) {
+            queryMatches.push(newAttempt);
+            break;
+          }
         }
-        attempt = baseAttempt + '.bat';
-        if (checkPath(attempt)) {
-          where = attempt;
-          return;
-        }
-      } // if 'win'
-    });
+      }
+    }
+  } else if (checkPath(cmd)) { // a valid absolute or relative path
+    queryMatches.push(path.resolve(cmd));
   }
 
-  // Command not found anywhere?
-  if (!checkPath(cmd) && !where)
-    return null;
-
-  where = where || path.resolve(cmd);
-
-  return common.ShellString(where);
+  if (queryMatches.length > 0) {
+    return options.all ? queryMatches : queryMatches[0];
+  }
+  return options.all ? [] : null;
 }
 module.exports = _which;
 
@@ -11392,6 +15212,46 @@ function v4(options, buf, offset) {
 }
 
 module.exports = v4;
+
+
+/***/ }),
+
+/***/ 2940:
+/***/ ((module) => {
+
+// Returns a wrapper function that returns a wrapped callback
+// The wrapper function should do some stuff, and return a
+// presumably different callback function.
+// This makes sure that own properties are retained, so that
+// decorations and such are not lost along the way.
+module.exports = wrappy
+function wrappy (fn, cb) {
+  if (fn && cb) return wrappy(fn)(cb)
+
+  if (typeof fn !== 'function')
+    throw new TypeError('need wrapper function')
+
+  Object.keys(fn).forEach(function (k) {
+    wrapper[k] = fn[k]
+  })
+
+  return wrapper
+
+  function wrapper() {
+    var args = new Array(arguments.length)
+    for (var i = 0; i < args.length; i++) {
+      args[i] = arguments[i]
+    }
+    var ret = fn.apply(this, args)
+    var cb = args[args.length-1]
+    if (typeof ret === 'function' && ret !== cb) {
+      Object.keys(cb).forEach(function (k) {
+        ret[k] = cb[k]
+      })
+    }
+    return ret
+  }
+}
 
 
 /***/ }),
@@ -13004,7 +16864,183 @@ module.exports = v4;
 
 /***/ }),
 
-/***/ 9340:
+/***/ 4624:
+/***/ ((__unused_webpack_module, __webpack_exports__, __nccwpck_require__) => {
+
+"use strict";
+__nccwpck_require__.r(__webpack_exports__);
+/* harmony export */ __nccwpck_require__.d(__webpack_exports__, {
+/* harmony export */   "devcontainer": () => (/* binding */ devcontainer)
+/* harmony export */ });
+/* harmony import */ var child_process__WEBPACK_IMPORTED_MODULE_0__ = __nccwpck_require__(3129);
+/* harmony import */ var child_process__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__nccwpck_require__.n(child_process__WEBPACK_IMPORTED_MODULE_0__);
+/* harmony import */ var fs__WEBPACK_IMPORTED_MODULE_1__ = __nccwpck_require__(5747);
+/* harmony import */ var fs__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__nccwpck_require__.n(fs__WEBPACK_IMPORTED_MODULE_1__);
+/* harmony import */ var util__WEBPACK_IMPORTED_MODULE_2__ = __nccwpck_require__(1669);
+/* harmony import */ var util__WEBPACK_IMPORTED_MODULE_2___default = /*#__PURE__*/__nccwpck_require__.n(util__WEBPACK_IMPORTED_MODULE_2__);
+var __awaiter = (undefined && undefined.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+
+
+
+function getSpecCliInfo() {
+    // // TODO - this is temporary until the CLI is installed via npm
+    // // TODO - ^ could consider an `npm install` from the folder
+    // const specCLIPath = path.resolve(__dirname, "..", "cli", "cli.js");
+    // return {
+    //   command: `node ${specCLIPath}`,
+    // };
+    return {
+        command: "devcontainer"
+    };
+}
+function isCliInstalled(exec) {
+    return __awaiter(this, void 0, void 0, function* () {
+        try {
+            const { exitCode } = yield exec(getSpecCliInfo().command, ['--help'], { silent: true });
+            return exitCode === 0;
+        }
+        catch (error) {
+            return false;
+        }
+    });
+}
+const fstat = (0,util__WEBPACK_IMPORTED_MODULE_2__.promisify)((fs__WEBPACK_IMPORTED_MODULE_1___default().stat));
+function installCli(exec) {
+    return __awaiter(this, void 0, void 0, function* () {
+        // if we have a local 'cli' folder, then use that as we're testing a private cli build
+        let cliStat = null;
+        try {
+            cliStat = yield fstat('./cli');
+        }
+        catch (_a) {
+        }
+        if (cliStat && cliStat.isDirectory()) {
+            const { exitCode } = yield exec('bash', ['-c', 'cd cli && npm install && npm install -g'], {});
+            return exitCode === 0;
+        }
+        const { exitCode } = yield exec('bash', ['-c', 'npm install -g @devcontainers/cli'], {});
+        return exitCode === 0;
+    });
+}
+function spawn(command, args, options) {
+    return new Promise((resolve, reject) => {
+        const proc = (0,child_process__WEBPACK_IMPORTED_MODULE_0__.spawn)(command, args, { env: process.env });
+        // const env = params.env ? { ...process.env, ...params.env } : process.env;
+        proc.stdout.on("data", data => options.log(data.toString()));
+        proc.stderr.on("data", data => options.err(data.toString()));
+        proc.on("error", err => {
+            reject(err);
+        });
+        proc.on("close", code => {
+            resolve({
+                code: code
+            });
+        });
+    });
+}
+function parseCliOutput(value) {
+    if (value === "") {
+        // TODO - revisit this
+        throw new Error("Unexpected empty output from CLI");
+    }
+    try {
+        return JSON.parse(value);
+    }
+    catch (error) {
+        return {
+            code: -1,
+            outcome: "error",
+            message: "Failed to parse CLI output",
+            description: `Failed to parse CLI output as JSON: ${value}\nError: ${error}`
+        };
+    }
+}
+function runSpecCli(options) {
+    return __awaiter(this, void 0, void 0, function* () {
+        let stdout = "";
+        const spawnOptions = {
+            log: data => stdout += data,
+            err: data => options.log(data),
+            env: options.env ? Object.assign(Object.assign({}, process.env), options.env) : process.env,
+        };
+        yield spawn(getSpecCliInfo().command, options.args, spawnOptions);
+        return parseCliOutput(stdout);
+    });
+}
+function devContainerBuild(args, log) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const commandArgs = ["build", "--workspace-folder", args.workspaceFolder];
+        if (args.imageName) {
+            commandArgs.push("--image-name", args.imageName);
+        }
+        if (args.additionalCacheFroms) {
+            args.additionalCacheFroms.forEach(cacheFrom => commandArgs.push('--cache-from', cacheFrom));
+        }
+        return yield runSpecCli({
+            args: commandArgs,
+            log,
+            env: { DOCKER_BUILDKIT: "1" },
+        });
+    });
+}
+function devContainerUp(args, log) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const commandArgs = ["up", "--workspace-folder", args.workspaceFolder];
+        if (args.additionalCacheFroms) {
+            args.additionalCacheFroms.forEach(cacheFrom => commandArgs.push('--cache-from', cacheFrom));
+        }
+        if (args.skipContainerUserIdUpdate) {
+            commandArgs.push('--update-remote-user-uid-default', 'off');
+        }
+        return yield runSpecCli({
+            args: commandArgs,
+            log,
+            env: { DOCKER_BUILDKIT: "1" },
+        });
+    });
+}
+function devContainerExec(args, log) {
+    return __awaiter(this, void 0, void 0, function* () {
+        // const remoteEnvArgs = args.env ? args.env.flatMap(e=> ["--remote-env", e]): []; // TODO - test flatMap again
+        const remoteEnvArgs = getRemoteEnvArray(args.env);
+        return yield runSpecCli({
+            args: ["exec", "--workspace-folder", args.workspaceFolder, ...remoteEnvArgs, ...args.command],
+            log,
+            env: { DOCKER_BUILDKIT: "1", },
+        });
+    });
+}
+function getRemoteEnvArray(env) {
+    if (!env) {
+        return [];
+    }
+    let result = [];
+    for (let i = 0; i < env.length; i++) {
+        const envItem = env[i];
+        result.push("--remote-env", envItem);
+    }
+    return result;
+}
+const devcontainer = {
+    build: devContainerBuild,
+    up: devContainerUp,
+    exec: devContainerExec,
+    isCliInstalled,
+    installCli,
+};
+
+
+/***/ }),
+
+/***/ 2255:
 /***/ ((__unused_webpack_module, __webpack_exports__, __nccwpck_require__) => {
 
 "use strict";
@@ -13084,32 +17120,8 @@ function getAbsolutePath(inputPath, referencePath) {
     return external_path_default().join(referencePath, inputPath);
 }
 
-;// CONCATENATED MODULE: ../../common/src/envvars.ts
-function substituteValues(input) {
-    // Find all `${...}` entries and substitute
-    // Note the non-greedy `.+?` match to avoid matching the start of
-    // one placeholder up to the end of another when multiple placeholders are present
-    return input.replace(/\$\{(.+?)\}/g, getSubstitutionValue);
-}
-function getSubstitutionValue(regexMatch, placeholder) {
-    // Substitution values are in TYPE:KEY form
-    // e.g. env:MY_ENV
-    var _a;
-    const parts = placeholder.split(':');
-    if (parts.length === 2) {
-        const type = parts[0];
-        const key = parts[1];
-        switch (type.toLowerCase()) {
-            case 'env':
-            case 'localenv':
-                return (_a = process.env[key]) !== null && _a !== void 0 ? _a : '';
-        }
-    }
-    // if we can't process the format then return the original string
-    // as having it present in any output will likely make issues more obvious
-    return regexMatch;
-}
-
+// EXTERNAL MODULE: ../../common/src/envvars.ts
+var envvars = __nccwpck_require__(9243);
 ;// CONCATENATED MODULE: ../../common/src/users.ts
 function parsePasswd(input) {
     const result = [];
@@ -13163,13 +17175,13 @@ function isDockerBuildXInstalled(exec) {
         return exitCode === 0;
     });
 }
-function buildImage(exec, imageName, imageTag, checkoutPath, subFolder, skipContainerUserIdUpdate) {
+function buildImage(exec, imageName, imageTag, checkoutPath, subFolder, skipContainerUserIdUpdate, cacheFrom) {
     return docker_awaiter(this, void 0, void 0, function* () {
         const folder = external_path_default().join(checkoutPath, subFolder);
         const devcontainerJsonPath = external_path_default().join(folder, '.devcontainer/devcontainer.json');
         const devcontainerConfig = yield loadFromFile(devcontainerJsonPath);
         // build the image from the .devcontainer spec
-        yield buildImageBase(exec, imageName, imageTag, folder, devcontainerConfig);
+        yield buildImageBase(exec, imageName, imageTag, folder, devcontainerConfig, cacheFrom);
         if (!devcontainerConfig.remoteUser || skipContainerUserIdUpdate == true) {
             return imageName;
         }
@@ -13179,7 +17191,7 @@ function buildImage(exec, imageName, imageTag, checkoutPath, subFolder, skipCont
 function coerceToArray(value) {
     return (typeof (value) === 'string') ? [value] : value;
 }
-function buildImageBase(exec, imageName, imageTag, folder, devcontainerConfig) {
+function buildImageBase(exec, imageName, imageTag, folder, devcontainerConfig, cacheFrom) {
     var _a, _b, _c;
     return docker_awaiter(this, void 0, void 0, function* () {
         const configDockerfile = getDockerfile(devcontainerConfig);
@@ -13198,12 +17210,13 @@ function buildImageBase(exec, imageName, imageTag, folder, devcontainerConfig) {
         if (configCacheFrom) {
             coerceToArray(configCacheFrom).forEach(cacheValue => args.push('--cache-from', cacheValue));
         }
+        cacheFrom.forEach(cacheValue => args.push('--cache-from', cacheValue));
         args.push('--cache-to');
         args.push('type=inline');
         args.push('--output=type=docker');
         const buildArgs = (_c = devcontainerConfig.build) === null || _c === void 0 ? void 0 : _c.args;
         for (const argName in buildArgs) {
-            const argValue = substituteValues(buildArgs[argName]);
+            const argValue = (0,envvars.substituteValues)(buildArgs[argName]);
             args.push('--build-arg', `${argName}=${argValue}`);
         }
         args.push('-f', dockerfilePath);
@@ -13292,7 +17305,7 @@ function runContainer(exec, imageName, imageTag, checkoutPath, subFolder, comman
         args.push('--mount', `type=bind,src=${checkoutPathAbsolute},dst=${workspaceFolder}`);
         if (devcontainerConfig.mounts) {
             devcontainerConfig.mounts
-                .map(m => substituteValues(m))
+                .map(m => (0,envvars.substituteValues)(m))
                 .forEach(m => {
                 const mount = parseMount(m);
                 if (mount.type === "bind") {
@@ -13308,7 +17321,7 @@ function runContainer(exec, imageName, imageTag, checkoutPath, subFolder, comman
         args.push('--workdir', workdir);
         args.push('--user', remoteUser);
         if (devcontainerConfig.runArgs) {
-            const substitutedRunArgs = devcontainerConfig.runArgs.map(a => substituteValues(a));
+            const substitutedRunArgs = devcontainerConfig.runArgs.map(a => (0,envvars.substituteValues)(a));
             args.push(...substitutedRunArgs);
         }
         if (envs) {
@@ -13369,6 +17382,73 @@ function parseMount(mountString) {
     return { type, source, target };
 }
 
+
+/***/ }),
+
+/***/ 9243:
+/***/ ((__unused_webpack_module, __webpack_exports__, __nccwpck_require__) => {
+
+"use strict";
+__nccwpck_require__.r(__webpack_exports__);
+/* harmony export */ __nccwpck_require__.d(__webpack_exports__, {
+/* harmony export */   "substituteValues": () => (/* binding */ substituteValues),
+/* harmony export */   "populateDefaults": () => (/* binding */ populateDefaults)
+/* harmony export */ });
+function substituteValues(input) {
+    // Find all `${...}` entries and substitute
+    // Note the non-greedy `.+?` match to avoid matching the start of
+    // one placeholder up to the end of another when multiple placeholders are present
+    return input.replace(/\$\{(.+?)\}/g, getSubstitutionValue);
+}
+function getSubstitutionValue(regexMatch, placeholder) {
+    // Substitution values are in TYPE:KEY form
+    // e.g. env:MY_ENV
+    var _a;
+    const parts = placeholder.split(':');
+    if (parts.length === 2) {
+        const type = parts[0];
+        const key = parts[1];
+        switch (type.toLowerCase()) {
+            case 'env':
+            case 'localenv':
+                return (_a = process.env[key]) !== null && _a !== void 0 ? _a : '';
+        }
+    }
+    // if we can't process the format then return the original string
+    // as having it present in any output will likely make issues more obvious
+    return regexMatch;
+}
+// populateDefaults expects strings either "FOO=hello" or "BAR".
+// In the latter case, the corresponding returned item would be "BAR=hi"
+// where the value is taken from the matching process env var.
+// In the case of values not set in the process, they are omitted
+function populateDefaults(envs) {
+    const result = [];
+    for (let i = 0; i < envs.length; i++) {
+        const inputEnv = envs[i];
+        if (inputEnv.indexOf('=') >= 0) {
+            // pass straight through to result
+            result.push(inputEnv);
+        }
+        else {
+            // inputEnv is just the env var name
+            const processEnvValue = process.env[inputEnv];
+            if (processEnvValue) {
+                result.push(`${inputEnv}=${processEnvValue}`);
+            }
+        }
+    }
+    return result;
+}
+
+
+/***/ }),
+
+/***/ 2357:
+/***/ ((module) => {
+
+"use strict";
+module.exports = require("assert");;
 
 /***/ }),
 
@@ -13450,8 +17530,8 @@ module.exports = require("util");;
 /******/ 		}
 /******/ 		// Create a new module (and put it into the cache)
 /******/ 		var module = __webpack_module_cache__[moduleId] = {
-/******/ 			// no module.id needed
-/******/ 			// no module.loaded needed
+/******/ 			id: moduleId,
+/******/ 			loaded: false,
 /******/ 			exports: {}
 /******/ 		};
 /******/ 	
@@ -13463,6 +17543,9 @@ module.exports = require("util");;
 /******/ 		} finally {
 /******/ 			if(threw) delete __webpack_module_cache__[moduleId];
 /******/ 		}
+/******/ 	
+/******/ 		// Flag the module as loaded
+/******/ 		module.loaded = true;
 /******/ 	
 /******/ 		// Return the exports of the module
 /******/ 		return module.exports;
@@ -13506,6 +17589,15 @@ module.exports = require("util");;
 /******/ 				Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 /******/ 			}
 /******/ 			Object.defineProperty(exports, '__esModule', { value: true });
+/******/ 		};
+/******/ 	})();
+/******/ 	
+/******/ 	/* webpack/runtime/node module decorator */
+/******/ 	(() => {
+/******/ 		__nccwpck_require__.nmd = (module) => {
+/******/ 			module.paths = [];
+/******/ 			if (!module.children) module.children = [];
+/******/ 			return module;
 /******/ 		};
 /******/ 	})();
 /******/ 	
