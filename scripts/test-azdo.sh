@@ -18,5 +18,6 @@ sleep 30s # hacky workaround for AzDO picking up stale extension version
 
 echo "About to start AzDo build"
 commit=$(git rev-parse HEAD)
-echo "  commit: $commit"
+echo "  commit   : $commit"
+echo "  image_tag: $IMAGE_TAG"
 "$script_dir/../azdo-task/scripts/run-azdo-build.sh" --organization "$AZDO_ORG" --project "$AZDO_PROJECT" --build "$AZDO_BUILD" --image-tag "$IMAGE_TAG" --commit "$commit"

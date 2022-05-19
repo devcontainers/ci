@@ -50,6 +50,7 @@ jobs:
         uses: actions/github-script@v6
         with:
           script: |
+            console.log(context);
             if (context.eventName === "push" && context.ref === "refs/heads/main") {
               console.log("Setting image_tag=latest for push to main");
               core.setOutput("image_tag", "latest");
