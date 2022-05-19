@@ -9,7 +9,7 @@
   "category": "Build",
   "version": {
     "Major": 0,
-    "Minor": 1,
+    "Minor": 2,
     "Patch": 0
   },
   "visibility": [
@@ -69,19 +69,20 @@
       "name": "pushOnFailedBuild",
       "type": "boolean",
       "defaultValue": false,
-      "required": false
+      "required": false,
+      "label": "Control whether to push the image on failed builds (if push==filter)"
     },
     {
       "name": "buildReasonsForPush",
       "type": "multiLine",
-      "label": "Set the Build Reasons that should trigger a push of the dev container image . Defaults to Manual, IndividualCI, BatchedCI. (see https://docs.microsoft.com/en-us/azure/devops/pipelines/build/variables?view=azure-devops&viewFallbackFrom=vsts&tabs=yaml)",
+      "label": "Set the Build Reasons that should trigger a push of the dev container image (if push=filter). Defaults to Manual, IndividualCI, BatchedCI. (see https://docs.microsoft.com/en-us/azure/devops/pipelines/build/variables?view=azure-devops&viewFallbackFrom=vsts&tabs=yaml)",
       "required": false,
       "defaultValue": "Manual\nIndividualCI\nBatchedCI"
     },
     {
       "name": "sourceBranchFilterForPush",
       "type": "multiLine",
-      "label": "Set the source branches (e.g. refs/heads/main) that are allowed to trigger a push of the dev container image. Leave empty to allow all.",
+      "label": "Set the source branches (e.g. refs/heads/main) that are allowed to trigger a push of the dev container image (if push=filter). Leave empty to allow all.",
       "required": false,
       "defaultValue": ""
     },

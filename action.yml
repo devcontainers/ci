@@ -42,7 +42,7 @@ inputs:
     default: false
     description: For non-root dev containers (i.e. where `remoteUser` is specified), the action attempts to make the container user UID and GID match those of the host user. Set this to true to skip this step (defaults to false)
 runs:
-  using: 'node12'
+  using: 'node16'
   main: 'github-action/dist/index.js'
   post: 'github-action/dist/index.js'
   post-if: 'success()'
