@@ -50,7 +50,6 @@ jobs:
         uses: actions/github-script@v6
         with:
           script: |
-            console.log(context);
             if (context.eventName === "push" && context.ref === "refs/heads/main") {
               console.log("Setting image_tag=latest for push to main");
               core.setOutput("image_tag", "latest");
@@ -58,7 +57,7 @@ jobs:
             }
             if (context.eventName === "pull_request") {
               const prTag = `pr-${context.payload.pull_request.number}`;
-              console.log("Setting image_tag=latest for push to main");
+              console.log(`Setting image_tag=${prTag} for pull_request`);
               core.setOutput("image_tag", prTag);
               return;
             }
