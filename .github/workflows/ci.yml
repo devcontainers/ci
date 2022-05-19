@@ -253,6 +253,7 @@ jobs:
           BUILD_NUMBER: ${{ github.run_id }}
           IS_PR: ${{ github.head_ref }}
           BRANCH: ${{ github.ref }}
+          IMAGE_TAG: ${{ needs.build.outputs.image_tag }}
         with:
           imageName: ghcr.io/stuartleeks/devcontainer-build-run-devcontainer
           runCmd: |
@@ -260,6 +261,7 @@ jobs:
             ./scripts/test-azdo.sh
           env: |
             BUILD_NUMBER
+            IMAGE_TAG
             IS_CI=1
             IS_PR
             BRANCH
@@ -267,7 +269,7 @@ jobs:
             AZURE_DEVOPS_EXT_PAT
             AZDO_ORG=https://dev.azure.com/stuartle
             AZDO_PROJECT=AzDODevContainerBuildRunTest
-            AZDO_BUILD=AzDODevContainerBuildRunTest
+            AZDO_BUILD=stuartleeks.devcontainer-build-run
 
   test-gh-run-args:
     name: Run GitHub run-args test

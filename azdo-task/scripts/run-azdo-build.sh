@@ -10,6 +10,8 @@ function show_usage() {
     echo -e "\t--organization\t(Required)The AzDO organization url"
     echo -e "\t--project\t(Required)The AzDO project name"
     echo -e "\t--build\t(Required)The build name"
+    echo -e "\t--image-tag\t(Required)The image tag for dev containers build in the pipeline"
+    echo -e "\t--branch\t(Required)The branch ref to build"
     echo
 }
 
@@ -18,6 +20,8 @@ function show_usage() {
 organization=""
 project=""
 build=""
+image_tag=""
+branch_ref=""
 
 # Process switches:
 while [[ $# -gt 0 ]]
@@ -33,6 +37,14 @@ do
             ;;
         --build)
             build=$2
+            shift 2
+            ;;
+        --image-tag)
+            image_tag=$2
+            shift 2
+            ;;
+        --branch)
+            branch_ref=$2
             shift 2
             ;;
         *)
@@ -59,17 +71,27 @@ if [[ -z $build ]]; then
     show_usage
     exit 1
 fi
+if [[ -z $image_tag ]]; then
+    echo "--image-tag must be specified"
+    show_usage
+    exit 1
+fi
+if [[ -z $branch_ref ]]; then
+    echo "--branch must be specified"
+    show_usage
+    exit 1
+fi
 
 
 echo "Starting AzDO pipeline..."
-run_json=$(az pipelines build queue --definition-name $build --organization $organization --project $project -o json)
+run_json=$(az pipelines build queue --definition-name "$build" --organization "$organization" --project "$project" --branch "$branch_ref" --variables IMAGE_TAG=$image_tag -o json)
 run_id=$(echo $run_json | jq -r .id)
 run_url="$organization/$project/_build/results?buildId=$run_id"
 echo "Run id: $run_id"
 echo "Run url: $run_url"
 while true
 do
-    run_state=$(az pipelines runs show --id $run_id --organization $organization --project $project -o json)
+    run_state=$(az pipelines runs show --id "$run_id" --organization "$organization" --project "$project" -o json)
     finish_time=$(echo $run_state | jq -r .finishTime)
     if [[ $finish_time != "null" ]]; then
         result=$(echo $run_state | jq -r .result)
