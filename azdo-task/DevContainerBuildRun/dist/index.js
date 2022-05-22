@@ -220,6 +220,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.runPost = exports.runMain = void 0;
 const task = __importStar(__nccwpck_require__(347));
 const task_1 = __nccwpck_require__(347);
 const path_1 = __importDefault(__nccwpck_require__(5622));
@@ -227,25 +228,11 @@ const envvars_1 = __nccwpck_require__(9243);
 const dev_container_cli_1 = __nccwpck_require__(4624);
 const docker_1 = __nccwpck_require__(3758);
 const exec_1 = __nccwpck_require__(7757);
-function run() {
-    return __awaiter(this, void 0, void 0, function* () {
-        console.log('DevContainerBuildRun starting...');
-        const hasRunMain = task.getTaskVariable('hasRunMain');
-        if (hasRunMain === 'true') {
-            console.log('DevContainerBuildRun running post step...');
-            return yield runPost();
-        }
-        else {
-            console.log('DevContainerBuildRun running main step...');
-            task.setTaskVariable('hasRunMain', 'true');
-            return yield runMain();
-        }
-    });
-}
 function runMain() {
     var _a, _b, _c, _d, _e, _f, _g;
     return __awaiter(this, void 0, void 0, function* () {
         try {
+            task.setTaskVariable('hasRunMain', 'true');
             const buildXInstalled = yield docker_1.isDockerBuildXInstalled();
             if (!buildXInstalled) {
                 console.log('### WARNING: docker buildx not available: add a step to set up with docker/setup-buildx-action - see https://github.com/stuartleeks/devcontainer-build-run/blob/main/docs/azure-devops-task.md');
@@ -345,6 +332,7 @@ function runMain() {
         }
     });
 }
+exports.runMain = runMain;
 function runPost() {
     var _a, _b, _c, _d, _e, _f;
     return __awaiter(this, void 0, void 0, function* () {
@@ -395,7 +383,7 @@ function runPost() {
         yield docker_1.pushImage(imageName, imageTag);
     });
 }
-run();
+exports.runPost = runPost;
 
 
 /***/ }),

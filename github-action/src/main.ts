@@ -11,18 +11,10 @@ import {
 import {isDockerBuildXInstalled, pushImage} from './docker'
 import {populateDefaults} from '../../common/src/envvars'
 
-async function run(): Promise<void> {
-	const hasRunMain = core.getState('hasRunMain')
-	if (hasRunMain === 'true') {
-		return await runPost()
-	} else {
-		core.saveState('hasRunMain', 'true')
-		return await runMain()
-	}
-}
-async function runMain(): Promise<void> {
+export async function runMain(): Promise<void> {
 	try {
 		core.info('Starting...')
+		core.saveState('hasRunMain', 'true')
 		const buildXInstalled = await isDockerBuildXInstalled()
 		if (!buildXInstalled) {
 			core.warning(
@@ -131,7 +123,7 @@ async function runMain(): Promise<void> {
 	}
 }
 
-async function runPost(): Promise<void> {
+export async function runPost(): Promise<void> {
 	const pushOption: string = valueOrDefault(core.getInput('push'), 'filter')
 	const refFilterForPush: string[] = core.getMultilineInput('refFilterForPush')
 	const eventFilterForPush: string[] =
@@ -187,5 +179,3 @@ function emptyStringAsUndefined(value: string): string | undefined {
 	}
 	return value
 }
-
-run()

@@ -1800,28 +1800,18 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.runPost = exports.runMain = void 0;
 const core = __importStar(__nccwpck_require__(186));
 const path_1 = __importDefault(__nccwpck_require__(622));
 const exec_1 = __nccwpck_require__(757);
 const dev_container_cli_1 = __nccwpck_require__(331);
 const docker_1 = __nccwpck_require__(758);
 const envvars_1 = __nccwpck_require__(228);
-function run() {
-    return __awaiter(this, void 0, void 0, function* () {
-        const hasRunMain = core.getState('hasRunMain');
-        if (hasRunMain === 'true') {
-            return yield runPost();
-        }
-        else {
-            core.saveState('hasRunMain', 'true');
-            return yield runMain();
-        }
-    });
-}
 function runMain() {
     return __awaiter(this, void 0, void 0, function* () {
         try {
             core.info('Starting...');
+            core.saveState('hasRunMain', 'true');
             const buildXInstalled = yield docker_1.isDockerBuildXInstalled();
             if (!buildXInstalled) {
                 core.warning('docker buildx not available: add a step to set up with docker/setup-buildx-action - see https://github.com/stuartleeks/devcontainer-build-run/blob/main/docs/github-action.md');
@@ -1911,6 +1901,7 @@ function runMain() {
         }
     });
 }
+exports.runMain = runMain;
 function runPost() {
     return __awaiter(this, void 0, void 0, function* () {
         const pushOption = valueOrDefault(core.getInput('push'), 'filter');
@@ -1945,6 +1936,7 @@ function runPost() {
         yield docker_1.pushImage(imageName, imageTag);
     });
 }
+exports.runPost = runPost;
 function valueOrDefault(value, defaultValue) {
     if (!value || value === '') {
         return defaultValue;
@@ -1957,7 +1949,6 @@ function emptyStringAsUndefined(value) {
     }
     return value;
 }
-run();
 
 
 /***/ }),
