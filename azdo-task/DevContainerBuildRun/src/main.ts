@@ -12,21 +12,9 @@ import {
 import {isDockerBuildXInstalled, pushImage} from './docker'
 import {exec} from './exec'
 
-async function run(): Promise<void> {
-	console.log('DevContainerBuildRun starting...')
-	const hasRunMain = task.getTaskVariable('hasRunMain')
-	if (hasRunMain === 'true') {
-		console.log('DevContainerBuildRun running post step...')
-		return await runPost()
-	} else {
-		console.log('DevContainerBuildRun running main step...')
-		task.setTaskVariable('hasRunMain', 'true')
-		return await runMain()
-	}
-}
-
-async function runMain(): Promise<void> {
+export async function runMain(): Promise<void> {
 	try {
+		task.setTaskVariable('hasRunMain', 'true')
 		const buildXInstalled = await isDockerBuildXInstalled()
 		if (!buildXInstalled) {
 			console.log(
@@ -143,7 +131,7 @@ async function runMain(): Promise<void> {
 	}
 }
 
-async function runPost(): Promise<void> {
+export async function runPost(): Promise<void> {
 	const pushOption = task.getInput('push') ?? 'filter'
 	const pushOnFailedBuild =
 		(task.getInput('pushOnFailedBuild') ?? 'false') === 'true'
@@ -209,5 +197,3 @@ async function runPost(): Promise<void> {
 	console.log(`Pushing image ''${imageName}:${imageTag ?? 'latest'}...`)
 	await pushImage(imageName, imageTag)
 }
-
-run()

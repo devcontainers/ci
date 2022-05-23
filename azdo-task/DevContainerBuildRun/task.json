@@ -98,13 +98,13 @@
   "outputVariables": [],
   "execution": {
     "Node10": {
-      "target": "dist/index.js",
+      "target": "run-main.js",
       "argumentFormat": ""
     }
   },
   "postjobexecution": {
     "Node10": {
-      "target": "dist/index.js",
+      "target": "run-post.js",
       "argumentFormat": ""
     }
   }
