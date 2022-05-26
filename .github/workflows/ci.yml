@@ -292,7 +292,7 @@ jobs:
       - name: Run test
         uses: ./
         with:
-          subFolder: github-tests/run-args
+          subFolder: github-tests/Dockerfile/run-args
           imageName: ghcr.io/stuartleeks/devcontainer-build-run/tests/run-args
           runCmd: echo $HOSTNAME && [[ $HOSTNAME == "my-host" ]]
           imageTag: ${{ needs.build.outputs.image_tag }}
@@ -321,7 +321,7 @@ jobs:
       - name: Run test
         uses: ./
         with:
-          subFolder: github-tests/build-args
+          subFolder: github-tests/Dockerfile/build-args
           imageName: ghcr.io/stuartleeks/devcontainer-build-run/tests/build-args
           runCmd: echo $BUILD_ARG_TEST && [[ $BUILD_ARG_TEST == "Hello build-args!" ]]
           imageTag: ${{ needs.build.outputs.image_tag }}
@@ -350,7 +350,7 @@ jobs:
       - name: Run test
         uses: ./
         with:
-          subFolder: github-tests/dockerfile-context
+          subFolder: github-tests/Dockerfile/dockerfile-context
           imageName: ghcr.io/stuartleeks/devcontainer-build-run/tests/dockerfile-context
           runCmd: /tmp/dummy.sh
           imageTag: ${{ needs.build.outputs.image_tag }}
@@ -379,7 +379,7 @@ jobs:
       - name: Run test
         uses: ./
         with:
-          subFolder: github-tests/feature-docker-from-docker
+          subFolder: github-tests/Dockerfile/feature-docker-from-docker
           imageName: ghcr.io/stuartleeks/devcontainer-build-run/tests/feature-docker-from-docker
           runCmd: make docker-build
           imageTag: ${{ needs.build.outputs.image_tag }}
@@ -408,7 +408,7 @@ jobs:
       - name: Run test
         uses: ./
         with:
-          subFolder: github-tests/docker-from-docker-non-root
+          subFolder: github-tests/Dockerfile/docker-from-docker-non-root
           imageName: ghcr.io/stuartleeks/devcontainer-build-run/tests/docker-from-docker-non-root
           runCmd: make docker-build
           imageTag: ${{ needs.build.outputs.image_tag }}
@@ -437,7 +437,7 @@ jobs:
       - name: Run test
         uses: ./
         with:
-          subFolder: github-tests/docker-from-docker-root
+          subFolder: github-tests/Dockerfile/docker-from-docker-root
           imageName: ghcr.io/stuartleeks/devcontainer-build-run/tests/docker-from-docker-root
           runCmd: make docker-build
           imageTag: ${{ needs.build.outputs.image_tag }}
@@ -470,7 +470,7 @@ jobs:
   #     - name: Run test
   #       uses: ./
   #       with:
-  #         subFolder: github-tests/image-tag
+  #         subFolder: github-tests/Dockerfile/image-tag
   #         imageName: ghcr.io/stuartleeks/devcontainer-build-run/tests/image-tag
   #         # Don't push this as we have a fixed custom tag
   #         imageTag: custom-tag
@@ -505,7 +505,7 @@ jobs:
       - name: Run test
         uses: ./
         with:
-          subFolder: github-tests/skip-user-update
+          subFolder: github-tests/Dockerfile/skip-user-update
           imageName: ghcr.io/stuartleeks/devcontainer-build-run/tests/skip-user-update
           skipContainerUserIdUpdate: true
           runCmd: |
