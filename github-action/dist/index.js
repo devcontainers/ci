@@ -3751,12 +3751,23 @@ function installCli(exec) {
         try {
             cliStat = yield fstat('./cli');
         }
-        catch (_a) { }
+        catch (_a) {
+        }
         if (cliStat && cliStat.isDirectory()) {
-            const { exitCode } = yield exec('bash', ['-c', 'cd cli && npm install && npm install -g'], {});
+            console.log('** Installing local cli');
+            const { exitCode, stdout, stderr } = yield exec('bash', ['-c', 'cd cli && npm install && npm install -g'], {});
+            if (exitCode != 0) {
+                console.log(stdout);
+                console.error(stderr);
+            }
             return exitCode === 0;
         }
-        const { exitCode } = yield exec('bash', ['-c', 'npm install -g @devcontainers/cli'], {});
+        console.log('** Installing @devcontainers/cli');
+        const { exitCode, stdout, stderr } = yield exec('bash', ['-c', 'npm install -g @devcontainers/cli'], {});
+        if (exitCode != 0) {
+            console.log(stdout);
+            console.error(stderr);
+        }
         return exitCode === 0;
     });
 }
