@@ -1,9 +1,9 @@
-import * as core from '@actions/core'
-import * as docker from '../../common/src/docker'
-import {exec} from './exec'
+import * as core from '@actions/core';
+import * as docker from '../../common/src/docker';
+import {exec} from './exec';
 
 export async function isDockerBuildXInstalled(): Promise<boolean> {
-	return await docker.isDockerBuildXInstalled(exec)
+	return await docker.isDockerBuildXInstalled(exec);
 }
 export async function buildImage(
 	imageName: string,
@@ -11,9 +11,9 @@ export async function buildImage(
 	checkoutPath: string,
 	subFolder: string,
 	skipContainerUserIdUpdate: boolean,
-	cacheFrom: string[]
+	cacheFrom: string[],
 ): Promise<string> {
-	core.startGroup('🏗 Building dev container...')
+	core.startGroup('🏗 Building dev container...');
 	try {
 		return await docker.buildImage(
 			exec,
@@ -22,13 +22,13 @@ export async function buildImage(
 			checkoutPath,
 			subFolder,
 			skipContainerUserIdUpdate,
-			cacheFrom
-		)
+			cacheFrom,
+		);
 	} catch (error) {
-		core.setFailed(error)
-		return ''
+		core.setFailed(error);
+		return '';
 	} finally {
-		core.endGroup()
+		core.endGroup();
 	}
 }
 
@@ -38,9 +38,9 @@ export async function runContainer(
 	checkoutPath: string,
 	subFolder: string,
 	command: string,
-	envs?: string[]
+	envs?: string[],
 ): Promise<boolean> {
-	core.startGroup('🏃‍♀️ Running dev container...')
+	core.startGroup('🏃‍♀️ Running dev container...');
 	try {
 		await docker.runContainer(
 			exec,
@@ -49,29 +49,29 @@ export async function runContainer(
 			checkoutPath,
 			subFolder,
 			command,
-			envs
-		)
-		return true
+			envs,
+		);
+		return true;
 	} catch (error) {
-		core.setFailed(error)
-		return false
+		core.setFailed(error);
+		return false;
 	} finally {
-		core.endGroup()
+		core.endGroup();
 	}
 }
 
 export async function pushImage(
 	imageName: string,
-	imageTag: string | undefined
+	imageTag: string | undefined,
 ): Promise<boolean> {
-	core.startGroup('📌 Pushing image...')
+	core.startGroup('📌 Pushing image...');
 	try {
-		await docker.pushImage(exec, imageName, imageTag)
-		return true
+		await docker.pushImage(exec, imageName, imageTag);
+		return true;
 	} catch (error) {
-		core.setFailed(error)
-		return false
+		core.setFailed(error);
+		return false;
 	} finally {
-		core.endGroup()
+		core.endGroup();
 	}
 }

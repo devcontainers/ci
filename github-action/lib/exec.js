@@ -35,13 +35,13 @@ function exec(command, args, options) {
     return __awaiter(this, void 0, void 0, function* () {
         const actionOptions = {
             ignoreReturnCode: true,
-            silent: (_a = options.silent) !== null && _a !== void 0 ? _a : false
+            silent: (_a = options.silent) !== null && _a !== void 0 ? _a : false,
         };
         const result = yield actions_exec.getExecOutput(command, args, actionOptions);
         return {
             exitCode: result.exitCode,
             stdout: result.stdout,
-            stderr: result.stderr
+            stderr: result.stderr,
         };
     });
 }

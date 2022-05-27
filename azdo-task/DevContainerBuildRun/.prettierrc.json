@@ -2,9 +2,9 @@
   "printWidth": 80,
   "tabWidth": 2,
   "useTabs": true,
-  "semi": false,
+  "semi": true,
   "singleQuote": true,
-  "trailingComma": "none",
+  "trailingComma": "all",
   "bracketSpacing": false,
   "arrowParens": "avoid"
 }

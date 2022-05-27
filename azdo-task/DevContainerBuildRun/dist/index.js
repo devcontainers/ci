@@ -169,12 +169,12 @@ function exec(command, args, options) {
             silent: false,
             ignoreReturnCode: true,
             outStream,
-            errStream
+            errStream,
         });
         return {
             exitCode,
             stdout: trimCommand(outStream.toString()),
-            stderr: errStream.toString()
+            stderr: errStream.toString(),
         };
     });
 }
@@ -277,7 +277,7 @@ function runMain() {
             const buildArgs = {
                 workspaceFolder,
                 imageName: fullImageName,
-                additionalCacheFroms: cacheFrom
+                additionalCacheFroms: cacheFrom,
             };
             console.log('\n\n');
             console.log('***');
@@ -298,7 +298,7 @@ function runMain() {
             const upArgs = {
                 workspaceFolder,
                 additionalCacheFroms: cacheFrom,
-                skipContainerUserIdUpdate
+                skipContainerUserIdUpdate,
             };
             const upResult = yield dev_container_cli_1.devcontainer.up(upArgs, log);
             if (upResult.outcome !== 'success') {
@@ -315,7 +315,7 @@ function runMain() {
             const execArgs = {
                 workspaceFolder,
                 command: ['bash', '-c', runCommand],
-                env: inputEnvsWithDefaults
+                env: inputEnvsWithDefaults,
             };
             const execResult = yield dev_container_cli_1.devcontainer.exec(execArgs, log);
             if (execResult.outcome !== 'success') {
@@ -16886,13 +16886,15 @@ function getSpecCliInfo() {
     //   command: `node ${specCLIPath}`,
     // };
     return {
-        command: "devcontainer"
+        command: 'devcontainer',
     };
 }
 function isCliInstalled(exec) {
     return __awaiter(this, void 0, void 0, function* () {
         try {
-            const { exitCode } = yield exec(getSpecCliInfo().command, ['--help'], { silent: true });
+            const { exitCode } = yield exec(getSpecCliInfo().command, ['--help'], {
+                silent: true,
+            });
             return exitCode === 0;
         }
         catch (error) {
@@ -16908,8 +16910,7 @@ function installCli(exec) {
         try {
             cliStat = yield fstat('./cli');
         }
-        catch (_a) {
-        }
+        catch (_a) { }
         if (cliStat && cliStat.isDirectory()) {
             const { exitCode } = yield exec('bash', ['-c', 'cd cli && npm install && npm install -g'], {});
             return exitCode === 0;
@@ -16922,22 +16923,22 @@ function spawn(command, args, options) {
     return new Promise((resolve, reject) => {
         const proc = (0,child_process__WEBPACK_IMPORTED_MODULE_0__.spawn)(command, args, { env: process.env });
         // const env = params.env ? { ...process.env, ...params.env } : process.env;
-        proc.stdout.on("data", data => options.log(data.toString()));
-        proc.stderr.on("data", data => options.err(data.toString()));
-        proc.on("error", err => {
+        proc.stdout.on('data', data => options.log(data.toString()));
+        proc.stderr.on('data', data => options.err(data.toString()));
+        proc.on('error', err => {
             reject(err);
         });
-        proc.on("close", code => {
+        proc.on('close', code => {
             resolve({
-                code: code
+                code: code,
             });
         });
     });
 }
 function parseCliOutput(value) {
-    if (value === "") {
+    if (value === '') {
         // TODO - revisit this
-        throw new Error("Unexpected empty output from CLI");
+        throw new Error('Unexpected empty output from CLI');
     }
     try {
         return JSON.parse(value);
@@ -16945,17 +16946,17 @@ function parseCliOutput(value) {
     catch (error) {
         return {
             code: -1,
-            outcome: "error",
-            message: "Failed to parse CLI output",
-            description: `Failed to parse CLI output as JSON: ${value}\nError: ${error}`
+            outcome: 'error',
+            message: 'Failed to parse CLI output',
+            description: `Failed to parse CLI output as JSON: ${value}\nError: ${error}`,
         };
     }
 }
 function runSpecCli(options) {
     return __awaiter(this, void 0, void 0, function* () {
-        let stdout = "";
+        let stdout = '';
         const spawnOptions = {
-            log: data => stdout += data,
+            log: data => (stdout += data),
             err: data => options.log(data),
             env: options.env ? Object.assign(Object.assign({}, process.env), options.env) : process.env,
         };
@@ -16965,9 +16966,13 @@ function runSpecCli(options) {
 }
 function devContainerBuild(args, log) {
     return __awaiter(this, void 0, void 0, function* () {
-        const commandArgs = ["build", "--workspace-folder", args.workspaceFolder];
+        const commandArgs = [
+            'build',
+            '--workspace-folder',
+            args.workspaceFolder,
+        ];
         if (args.imageName) {
-            commandArgs.push("--image-name", args.imageName);
+            commandArgs.push('--image-name', args.imageName);
         }
         if (args.additionalCacheFroms) {
             args.additionalCacheFroms.forEach(cacheFrom => commandArgs.push('--cache-from', cacheFrom));
@@ -16975,13 +16980,17 @@ function devContainerBuild(args, log) {
         return yield runSpecCli({
             args: commandArgs,
             log,
-            env: { DOCKER_BUILDKIT: "1" },
+            env: { DOCKER_BUILDKIT: '1' },
         });
     });
 }
 function devContainerUp(args, log) {
     return __awaiter(this, void 0, void 0, function* () {
-        const commandArgs = ["up", "--workspace-folder", args.workspaceFolder];
+        const commandArgs = [
+            'up',
+            '--workspace-folder',
+            args.workspaceFolder,
+        ];
         if (args.additionalCacheFroms) {
             args.additionalCacheFroms.forEach(cacheFrom => commandArgs.push('--cache-from', cacheFrom));
         }
@@ -16991,7 +17000,7 @@ function devContainerUp(args, log) {
         return yield runSpecCli({
             args: commandArgs,
             log,
-            env: { DOCKER_BUILDKIT: "1" },
+            env: { DOCKER_BUILDKIT: '1' },
         });
     });
 }
@@ -17000,9 +17009,15 @@ function devContainerExec(args, log) {
         // const remoteEnvArgs = args.env ? args.env.flatMap(e=> ["--remote-env", e]): []; // TODO - test flatMap again
         const remoteEnvArgs = getRemoteEnvArray(args.env);
         return yield runSpecCli({
-            args: ["exec", "--workspace-folder", args.workspaceFolder, ...remoteEnvArgs, ...args.command],
+            args: [
+                'exec',
+                '--workspace-folder',
+                args.workspaceFolder,
+                ...remoteEnvArgs,
+                ...args.command,
+            ],
             log,
-            env: { DOCKER_BUILDKIT: "1", },
+            env: { DOCKER_BUILDKIT: '1' },
         });
     });
 }
@@ -17013,7 +17028,7 @@ function getRemoteEnvArray(env) {
     let result = [];
     for (let i = 0; i < env.length; i++) {
         const envItem = env[i];
-        result.push("--remote-env", envItem);
+        result.push('--remote-env', envItem);
     }
     return result;
 }
@@ -17119,7 +17134,7 @@ function parsePasswd(input) {
         const user = {
             name: parts[0],
             uid: parts[2],
-            gid: parts[3]
+            gid: parts[3],
         };
         result.push(user);
     }
@@ -17133,7 +17148,7 @@ function parseGroup(input) {
         const group = {
             name: parts[0],
             gid: parts[2],
-            users: parts[3] ? parts[3].split(',') : []
+            users: parts[3] ? parts[3].split(',') : [],
         };
         result.push(group);
     }
@@ -17177,7 +17192,7 @@ function buildImage(exec, imageName, imageTag, checkoutPath, subFolder, skipCont
     });
 }
 function coerceToArray(value) {
-    return (typeof (value) === 'string') ? [value] : value;
+    return typeof value === 'string' ? [value] : value;
 }
 function buildImageBase(exec, imageName, imageTag, folder, devcontainerConfig, cacheFrom) {
     var _a, _b, _c;
@@ -17221,19 +17236,37 @@ function ensureHostAndContainerUsersAlign(exec, imageName, imageTag, devcontaine
         if (!devcontainerConfig.remoteUser) {
             return imageName;
         }
-        const resultHostUser = yield exec('/bin/sh', ['-c', 'id -u -n'], { silent: true });
+        const resultHostUser = yield exec('/bin/sh', ['-c', 'id -u -n'], {
+            silent: true,
+        });
         if (resultHostUser.exitCode !== 0) {
             throw new Error(`Failed to get host user (exitcode: ${resultHostUser.exitCode}):${resultHostUser.stdout}\n${resultHostUser.stderr}`);
         }
-        const resultHostPasswd = yield exec('/bin/sh', ['-c', "cat /etc/passwd"], { silent: true });
+        const resultHostPasswd = yield exec('/bin/sh', ['-c', 'cat /etc/passwd'], {
+            silent: true,
+        });
         if (resultHostPasswd.exitCode !== 0) {
             throw new Error(`Failed to get host user info (exitcode: ${resultHostPasswd.exitCode}):${resultHostPasswd.stdout}\n${resultHostPasswd.stderr}`);
         }
-        const resultContainerPasswd = yield exec('docker', ['run', '--rm', `${imageName}:${imageTag !== null && imageTag !== void 0 ? imageTag : 'latest'}`, 'sh', '-c', "cat /etc/passwd"], { silent: true });
+        const resultContainerPasswd = yield exec('docker', [
+            'run',
+            '--rm',
+            `${imageName}:${imageTag !== null && imageTag !== void 0 ? imageTag : 'latest'}`,
+            'sh',
+            '-c',
+            'cat /etc/passwd',
+        ], { silent: true });
         if (resultContainerPasswd.exitCode !== 0) {
             throw new Error(`Failed to get container user info (exitcode: ${resultContainerPasswd.exitCode}):${resultContainerPasswd.stdout}\n${resultContainerPasswd.stderr}`);
         }
-        const resultContainerGroup = yield exec('docker', ['run', '--rm', `${imageName}:${imageTag !== null && imageTag !== void 0 ? imageTag : 'latest'}`, 'sh', '-c', "cat /etc/group"], { silent: true });
+        const resultContainerGroup = yield exec('docker', [
+            'run',
+            '--rm',
+            `${imageName}:${imageTag !== null && imageTag !== void 0 ? imageTag : 'latest'}`,
+            'sh',
+            '-c',
+            'cat /etc/group',
+        ], { silent: true });
         if (resultContainerGroup.exitCode !== 0) {
             throw new Error(`Failed to get container group info (exitcode: ${resultContainerGroup.exitCode}):${resultContainerGroup.stdout}\n${resultContainerGroup.stderr}`);
         }
@@ -17265,16 +17298,24 @@ function ensureHostAndContainerUsersAlign(exec, imageName, imageTag, devcontaine
 RUN sudo chown -R ${hostUser.uid}:${hostUser.gid} /home/${containerUserName} \
     && sudo sed -i /etc/passwd -e s/${containerUser.name}:x:${containerUser.uid}:${containerUser.gid}/${containerUser.name}:x:${hostUser.uid}:${hostUser.gid}/
 `;
-        const tempDir = external_fs_.mkdtempSync(external_path_default().join(external_os_.tmpdir(), "tmp-devcontainer-build-run"));
-        const derivedDockerfilePath = external_path_default().join(tempDir, "Dockerfile");
+        const tempDir = external_fs_.mkdtempSync(external_path_default().join(external_os_.tmpdir(), 'tmp-devcontainer-build-run'));
+        const derivedDockerfilePath = external_path_default().join(tempDir, 'Dockerfile');
         external_fs_.writeFileSync(derivedDockerfilePath, dockerfileContent);
         const derivedImageName = `${imageName}-userfix`;
-        // TODO - `buildx build` was giving issues when building an image for the first time and it is unable to 
+        // TODO - `buildx build` was giving issues when building an image for the first time and it is unable to
         // pull the image from the registry
         // const derivedDockerBuild = await exec('docker', ['buildx', 'build', '--tag', derivedImageName, '-f', derivedDockerfilePath, tempDir, '--output=type=docker'], {})
-        const derivedDockerBuild = yield exec('docker', ['build', '--tag', `${derivedImageName}:${imageTag !== null && imageTag !== void 0 ? imageTag : 'latest'}`, '-f', derivedDockerfilePath, tempDir, '--output=type=docker'], {});
+        const derivedDockerBuild = yield exec('docker', [
+            'build',
+            '--tag',
+            `${derivedImageName}:${imageTag !== null && imageTag !== void 0 ? imageTag : 'latest'}`,
+            '-f',
+            derivedDockerfilePath,
+            tempDir,
+            '--output=type=docker',
+        ], {});
         if (derivedDockerBuild.exitCode !== 0) {
-            throw new Error("Failed to build derived Docker image with users updated");
+            throw new Error('Failed to build derived Docker image with users updated');
         }
         return derivedImageName;
     });
@@ -17296,7 +17337,7 @@ function runContainer(exec, imageName, imageTag, checkoutPath, subFolder, comman
                 .map(m => (0,envvars.substituteValues)(m))
                 .forEach(m => {
                 const mount = parseMount(m);
-                if (mount.type === "bind") {
+                if (mount.type === 'bind') {
                     // check path exists
                     if (!external_fs_.existsSync(mount.source)) {
                         console.log(`Skipping mount as source does not exist: '${m}'`);
