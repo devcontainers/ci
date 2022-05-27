@@ -125,6 +125,9 @@ function devContainerBuild(args, log) {
         if (args.imageName) {
             commandArgs.push('--image-name', args.imageName);
         }
+        if (args.userDataFolder) {
+            commandArgs.push("--user-data-folder", args.userDataFolder);
+        }
         if (args.additionalCacheFroms) {
             args.additionalCacheFroms.forEach(cacheFrom => commandArgs.push('--cache-from', cacheFrom));
         }
@@ -145,6 +148,9 @@ function devContainerUp(args, log) {
         if (args.additionalCacheFroms) {
             args.additionalCacheFroms.forEach(cacheFrom => commandArgs.push('--cache-from', cacheFrom));
         }
+        if (args.userDataFolder) {
+            commandArgs.push("--user-data-folder", args.userDataFolder);
+        }
         if (args.skipContainerUserIdUpdate) {
             commandArgs.push('--update-remote-user-uid-default', 'off');
         }
@@ -159,14 +165,12 @@ function devContainerExec(args, log) {
     return __awaiter(this, void 0, void 0, function* () {
         // const remoteEnvArgs = args.env ? args.env.flatMap(e=> ["--remote-env", e]): []; // TODO - test flatMap again
         const remoteEnvArgs = getRemoteEnvArray(args.env);
+        const commandArgs = ["exec", "--workspace-folder", args.workspaceFolder, ...remoteEnvArgs, ...args.command];
+        if (args.userDataFolder) {
+            commandArgs.push("--user-data-folder", args.userDataFolder);
+        }
         return yield runSpecCli({
-            args: [
-                'exec',
-                '--workspace-folder',
-                args.workspaceFolder,
-                ...remoteEnvArgs,
-                ...args.command,
-            ],
+            args: commandArgs,
             log,
             env: { DOCKER_BUILDKIT: '1' },
         });

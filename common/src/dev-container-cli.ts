@@ -136,6 +136,7 @@ export interface DevContainerCliBuildArgs {
   workspaceFolder: string;
   imageName?: string;
   additionalCacheFroms?: string[];
+  userDataFolder?: string;
 }
 async function devContainerBuild(
   args: DevContainerCliBuildArgs,
@@ -148,6 +149,9 @@ async function devContainerBuild(
   ];
   if (args.imageName) {
     commandArgs.push('--image-name', args.imageName);
+  }
+  if (args.userDataFolder) {
+    commandArgs.push("--user-data-folder", args.userDataFolder);
   }
   if (args.additionalCacheFroms) {
     args.additionalCacheFroms.forEach(cacheFrom =>
@@ -170,6 +174,7 @@ export interface DevContainerCliUpArgs {
   workspaceFolder: string;
   additionalCacheFroms?: string[];
   skipContainerUserIdUpdate?: boolean;
+  userDataFolder?: string;
 }
 async function devContainerUp(
   args: DevContainerCliUpArgs,
@@ -184,6 +189,9 @@ async function devContainerUp(
     args.additionalCacheFroms.forEach(cacheFrom =>
       commandArgs.push('--cache-from', cacheFrom),
     );
+  }
+  if (args.userDataFolder) {
+    commandArgs.push("--user-data-folder", args.userDataFolder);
   }
   if (args.skipContainerUserIdUpdate) {
     commandArgs.push('--update-remote-user-uid-default', 'off');
@@ -201,6 +209,7 @@ export interface DevContainerCliExecArgs {
   workspaceFolder: string;
   command: string[];
   env?: string[];
+  userDataFolder?: string;
 }
 async function devContainerExec(
   args: DevContainerCliExecArgs,
@@ -208,14 +217,12 @@ async function devContainerExec(
 ): Promise<DevContainerCliExecResult | DevContainerCliError> {
   // const remoteEnvArgs = args.env ? args.env.flatMap(e=> ["--remote-env", e]): []; // TODO - test flatMap again
   const remoteEnvArgs = getRemoteEnvArray(args.env);
+  const commandArgs = ["exec", "--workspace-folder", args.workspaceFolder, ...remoteEnvArgs, ...args.command];
+  if (args.userDataFolder) {
+    commandArgs.push("--user-data-folder", args.userDataFolder);
+  }
   return await runSpecCli<DevContainerCliExecResult>({
-    args: [
-      'exec',
-      '--workspace-folder',
-      args.workspaceFolder,
-      ...remoteEnvArgs,
-      ...args.command,
-    ],
+    args: commandArgs,
     log,
     env: {DOCKER_BUILDKIT: '1'},
   });

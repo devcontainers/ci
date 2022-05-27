@@ -66,6 +66,7 @@ function runMain() {
             const inputEnvsWithDefaults = envvars_1.populateDefaults(inputEnvs);
             const cacheFrom = core.getMultilineInput('cacheFrom');
             const skipContainerUserIdUpdate = core.getBooleanInput('skipContainerUserIdUpdate');
+            const userDataFolder = core.getInput('userDataFolder');
             // TODO - nocache
             const log = (message) => core.info(message);
             const workspaceFolder = path_1.default.resolve(checkoutPath, subFolder);
@@ -83,6 +84,7 @@ function runMain() {
                     workspaceFolder,
                     imageName: fullImageName,
                     additionalCacheFroms: cacheFrom,
+                    userDataFolder,
                 };
                 const result = yield dev_container_cli_1.devcontainer.build(args, log);
                 if (result.outcome !== 'success') {
@@ -99,6 +101,7 @@ function runMain() {
                     workspaceFolder,
                     additionalCacheFroms: cacheFrom,
                     skipContainerUserIdUpdate,
+                    userDataFolder,
                 };
                 const result = yield dev_container_cli_1.devcontainer.up(args, log);
                 if (result.outcome !== 'success') {
@@ -115,6 +118,7 @@ function runMain() {
                     workspaceFolder,
                     command: ['bash', '-c', runCommand],
                     env: inputEnvsWithDefaults,
+                    userDataFolder,
                 };
                 const result = yield dev_container_cli_1.devcontainer.exec(args, log);
                 if (result.outcome !== 'success') {
