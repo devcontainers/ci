@@ -1,6 +1,6 @@
-import { ExecFunction } from "./exec";
+import { ExecFunction } from './exec';
 export interface DevContainerCliError {
-    outcome: "error";
+    outcome: 'error';
     code: number;
     message: string;
     description: string;
@@ -8,7 +8,7 @@ export interface DevContainerCliError {
 declare function isCliInstalled(exec: ExecFunction): Promise<boolean>;
 declare function installCli(exec: ExecFunction): Promise<boolean>;
 export interface DevContainerCliSuccessResult {
-    outcome: "success";
+    outcome: 'success';
 }
 export interface DevContainerCliBuildResult extends DevContainerCliSuccessResult {
 }

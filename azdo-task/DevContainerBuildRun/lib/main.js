@@ -88,7 +88,7 @@ function runMain() {
             const buildArgs = {
                 workspaceFolder,
                 imageName: fullImageName,
-                additionalCacheFroms: cacheFrom
+                additionalCacheFroms: cacheFrom,
             };
             console.log('\n\n');
             console.log('***');
@@ -109,7 +109,7 @@ function runMain() {
             const upArgs = {
                 workspaceFolder,
                 additionalCacheFroms: cacheFrom,
-                skipContainerUserIdUpdate
+                skipContainerUserIdUpdate,
             };
             const upResult = yield dev_container_cli_1.devcontainer.up(upArgs, log);
             if (upResult.outcome !== 'success') {
@@ -126,7 +126,7 @@ function runMain() {
             const execArgs = {
                 workspaceFolder,
                 command: ['bash', '-c', runCommand],
-                env: inputEnvsWithDefaults
+                env: inputEnvsWithDefaults,
             };
             const execResult = yield dev_container_cli_1.devcontainer.exec(execArgs, log);
             if (execResult.outcome !== 'success') {

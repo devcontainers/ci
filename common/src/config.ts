@@ -21,7 +21,7 @@ export interface DevContainerConfig {
 }
 
 export async function loadFromFile(
-	filepath: string
+	filepath: string,
 ): Promise<DevContainerConfig> {
 	const jsonContent = await readFile(filepath);
 	return loadFromString(jsonContent.toString());
@@ -34,7 +34,7 @@ export function loadFromString(content: string): DevContainerConfig {
 
 export function getWorkspaceFolder(
 	config: DevContainerConfig,
-	repoPath: string
+	repoPath: string,
 ): string {
 	// TODO - need to check workspaceMount/workspaceFolder to set the source mount (https://github.com/stuartleeks/devcontainer-build-run/issues/66)
 	// // https://code.visualstudio.com/docs/remote/containers-advanced#_changing-the-default-source-code-mount

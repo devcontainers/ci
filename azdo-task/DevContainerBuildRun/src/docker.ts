@@ -1,9 +1,9 @@
-import * as task from 'azure-pipelines-task-lib/task'
-import * as docker from '../../../common/src/docker'
-import {exec} from './exec'
+import * as task from 'azure-pipelines-task-lib/task';
+import * as docker from '../../../common/src/docker';
+import {exec} from './exec';
 
 export async function isDockerBuildXInstalled(): Promise<boolean> {
-	return await docker.isDockerBuildXInstalled(exec)
+	return await docker.isDockerBuildXInstalled(exec);
 }
 export async function buildImage(
 	imageName: string,
@@ -11,9 +11,9 @@ export async function buildImage(
 	checkoutPath: string,
 	subFolder: string,
 	skipContainerUserIdUpdate: boolean,
-	cacheFrom: string[]
+	cacheFrom: string[],
 ): Promise<string> {
-	console.log('🏗 Building dev container...')
+	console.log('🏗 Building dev container...');
 	try {
 		return await docker.buildImage(
 			exec,
@@ -22,11 +22,11 @@ export async function buildImage(
 			checkoutPath,
 			subFolder,
 			skipContainerUserIdUpdate,
-			cacheFrom
-		)
+			cacheFrom,
+		);
 	} catch (error) {
-		task.setResult(task.TaskResult.Failed, error)
-		return ''
+		task.setResult(task.TaskResult.Failed, error);
+		return '';
 	}
 }
 
@@ -36,9 +36,9 @@ export async function runContainer(
 	checkoutPath: string,
 	subFolder: string,
 	command: string,
-	envs?: string[]
+	envs?: string[],
 ): Promise<boolean> {
-	console.log('🏃‍♀️ Running dev container...')
+	console.log('🏃‍♀️ Running dev container...');
 	try {
 		await docker.runContainer(
 			exec,
@@ -47,25 +47,25 @@ export async function runContainer(
 			checkoutPath,
 			subFolder,
 			command,
-			envs
-		)
-		return true
+			envs,
+		);
+		return true;
 	} catch (error) {
-		task.setResult(task.TaskResult.Failed, error)
-		return false
+		task.setResult(task.TaskResult.Failed, error);
+		return false;
 	}
 }
 
 export async function pushImage(
 	imageName: string,
-	imageTag: string | undefined
+	imageTag: string | undefined,
 ): Promise<boolean> {
-	console.log('📌 Pushing image...')
+	console.log('📌 Pushing image...');
 	try {
-		await docker.pushImage(exec, imageName, imageTag)
-		return true
+		await docker.pushImage(exec, imageName, imageTag);
+		return true;
 	} catch (error) {
-		task.setResult(task.TaskResult.Failed, error)
-		return false
+		task.setResult(task.TaskResult.Failed, error);
+		return false;
 	}
 }
