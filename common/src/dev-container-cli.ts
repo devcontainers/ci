@@ -161,7 +161,7 @@ async function devContainerBuild(
   return await runSpecCli<DevContainerCliBuildResult>({
     args: commandArgs,
     log,
-    env: {DOCKER_BUILDKIT: '1'},
+    env: {DOCKER_BUILDKIT: '1', COMPOSE_DOCKER_CLI_BUILD: '1'},
   });
 }
 
@@ -199,7 +199,7 @@ async function devContainerUp(
   return await runSpecCli<DevContainerCliUpResult>({
     args: commandArgs,
     log,
-    env: {DOCKER_BUILDKIT: '1'},
+    env: {DOCKER_BUILDKIT: '1', COMPOSE_DOCKER_CLI_BUILD: '1'},
   });
 }
 
@@ -224,7 +224,7 @@ async function devContainerExec(
   return await runSpecCli<DevContainerCliExecResult>({
     args: commandArgs,
     log,
-    env: {DOCKER_BUILDKIT: '1'},
+    env: {DOCKER_BUILDKIT: '1', COMPOSE_DOCKER_CLI_BUILD: '1'},
   });
 }
 

@@ -16996,7 +16996,7 @@ function devContainerBuild(args, log) {
         return yield runSpecCli({
             args: commandArgs,
             log,
-            env: { DOCKER_BUILDKIT: '1' },
+            env: { DOCKER_BUILDKIT: '1', COMPOSE_DOCKER_CLI_BUILD: '1' },
         });
     });
 }
@@ -17019,7 +17019,7 @@ function devContainerUp(args, log) {
         return yield runSpecCli({
             args: commandArgs,
             log,
-            env: { DOCKER_BUILDKIT: '1' },
+            env: { DOCKER_BUILDKIT: '1', COMPOSE_DOCKER_CLI_BUILD: '1' },
         });
     });
 }
@@ -17034,7 +17034,7 @@ function devContainerExec(args, log) {
         return yield runSpecCli({
             args: commandArgs,
             log,
-            env: { DOCKER_BUILDKIT: '1' },
+            env: { DOCKER_BUILDKIT: '1', COMPOSE_DOCKER_CLI_BUILD: '1' },
         });
     });
 }
