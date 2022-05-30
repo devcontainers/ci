@@ -73,9 +73,7 @@ function spawn(
   options: SpawnOptions,
 ): Promise<SpawnResult> {
   return new Promise<SpawnResult>((resolve, reject) => {
-    const proc = spawnRaw(command, args, {env: process.env});
-
-    // const env = params.env ? { ...process.env, ...params.env } : process.env;
+    const proc = spawnRaw(command, args, {env: options.env});
 
     proc.stdout.on('data', data => options.log(data.toString()));
     proc.stderr.on('data', data => options.err(data.toString()));

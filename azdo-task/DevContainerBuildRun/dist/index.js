@@ -16932,8 +16932,7 @@ function installCli(exec) {
 }
 function spawn(command, args, options) {
     return new Promise((resolve, reject) => {
-        const proc = (0,child_process__WEBPACK_IMPORTED_MODULE_0__.spawn)(command, args, { env: process.env });
-        // const env = params.env ? { ...process.env, ...params.env } : process.env;
+        const proc = (0,child_process__WEBPACK_IMPORTED_MODULE_0__.spawn)(command, args, { env: options.env });
         proc.stdout.on('data', data => options.log(data.toString()));
         proc.stderr.on('data', data => options.err(data.toString()));
         proc.on('error', err => {
