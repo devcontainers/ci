@@ -27,3 +27,30 @@ jobs:
         subFolder: '.'
         env: ''
         imageTag: $(IMAGE_TAG)
+        sourceBranchFilterForPush: ''
+
+  - job: test_run_args
+    displayName: Test run-args
+    steps:
+    - script: |
+        docker login -u $ACR_USERNAME -p $ACR_TOKEN $(ACR_NAME).azurecr.io
+      displayName: 'Log in to Azure Container Registry'
+      env:
+        ACR_NAME: $(ACR_NAME)
+        ACR_TOKEN: $(ACR_TOKEN)
+        ACR_USERNAME: $(ACR_USERNAME)
+
+    - script: |
+        printenv | sort
+      env:
+        IMAGE_TAG: $(IMAGE_TAG)
+
+    - task: DevContainerBuildRun@0
+      inputs:
+        imageName: '$(ACR_NAME).azurecr.io/stuartleeks/azdo-devcontainer-build-run/test/run-args'
+        subFolder: github-tests/run-args
+        runCmd: echo $HOSTNAME && [[ $HOSTNAME == "my-host" ]]
+        env: ''
+        imageTag: $(IMAGE_TAG)
+        sourceBranchFilterForPush: ''
+
