@@ -30,7 +30,8 @@
 		"davidanson.vscode-markdownlint",
 		"heaths.vscode-guid",
 		"esbenp.prettier-vscode",
-		"meganrogge.template-string-converter"
+		"meganrogge.template-string-converter",
+		"ms-azure-devops.azure-pipelines"
 	],
 	"features": {
 		"github-cli": "latest"
