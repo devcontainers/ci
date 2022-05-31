@@ -42,24 +42,24 @@ ENV DEVCONTAINER=true
 
 # node
 COPY scripts/node.sh /tmp/
-RUN /tmp/node.sh 16.x
+RUN /bin/bash /tmp/node.sh 16.x
 
 # docker-client
 COPY scripts/docker-client.sh /tmp/
-RUN /tmp/docker-client.sh
+RUN /bin/bash /tmp/docker-client.sh
 
 #Add user to docker group
 RUN sudo groupadd docker && sudo usermod -aG docker $USERNAME && newgrp docker
 
 # act
 COPY scripts/act.sh /tmp/
-RUN /tmp/act.sh 0.2.21
+RUN /bin/bash /tmp/act.sh 0.2.21
 
 RUN sudo npm install -g tfx-cli
 
 # azure-cli-no-mount
 COPY scripts/azure-cli.sh /tmp/
-RUN /tmp/azure-cli.sh
+RUN /bin/bash /tmp/azure-cli.sh
 
 RUN az extension add --name azure-devops
 
