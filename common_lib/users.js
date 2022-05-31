@@ -9,7 +9,7 @@ function parsePasswd(input) {
         const user = {
             name: parts[0],
             uid: parts[2],
-            gid: parts[3]
+            gid: parts[3],
         };
         result.push(user);
     }
@@ -24,7 +24,7 @@ function parseGroup(input) {
         const group = {
             name: parts[0],
             gid: parts[2],
-            users: parts[3] ? parts[3].split(',') : []
+            users: parts[3] ? parts[3].split(',') : [],
         };
         result.push(group);
     }

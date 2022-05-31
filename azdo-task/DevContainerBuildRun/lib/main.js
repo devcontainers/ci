@@ -31,6 +31,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.runPost = exports.runMain = void 0;
 const task = __importStar(require("azure-pipelines-task-lib/task"));
 const task_1 = require("azure-pipelines-task-lib/task");
 const path_1 = __importDefault(require("path"));
@@ -38,25 +39,11 @@ const envvars_1 = require("../../../common/src/envvars");
 const dev_container_cli_1 = require("../../../common/src/dev-container-cli");
 const docker_1 = require("./docker");
 const exec_1 = require("./exec");
-function run() {
-    return __awaiter(this, void 0, void 0, function* () {
-        console.log('DevContainerBuildRun starting...');
-        const hasRunMain = task.getTaskVariable('hasRunMain');
-        if (hasRunMain === 'true') {
-            console.log('DevContainerBuildRun running post step...');
-            return yield runPost();
-        }
-        else {
-            console.log('DevContainerBuildRun running main step...');
-            task.setTaskVariable('hasRunMain', 'true');
-            return yield runMain();
-        }
-    });
-}
 function runMain() {
     var _a, _b, _c, _d, _e, _f, _g;
     return __awaiter(this, void 0, void 0, function* () {
         try {
+            task.setTaskVariable('hasRunMain', 'true');
             const buildXInstalled = yield docker_1.isDockerBuildXInstalled();
             if (!buildXInstalled) {
                 console.log('### WARNING: docker buildx not available: add a step to set up with docker/setup-buildx-action - see https://github.com/stuartleeks/devcontainer-build-run/blob/main/docs/azure-devops-task.md');
@@ -101,7 +88,7 @@ function runMain() {
             const buildArgs = {
                 workspaceFolder,
                 imageName: fullImageName,
-                additionalCacheFroms: cacheFrom
+                additionalCacheFroms: cacheFrom,
             };
             console.log('\n\n');
             console.log('***');
@@ -122,7 +109,7 @@ function runMain() {
             const upArgs = {
                 workspaceFolder,
                 additionalCacheFroms: cacheFrom,
-                skipContainerUserIdUpdate
+                skipContainerUserIdUpdate,
             };
             const upResult = yield dev_container_cli_1.devcontainer.up(upArgs, log);
             if (upResult.outcome !== 'success') {
@@ -139,7 +126,7 @@ function runMain() {
             const execArgs = {
                 workspaceFolder,
                 command: ['bash', '-c', runCommand],
-                env: inputEnvsWithDefaults
+                env: inputEnvsWithDefaults,
             };
             const execResult = yield dev_container_cli_1.devcontainer.exec(execArgs, log);
             if (execResult.outcome !== 'success') {
@@ -156,6 +143,7 @@ function runMain() {
         }
     });
 }
+exports.runMain = runMain;
 function runPost() {
     var _a, _b, _c, _d, _e, _f;
     return __awaiter(this, void 0, void 0, function* () {
@@ -206,4 +194,4 @@ function runPost() {
         yield docker_1.pushImage(imageName, imageTag);
     });
 }
-run();
+exports.runPost = runPost;

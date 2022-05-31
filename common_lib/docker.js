@@ -61,7 +61,7 @@ function buildImage(exec, imageName, imageTag, checkoutPath, subFolder, skipCont
 }
 exports.buildImage = buildImage;
 function coerceToArray(value) {
-    return (typeof (value) === 'string') ? [value] : value;
+    return typeof value === 'string' ? [value] : value;
 }
 function buildImageBase(exec, imageName, imageTag, folder, devcontainerConfig, cacheFrom) {
     var _a, _b, _c;
@@ -105,19 +105,37 @@ function ensureHostAndContainerUsersAlign(exec, imageName, imageTag, devcontaine
         if (!devcontainerConfig.remoteUser) {
             return imageName;
         }
-        const resultHostUser = yield exec('/bin/sh', ['-c', 'id -u -n'], { silent: true });
+        const resultHostUser = yield exec('/bin/sh', ['-c', 'id -u -n'], {
+            silent: true,
+        });
         if (resultHostUser.exitCode !== 0) {
             throw new Error(`Failed to get host user (exitcode: ${resultHostUser.exitCode}):${resultHostUser.stdout}\n${resultHostUser.stderr}`);
         }
-        const resultHostPasswd = yield exec('/bin/sh', ['-c', "cat /etc/passwd"], { silent: true });
+        const resultHostPasswd = yield exec('/bin/sh', ['-c', 'cat /etc/passwd'], {
+            silent: true,
+        });
         if (resultHostPasswd.exitCode !== 0) {
             throw new Error(`Failed to get host user info (exitcode: ${resultHostPasswd.exitCode}):${resultHostPasswd.stdout}\n${resultHostPasswd.stderr}`);
         }
-        const resultContainerPasswd = yield exec('docker', ['run', '--rm', `${imageName}:${imageTag !== null && imageTag !== void 0 ? imageTag : 'latest'}`, 'sh', '-c', "cat /etc/passwd"], { silent: true });
+        const resultContainerPasswd = yield exec('docker', [
+            'run',
+            '--rm',
+            `${imageName}:${imageTag !== null && imageTag !== void 0 ? imageTag : 'latest'}`,
+            'sh',
+            '-c',
+            'cat /etc/passwd',
+        ], { silent: true });
         if (resultContainerPasswd.exitCode !== 0) {
             throw new Error(`Failed to get container user info (exitcode: ${resultContainerPasswd.exitCode}):${resultContainerPasswd.stdout}\n${resultContainerPasswd.stderr}`);
         }
-        const resultContainerGroup = yield exec('docker', ['run', '--rm', `${imageName}:${imageTag !== null && imageTag !== void 0 ? imageTag : 'latest'}`, 'sh', '-c', "cat /etc/group"], { silent: true });
+        const resultContainerGroup = yield exec('docker', [
+            'run',
+            '--rm',
+            `${imageName}:${imageTag !== null && imageTag !== void 0 ? imageTag : 'latest'}`,
+            'sh',
+            '-c',
+            'cat /etc/group',
+        ], { silent: true });
         if (resultContainerGroup.exitCode !== 0) {
             throw new Error(`Failed to get container group info (exitcode: ${resultContainerGroup.exitCode}):${resultContainerGroup.stdout}\n${resultContainerGroup.stderr}`);
         }
@@ -149,16 +167,24 @@ function ensureHostAndContainerUsersAlign(exec, imageName, imageTag, devcontaine
 RUN sudo chown -R ${hostUser.uid}:${hostUser.gid} /home/${containerUserName} \
     && sudo sed -i /etc/passwd -e s/${containerUser.name}:x:${containerUser.uid}:${containerUser.gid}/${containerUser.name}:x:${hostUser.uid}:${hostUser.gid}/
 `;
-        const tempDir = fs.mkdtempSync(path_1.default.join(os.tmpdir(), "tmp-devcontainer-build-run"));
-        const derivedDockerfilePath = path_1.default.join(tempDir, "Dockerfile");
+        const tempDir = fs.mkdtempSync(path_1.default.join(os.tmpdir(), 'tmp-devcontainer-build-run'));
+        const derivedDockerfilePath = path_1.default.join(tempDir, 'Dockerfile');
         fs.writeFileSync(derivedDockerfilePath, dockerfileContent);
         const derivedImageName = `${imageName}-userfix`;
-        // TODO - `buildx build` was giving issues when building an image for the first time and it is unable to 
+        // TODO - `buildx build` was giving issues when building an image for the first time and it is unable to
         // pull the image from the registry
         // const derivedDockerBuild = await exec('docker', ['buildx', 'build', '--tag', derivedImageName, '-f', derivedDockerfilePath, tempDir, '--output=type=docker'], {})
-        const derivedDockerBuild = yield exec('docker', ['build', '--tag', `${derivedImageName}:${imageTag !== null && imageTag !== void 0 ? imageTag : 'latest'}`, '-f', derivedDockerfilePath, tempDir, '--output=type=docker'], {});
+        const derivedDockerBuild = yield exec('docker', [
+            'build',
+            '--tag',
+            `${derivedImageName}:${imageTag !== null && imageTag !== void 0 ? imageTag : 'latest'}`,
+            '-f',
+            derivedDockerfilePath,
+            tempDir,
+            '--output=type=docker',
+        ], {});
         if (derivedDockerBuild.exitCode !== 0) {
-            throw new Error("Failed to build derived Docker image with users updated");
+            throw new Error('Failed to build derived Docker image with users updated');
         }
         return derivedImageName;
     });
@@ -180,7 +206,7 @@ function runContainer(exec, imageName, imageTag, checkoutPath, subFolder, comman
                 .map(m => envvars_1.substituteValues(m))
                 .forEach(m => {
                 const mount = parseMount(m);
-                if (mount.type === "bind") {
+                if (mount.type === 'bind') {
                     // check path exists
                     if (!fs.existsSync(mount.source)) {
                         console.log(`Skipping mount as source does not exist: '${m}'`);

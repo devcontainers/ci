@@ -73,12 +73,12 @@ function exec(command, args, options) {
             silent: false,
             ignoreReturnCode: true,
             outStream,
-            errStream
+            errStream,
         });
         return {
             exitCode,
             stdout: trimCommand(outStream.toString()),
-            stderr: errStream.toString()
+            stderr: errStream.toString(),
         };
     });
 }
