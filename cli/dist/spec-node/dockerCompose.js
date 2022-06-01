@@ -26,7 +26,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.dockerComposeCLIConfig = exports.getProjectName = exports.findComposeContainer = exports.readDockerComposeConfig = exports.buildAndExtendDockerCompose = exports.getRemoteWorkspaceFolder = exports.openDockerComposeDevContainer = void 0;
+exports.dockerComposeCLIConfig = exports.getProjectName = exports.findComposeContainer = exports.readDockerComposeConfig = exports.buildAndExtendDockerCompose = exports.getBuildInfoForService = exports.getRemoteWorkspaceFolder = exports.openDockerComposeDevContainer = void 0;
 const yaml = __importStar(require("js-yaml"));
 const shellQuote = __importStar(require("shell-quote"));
 const utils_1 = require("./utils");
@@ -118,8 +118,11 @@ function getRemoteWorkspaceFolder(config) {
     return config.workspaceFolder || '/';
 }
 exports.getRemoteWorkspaceFolder = getRemoteWorkspaceFolder;
-function getInfoForService(composeService) {
-    // composeService should taken from readDockerComposeConfig which normalises the yml format
+// exported for testing
+function getBuildInfoForService(composeService) {
+    // composeService should taken from readDockerComposeConfig
+    // the 'build' property can be a string or an object (https://docs.docker.com/compose/compose-file/build/#build-definition)
+    var _a;
     const image = composeService.image;
     const composeBuild = composeService.build;
     if (!composeBuild) {
@@ -127,15 +130,25 @@ function getInfoForService(composeService) {
             image
         };
     }
+    if (typeof (composeBuild) === 'string') {
+        return {
+            image,
+            build: {
+                context: composeBuild,
+                dockerfilePath: 'Dockerfile'
+            }
+        };
+    }
     return {
         image,
         build: {
-            dockerfilePath: composeBuild.dockerfile,
+            dockerfilePath: (_a = composeBuild.dockerfile) !== null && _a !== void 0 ? _a : 'Dockerfile',
             context: composeBuild.context,
             target: composeBuild.target,
         }
     };
 }
+exports.getBuildInfoForService = getBuildInfoForService;
 async function buildAndExtendDockerCompose(config, projectName, params, localComposeFiles, envFile, composeGlobalArgs, runServices, noCache, overrideFilePath, overrideFilePrefix, additionalCacheFroms) {
     var _a, _b;
     const { common, dockerCLI, dockerComposeCLI: dockerComposeCLIFunc } = params;
@@ -146,7 +159,7 @@ async function buildAndExtendDockerCompose(config, projectName, params, localCom
     // determine base imageName for generated features build stage(s)
     let baseName = 'dev_container_auto_added_stage_label';
     let dockerfile = null;
-    const serviceInfo = getInfoForService(composeService);
+    const serviceInfo = getBuildInfoForService(composeService);
     if (serviceInfo.build) {
         const { context, dockerfilePath, target } = serviceInfo.build;
         const resolvedDockerfilePath = cliHost.path.isAbsolute(dockerfilePath) ? dockerfilePath : path_1.default.resolve(context, dockerfilePath);
@@ -338,7 +351,7 @@ async function startContainer(params, buildParams, config, projectName, composeF
         const { collapsedFeaturesConfig, additionalComposeOverrideFiles } = await buildAndExtendDockerCompose(config, projectName, infoParams, localComposeFiles, envFile, composeGlobalArgs, (_c = config.runServices) !== null && _c !== void 0 ? _c : [], (_d = params.buildNoCache) !== null && _d !== void 0 ? _d : false, persistedFolder, featuresBuildOverrideFilePrefix, params.additionalCacheFroms);
         additionalComposeOverrideFiles.forEach(overrideFilePath => composeGlobalArgs.push('-f', overrideFilePath));
         let cache;
-        const imageDetails = () => cache || (cache = (0, utils_1.inspectDockerImage)(params, originalImageName, false));
+        const imageDetails = () => cache || (cache = (0, utils_1.inspectDockerImage)(params, originalImageName, true));
         const updatedImageName = await (0, containerFeatures_1.updateRemoteUserUID)(params, config, originalImageName, imageDetails, service.user);
         // Save override docker-compose file to disk.
         // Persisted folder is a path that will be maintained between sessions
@@ -351,7 +364,7 @@ async function startContainer(params, buildParams, config, projectName, composeF
     }
     const args = ['--project-name', projectName, ...composeGlobalArgs];
     args.push('up', '-d');
-    if (params.expectExistingContainer) {
+    if (container || params.expectExistingContainer) {
         args.push('--no-recreate');
     }
     if (config.runServices && config.runServices.length) {

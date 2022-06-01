@@ -5,6 +5,24 @@ import { DevContainerFromDockerComposeConfig } from '../spec-configuration/confi
 import { CollapsedFeaturesConfig } from '../spec-configuration/containerFeaturesConfiguration';
 export declare function openDockerComposeDevContainer(params: DockerResolverParameters, workspace: Workspace, config: DevContainerFromDockerComposeConfig, idLabels: string[]): Promise<ResolverResult>;
 export declare function getRemoteWorkspaceFolder(config: DevContainerFromDockerComposeConfig): string;
+export declare function getBuildInfoForService(composeService: any): {
+    image: string | undefined;
+    build?: undefined;
+} | {
+    image: string | undefined;
+    build: {
+        context: string;
+        dockerfilePath: string;
+        target?: undefined;
+    };
+} | {
+    image: string | undefined;
+    build: {
+        dockerfilePath: string;
+        context: string;
+        target: string | undefined;
+    };
+};
 export declare function buildAndExtendDockerCompose(config: DevContainerFromDockerComposeConfig, projectName: string, params: DockerResolverParameters, localComposeFiles: string[], envFile: string | undefined, composeGlobalArgs: string[], runServices: string[], noCache: boolean, overrideFilePath: string, overrideFilePrefix: string, additionalCacheFroms?: string[]): Promise<{
     collapsedFeaturesConfig: CollapsedFeaturesConfig | undefined;
     additionalComposeOverrideFiles: string[];

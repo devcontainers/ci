@@ -356,7 +356,6 @@ async function runRemoteCommand(params, { remotePtyExec }, cmd, cwd, options = {
     const resolveEarly = new Promise(resolve => {
         doResolveEarly = resolve;
     });
-    process.stdin.on('data', data => { p.write(data.toString()); });
     p.onData(chunk => {
         cmdOutput += chunk;
         if (print === 'continuous') {
