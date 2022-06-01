@@ -3,6 +3,10 @@
 {
 	"name": "dc-test",
 	"dockerFile": "Dockerfile",
+	"build": {
+		"cacheFrom": "ghcr.io/stuartleeks/devcontainer-build-run/tests/docker-from-docker-non-root:latest"
+	},
+
 	"mounts": [
 		// Keep command history 
 		"source=dc-test-bashhistory,target=/home/vscode/commandhistory",

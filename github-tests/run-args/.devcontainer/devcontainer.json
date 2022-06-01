@@ -3,6 +3,10 @@
 {
 	"name": "run-args",
 	"dockerFile": "Dockerfile",
+	"build": {
+		"cacheFrom": "ghcr.io/stuartleeks/devcontainer-build-run/tests/run-args:latest"
+	},
+
 
 	"runArgs": [
 		"--hostname", "my-host"
