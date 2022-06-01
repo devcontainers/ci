@@ -27,3 +27,106 @@ jobs:
         subFolder: '.'
         env: ''
         imageTag: $(IMAGE_TAG)
+        sourceBranchFilterForPush: ''
+
+  - job: test_run_args
+    displayName: Test run-args
+    steps:
+    - script: |
+        docker login -u $ACR_USERNAME -p $ACR_TOKEN $(ACR_NAME).azurecr.io
+      displayName: 'Log in to Azure Container Registry'
+      env:
+        ACR_NAME: $(ACR_NAME)
+        ACR_TOKEN: $(ACR_TOKEN)
+        ACR_USERNAME: $(ACR_USERNAME)
+
+    - script: |
+        printenv | sort
+      env:
+        IMAGE_TAG: $(IMAGE_TAG)
+
+    - task: DevContainerBuildRun@0
+      inputs:
+        imageName: '$(ACR_NAME).azurecr.io/stuartleeks/azdo-devcontainer-build-run/test/run-args'
+        subFolder: github-tests/run-args
+        runCmd: echo $HOSTNAME && [[ $HOSTNAME == "my-host" ]]
+        env: ''
+        imageTag: $(IMAGE_TAG)
+        sourceBranchFilterForPush: ''
+
+  - job: test_build_args
+    displayName: Test build-args
+    steps:
+    - script: |
+        docker login -u $ACR_USERNAME -p $ACR_TOKEN $(ACR_NAME).azurecr.io
+      displayName: 'Log in to Azure Container Registry'
+      env:
+        ACR_NAME: $(ACR_NAME)
+        ACR_TOKEN: $(ACR_TOKEN)
+        ACR_USERNAME: $(ACR_USERNAME)
+
+    - script: |
+        printenv | sort
+      env:
+        IMAGE_TAG: $(IMAGE_TAG)
+
+    - task: DevContainerBuildRun@0
+      inputs:
+        imageName: '$(ACR_NAME).azurecr.io/stuartleeks/azdo-devcontainer-build-run/test/build-args'
+        subFolder: github-tests/build-args
+        runCmd: echo $BUILD_ARG_TEST && [[ $BUILD_ARG_TEST == "Hello build-args!" ]]
+        env: ''
+        imageTag: $(IMAGE_TAG)
+        sourceBranchFilterForPush: ''
+
+  - job: test_dockerfile_context
+    displayName: Test Dockerfile context
+    steps:
+    - script: |
+        docker login -u $ACR_USERNAME -p $ACR_TOKEN $(ACR_NAME).azurecr.io
+      displayName: 'Log in to Azure Container Registry'
+      env:
+        ACR_NAME: $(ACR_NAME)
+        ACR_TOKEN: $(ACR_TOKEN)
+        ACR_USERNAME: $(ACR_USERNAME)
+
+    - script: |
+        printenv | sort
+      env:
+        IMAGE_TAG: $(IMAGE_TAG)
+
+    - task: DevContainerBuildRun@0
+      inputs:
+        imageName: '$(ACR_NAME).azurecr.io/stuartleeks/azdo-devcontainer-build-run/test/dockerfile-context'
+        subFolder: github-tests/dockerfile-context
+        runCmd: /tmp/dummy.sh
+        env: ''
+        imageTag: $(IMAGE_TAG)
+        sourceBranchFilterForPush: ''
+
+  - job: test_feature_docker_from_docker
+    displayName: Test docker-from-docker using feature
+    steps:
+    - script: |
+        docker login -u $ACR_USERNAME -p $ACR_TOKEN $(ACR_NAME).azurecr.io
+      displayName: 'Log in to Azure Container Registry'
+      env:
+        ACR_NAME: $(ACR_NAME)
+        ACR_TOKEN: $(ACR_TOKEN)
+        ACR_USERNAME: $(ACR_USERNAME)
+
+    - script: |
+        printenv | sort
+      env:
+        IMAGE_TAG: $(IMAGE_TAG)
+
+    - task: DevContainerBuildRun@0
+      inputs:
+        imageName: '$(ACR_NAME).azurecr.io/stuartleeks/azdo-devcontainer-build-run/test/feature-docker-from-docker'
+        subFolder: github-tests/feature-docker-from-docker
+        runCmd: make docker-build
+        env: ''
+        imageTag: $(IMAGE_TAG)
+        sourceBranchFilterForPush: ''
+
+
