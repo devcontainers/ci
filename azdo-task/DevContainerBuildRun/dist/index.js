@@ -16864,8 +16864,10 @@ __nccwpck_require__.r(__webpack_exports__);
 /* harmony import */ var child_process__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__nccwpck_require__.n(child_process__WEBPACK_IMPORTED_MODULE_0__);
 /* harmony import */ var fs__WEBPACK_IMPORTED_MODULE_1__ = __nccwpck_require__(5747);
 /* harmony import */ var fs__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__nccwpck_require__.n(fs__WEBPACK_IMPORTED_MODULE_1__);
-/* harmony import */ var util__WEBPACK_IMPORTED_MODULE_2__ = __nccwpck_require__(1669);
-/* harmony import */ var util__WEBPACK_IMPORTED_MODULE_2___default = /*#__PURE__*/__nccwpck_require__.n(util__WEBPACK_IMPORTED_MODULE_2__);
+/* harmony import */ var path__WEBPACK_IMPORTED_MODULE_2__ = __nccwpck_require__(5622);
+/* harmony import */ var path__WEBPACK_IMPORTED_MODULE_2___default = /*#__PURE__*/__nccwpck_require__.n(path__WEBPACK_IMPORTED_MODULE_2__);
+/* harmony import */ var util__WEBPACK_IMPORTED_MODULE_3__ = __nccwpck_require__(1669);
+/* harmony import */ var util__WEBPACK_IMPORTED_MODULE_3___default = /*#__PURE__*/__nccwpck_require__.n(util__WEBPACK_IMPORTED_MODULE_3__);
 var __awaiter = (undefined && undefined.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -16875,6 +16877,7 @@ var __awaiter = (undefined && undefined.__awaiter) || function (thisArg, _argume
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
+
 
 
 
@@ -16902,17 +16905,19 @@ function isCliInstalled(exec) {
         }
     });
 }
-const fstat = (0,util__WEBPACK_IMPORTED_MODULE_2__.promisify)((fs__WEBPACK_IMPORTED_MODULE_1___default().stat));
+const fstat = (0,util__WEBPACK_IMPORTED_MODULE_3__.promisify)((fs__WEBPACK_IMPORTED_MODULE_1___default().stat));
 function installCli(exec) {
     return __awaiter(this, void 0, void 0, function* () {
         // if we have a local 'cli' folder, then use that as we're testing a private cli build
+        const localCLIPath = path__WEBPACK_IMPORTED_MODULE_2___default().resolve(__dirname, "..", "cli");
         let cliStat = null;
         try {
-            cliStat = yield fstat('./cli');
+            console.log(`Checking ${localCLIPath}...`);
+            cliStat = yield fstat(localCLIPath);
         }
         catch (_a) { }
         if (cliStat && cliStat.isDirectory()) {
-            const { exitCode } = yield exec('bash', ['-c', 'cd cli && npm install && npm install -g'], {});
+            const { exitCode } = yield exec('bash', ['-c', `cd  ${localCLIPath} && npm install && npm install -g`], {});
             return exitCode === 0;
         }
         const { exitCode } = yield exec('bash', ['-c', 'npm install -g @devcontainers/cli'], {});

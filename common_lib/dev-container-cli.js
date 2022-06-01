@@ -15,6 +15,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.devcontainer = void 0;
 const child_process_1 = require("child_process");
 const fs_1 = __importDefault(require("fs"));
+const path_1 = __importDefault(require("path"));
 const util_1 = require("util");
 function getSpecCliInfo() {
     // // TODO - this is temporary until the CLI is installed via npm
@@ -44,13 +45,15 @@ const fstat = util_1.promisify(fs_1.default.stat);
 function installCli(exec) {
     return __awaiter(this, void 0, void 0, function* () {
         // if we have a local 'cli' folder, then use that as we're testing a private cli build
+        const localCLIPath = path_1.default.resolve(__dirname, "..", "cli");
         let cliStat = null;
         try {
-            cliStat = yield fstat('./cli');
+            console.log(`Checking ${localCLIPath}...`);
+            cliStat = yield fstat(localCLIPath);
         }
         catch (_a) { }
         if (cliStat && cliStat.isDirectory()) {
-            const { exitCode } = yield exec('bash', ['-c', 'cd cli && npm install && npm install -g'], {});
+            const { exitCode } = yield exec('bash', ['-c', `cd  ${localCLIPath} && npm install && npm install -g`], {});
             return exitCode === 0;
         }
         const { exitCode } = yield exec('bash', ['-c', 'npm install -g @devcontainers/cli'], {});
