@@ -56,7 +56,7 @@ export async function runMain(): Promise<void> {
 			// resolves a previous image for the tag as a layer cache (if pushed to a registry)
 			cacheFrom.splice(0, 0, fullImageName);
 		}
-		const buildResult = await core.group('build container', async () => {
+		const buildResult = await core.group('🏗️ build container', async () => {
 			const args: DevContainerCliBuildArgs = {
 				workspaceFolder,
 				imageName: fullImageName,
@@ -76,7 +76,7 @@ export async function runMain(): Promise<void> {
 			return;
 		}
 
-		const upResult = await core.group('start container', async () => {
+		const upResult = await core.group('🏃 start container', async () => {
 			const args: DevContainerCliUpArgs = {
 				workspaceFolder,
 				additionalCacheFroms: cacheFrom,
@@ -96,7 +96,7 @@ export async function runMain(): Promise<void> {
 		}
 
 		const execResult = await core.group(
-			'Run command in container',
+			'🚀 Run command in container',
 			async () => {
 				const args: DevContainerCliExecArgs = {
 					workspaceFolder,

@@ -77,7 +77,7 @@ function runMain() {
                 // resolves a previous image for the tag as a layer cache (if pushed to a registry)
                 cacheFrom.splice(0, 0, fullImageName);
             }
-            const buildResult = yield core.group('build container', () => __awaiter(this, void 0, void 0, function* () {
+            const buildResult = yield core.group('🏗️ build container', () => __awaiter(this, void 0, void 0, function* () {
                 const args = {
                     workspaceFolder,
                     imageName: fullImageName,
@@ -93,7 +93,7 @@ function runMain() {
             if (buildResult.outcome !== 'success') {
                 return;
             }
-            const upResult = yield core.group('start container', () => __awaiter(this, void 0, void 0, function* () {
+            const upResult = yield core.group('🏃 start container', () => __awaiter(this, void 0, void 0, function* () {
                 const args = {
                     workspaceFolder,
                     additionalCacheFroms: cacheFrom,
@@ -109,7 +109,7 @@ function runMain() {
             if (upResult.outcome !== 'success') {
                 return;
             }
-            const execResult = yield core.group('Run command in container', () => __awaiter(this, void 0, void 0, function* () {
+            const execResult = yield core.group('🚀 Run command in container', () => __awaiter(this, void 0, void 0, function* () {
                 const args = {
                     workspaceFolder,
                     command: ['bash', '-c', runCommand],
