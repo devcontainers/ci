@@ -39,6 +39,7 @@ async function installCli(exec: ExecFunction): Promise<boolean> {
 
 	let cliStat = null;
 	try {
+		console.log(`Checking ${localCLIPath}...`)
 		cliStat = await fstat(localCLIPath);
 	} catch {}
 	if (cliStat && cliStat.isDirectory()) {
