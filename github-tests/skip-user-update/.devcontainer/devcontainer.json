@@ -3,6 +3,9 @@
 {
 	"name": "skip-uesr-update",
 	"dockerFile": "Dockerfile",
+	"build": {
+		"cacheFrom": "ghcr.io/stuartleeks/devcontainer-build-run/tests/skip-user-update:latest"
+	},
 
 	"mounts": [
 		// Keep command history 

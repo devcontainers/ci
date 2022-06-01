@@ -116,7 +116,9 @@ async function runSpecCli<T>(options: {
 		err: data => options.log(data),
 		env: options.env ? {...process.env, ...options.env} : process.env,
 	};
-	await spawn(getSpecCliInfo().command, options.args, spawnOptions);
+	const command = getSpecCliInfo().command;
+	console.log(`About to run ${command} ${options.args.join(' ')}`); // TODO - take an output arg to allow GH to use core.info
+	await spawn(command, options.args, spawnOptions);
 
 	return parseCliOutput<T>(stdout);
 }

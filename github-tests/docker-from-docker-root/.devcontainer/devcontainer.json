@@ -3,10 +3,12 @@
 {
 	"name": "dc-test",
 	"dockerFile": "Dockerfile",
+	"build": {
+		"cacheFrom": "ghcr.io/stuartleeks/devcontainer-build-run/tests/docker-from-docker-root:latest"
+	},
 	"mounts": [
 		// Mount host docker socket
 		"type=bind,source=/var/run/docker.sock,target=/var/run/docker.sock"
-	
 	],
 
 	// Set *default* container specific settings.json values on container create.

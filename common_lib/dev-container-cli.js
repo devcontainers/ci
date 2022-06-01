@@ -98,7 +98,9 @@ function runSpecCli(options) {
             err: data => options.log(data),
             env: options.env ? Object.assign(Object.assign({}, process.env), options.env) : process.env,
         };
-        yield spawn(getSpecCliInfo().command, options.args, spawnOptions);
+        const command = getSpecCliInfo().command;
+        console.log(`About to run ${command} ${options.args.join(' ')}`); // TODO - take an output arg to allow GH to use core.info
+        yield spawn(command, options.args, spawnOptions);
         return parseCliOutput(stdout);
     });
 }

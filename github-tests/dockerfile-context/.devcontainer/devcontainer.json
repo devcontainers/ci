@@ -4,6 +4,9 @@
 	"name": "dockerfile-contxt",
 	"dockerFile": "CustomDockerfile",
 	"context" : "../context",
+	"build": {
+		"cacheFrom": "ghcr.io/stuartleeks/devcontainer-build-run/tests/dockerfile-context:latest"
+	},
 
 
 	// Set *default* container specific settings.json values on container create.
