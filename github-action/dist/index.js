@@ -1844,6 +1844,7 @@ function runMain() {
                 // This ensures that when building a PR where the image specified in the action
                 // isn't included in devcontainer.json (or docker-compose.yml), the action still
                 // resolves a previous image for the tag as a layer cache (if pushed to a registry)
+                core.info(`Adding --cache-from ${fullImageName} to build args`);
                 cacheFrom.splice(0, 0, fullImageName);
             }
             const buildResult = yield core.group('🏗️ build container', () => __awaiter(this, void 0, void 0, function* () {
@@ -3800,7 +3801,9 @@ function runSpecCli(options) {
             err: data => options.log(data),
             env: options.env ? Object.assign(Object.assign({}, process.env), options.env) : process.env,
         };
-        yield spawn(getSpecCliInfo().command, options.args, spawnOptions);
+        const command = getSpecCliInfo().command;
+        console.log(`About to run ${command} ${options.args.join(' ')}`); // TODO - take an output arg to allow GH to use core.info
+        yield spawn(command, options.args, spawnOptions);
         return parseCliOutput(stdout);
     });
 }
