@@ -3750,7 +3750,7 @@ const fstat = (0,util__WEBPACK_IMPORTED_MODULE_3__.promisify)((fs__WEBPACK_IMPOR
 function installCli(exec) {
     return __awaiter(this, void 0, void 0, function* () {
         // if we have a local 'cli' folder, then use that as we're testing a private cli build
-        const localCLIPath = path__WEBPACK_IMPORTED_MODULE_2___default().resolve(__dirname, "..", "cli");
+        const localCLIPath = path__WEBPACK_IMPORTED_MODULE_2___default().resolve(__dirname, "..", "..", "cli");
         let cliStat = null;
         try {
             console.log(`Checking ${localCLIPath}...`);

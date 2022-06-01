@@ -45,7 +45,7 @@ const fstat = util_1.promisify(fs_1.default.stat);
 function installCli(exec) {
     return __awaiter(this, void 0, void 0, function* () {
         // if we have a local 'cli' folder, then use that as we're testing a private cli build
-        const localCLIPath = path_1.default.resolve(__dirname, "..", "cli");
+        const localCLIPath = path_1.default.resolve(__dirname, "..", "..", "cli");
         let cliStat = null;
         try {
             console.log(`Checking ${localCLIPath}...`);
