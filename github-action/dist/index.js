@@ -1835,6 +1835,7 @@ function runMain() {
             const inputEnvsWithDefaults = envvars_1.populateDefaults(inputEnvs);
             const cacheFrom = core.getMultilineInput('cacheFrom');
             const skipContainerUserIdUpdate = core.getBooleanInput('skipContainerUserIdUpdate');
+            const userDataFolder = core.getInput('userDataFolder');
             // TODO - nocache
             const log = (message) => core.info(message);
             const workspaceFolder = path_1.default.resolve(checkoutPath, subFolder);
@@ -1852,6 +1853,7 @@ function runMain() {
                     workspaceFolder,
                     imageName: fullImageName,
                     additionalCacheFroms: cacheFrom,
+                    userDataFolder,
                 };
                 const result = yield dev_container_cli_1.devcontainer.build(args, log);
                 if (result.outcome !== 'success') {
@@ -1868,6 +1870,7 @@ function runMain() {
                     workspaceFolder,
                     additionalCacheFroms: cacheFrom,
                     skipContainerUserIdUpdate,
+                    userDataFolder,
                 };
                 const result = yield dev_container_cli_1.devcontainer.up(args, log);
                 if (result.outcome !== 'success') {
@@ -1884,6 +1887,7 @@ function runMain() {
                     workspaceFolder,
                     command: ['bash', '-c', runCommand],
                     env: inputEnvsWithDefaults,
+                    userDataFolder,
                 };
                 const result = yield dev_container_cli_1.devcontainer.exec(args, log);
                 if (result.outcome !== 'success') {
@@ -3751,19 +3755,29 @@ function installCli(exec) {
         try {
             cliStat = yield fstat('./cli');
         }
-        catch (_a) { }
+        catch (_a) {
+        }
         if (cliStat && cliStat.isDirectory()) {
-            const { exitCode } = yield exec('bash', ['-c', 'cd cli && npm install && npm install -g'], {});
+            console.log('** Installing local cli');
+            const { exitCode, stdout, stderr } = yield exec('bash', ['-c', 'cd cli && npm install && npm install -g'], {});
+            if (exitCode != 0) {
+                console.log(stdout);
+                console.error(stderr);
+            }
             return exitCode === 0;
         }
-        const { exitCode } = yield exec('bash', ['-c', 'npm install -g @devcontainers/cli'], {});
+        console.log('** Installing @devcontainers/cli');
+        const { exitCode, stdout, stderr } = yield exec('bash', ['-c', 'npm install -g @devcontainers/cli'], {});
+        if (exitCode != 0) {
+            console.log(stdout);
+            console.error(stderr);
+        }
         return exitCode === 0;
     });
 }
 function spawn(command, args, options) {
     return new Promise((resolve, reject) => {
-        const proc = (0,child_process__WEBPACK_IMPORTED_MODULE_0__.spawn)(command, args, { env: process.env });
-        // const env = params.env ? { ...process.env, ...params.env } : process.env;
+        const proc = (0,child_process__WEBPACK_IMPORTED_MODULE_0__.spawn)(command, args, { env: options.env });
         proc.stdout.on('data', data => options.log(data.toString()));
         proc.stderr.on('data', data => options.err(data.toString()));
         proc.on('error', err => {
@@ -3817,13 +3831,16 @@ function devContainerBuild(args, log) {
         if (args.imageName) {
             commandArgs.push('--image-name', args.imageName);
         }
+        if (args.userDataFolder) {
+            commandArgs.push("--user-data-folder", args.userDataFolder);
+        }
         if (args.additionalCacheFroms) {
             args.additionalCacheFroms.forEach(cacheFrom => commandArgs.push('--cache-from', cacheFrom));
         }
         return yield runSpecCli({
             args: commandArgs,
             log,
-            env: { DOCKER_BUILDKIT: '1' },
+            env: { DOCKER_BUILDKIT: '1', COMPOSE_DOCKER_CLI_BUILD: '1' },
         });
     });
 }
@@ -3837,13 +3854,16 @@ function devContainerUp(args, log) {
         if (args.additionalCacheFroms) {
             args.additionalCacheFroms.forEach(cacheFrom => commandArgs.push('--cache-from', cacheFrom));
         }
+        if (args.userDataFolder) {
+            commandArgs.push("--user-data-folder", args.userDataFolder);
+        }
         if (args.skipContainerUserIdUpdate) {
             commandArgs.push('--update-remote-user-uid-default', 'off');
         }
         return yield runSpecCli({
             args: commandArgs,
             log,
-            env: { DOCKER_BUILDKIT: '1' },
+            env: { DOCKER_BUILDKIT: '1', COMPOSE_DOCKER_CLI_BUILD: '1' },
         });
     });
 }
@@ -3851,16 +3871,14 @@ function devContainerExec(args, log) {
     return __awaiter(this, void 0, void 0, function* () {
         // const remoteEnvArgs = args.env ? args.env.flatMap(e=> ["--remote-env", e]): []; // TODO - test flatMap again
         const remoteEnvArgs = getRemoteEnvArray(args.env);
+        const commandArgs = ["exec", "--workspace-folder", args.workspaceFolder, ...remoteEnvArgs, ...args.command];
+        if (args.userDataFolder) {
+            commandArgs.push("--user-data-folder", args.userDataFolder);
+        }
         return yield runSpecCli({
-            args: [
-                'exec',
-                '--workspace-folder',
-                args.workspaceFolder,
-                ...remoteEnvArgs,
-                ...args.command,
-            ],
+            args: commandArgs,
             log,
-            env: { DOCKER_BUILDKIT: '1' },
+            env: { DOCKER_BUILDKIT: '1', COMPOSE_DOCKER_CLI_BUILD: '1' },
         });
     });
 }

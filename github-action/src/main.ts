@@ -43,6 +43,7 @@ export async function runMain(): Promise<void> {
 		const skipContainerUserIdUpdate = core.getBooleanInput(
 			'skipContainerUserIdUpdate',
 		);
+		const userDataFolder: string = core.getInput('userDataFolder');
 
 		// TODO - nocache
 
@@ -62,6 +63,7 @@ export async function runMain(): Promise<void> {
 				workspaceFolder,
 				imageName: fullImageName,
 				additionalCacheFroms: cacheFrom,
+				userDataFolder,
 			};
 			const result = await devcontainer.build(args, log);
 
@@ -82,6 +84,7 @@ export async function runMain(): Promise<void> {
 				workspaceFolder,
 				additionalCacheFroms: cacheFrom,
 				skipContainerUserIdUpdate,
+				userDataFolder,
 			};
 			const result = await devcontainer.up(args, log);
 			if (result.outcome !== 'success') {
@@ -103,6 +106,7 @@ export async function runMain(): Promise<void> {
 					workspaceFolder,
 					command: ['bash', '-c', runCommand],
 					env: inputEnvsWithDefaults,
+					userDataFolder,
 				};
 				const result = await devcontainer.exec(args, log);
 				if (result.outcome !== 'success') {

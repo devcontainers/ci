@@ -115,6 +115,7 @@ jobs:
       - test-gh-docker-from-docker-root
       # - test-gh-image-tag
       - test-gh-skip-user-update
+      - test-compose-features
     if: github.ref == 'refs/heads/main' # only create release on `main`
     env:
       VERSION: ${{ needs.build.outputs.version }}
@@ -292,7 +293,7 @@ jobs:
       - name: Run test
         uses: ./
         with:
-          subFolder: github-tests/run-args
+          subFolder: github-tests/Dockerfile/run-args
           imageName: ghcr.io/stuartleeks/devcontainer-build-run/tests/run-args
           runCmd: echo $HOSTNAME && [[ $HOSTNAME == "my-host" ]]
           imageTag: ${{ needs.build.outputs.image_tag }}
@@ -321,7 +322,7 @@ jobs:
       - name: Run test
         uses: ./
         with:
-          subFolder: github-tests/build-args
+          subFolder: github-tests/Dockerfile/build-args
           imageName: ghcr.io/stuartleeks/devcontainer-build-run/tests/build-args
           runCmd: echo $BUILD_ARG_TEST && [[ $BUILD_ARG_TEST == "Hello build-args!" ]]
           imageTag: ${{ needs.build.outputs.image_tag }}
@@ -350,7 +351,7 @@ jobs:
       - name: Run test
         uses: ./
         with:
-          subFolder: github-tests/dockerfile-context
+          subFolder: github-tests/Dockerfile/dockerfile-context
           imageName: ghcr.io/stuartleeks/devcontainer-build-run/tests/dockerfile-context
           runCmd: /tmp/dummy.sh
           imageTag: ${{ needs.build.outputs.image_tag }}
@@ -379,7 +380,7 @@ jobs:
       - name: Run test
         uses: ./
         with:
-          subFolder: github-tests/feature-docker-from-docker
+          subFolder: github-tests/Dockerfile/feature-docker-from-docker
           imageName: ghcr.io/stuartleeks/devcontainer-build-run/tests/feature-docker-from-docker
           runCmd: make docker-build
           imageTag: ${{ needs.build.outputs.image_tag }}
@@ -408,7 +409,7 @@ jobs:
       - name: Run test
         uses: ./
         with:
-          subFolder: github-tests/docker-from-docker-non-root
+          subFolder: github-tests/Dockerfile/docker-from-docker-non-root
           imageName: ghcr.io/stuartleeks/devcontainer-build-run/tests/docker-from-docker-non-root
           runCmd: make docker-build
           imageTag: ${{ needs.build.outputs.image_tag }}
@@ -437,7 +438,7 @@ jobs:
       - name: Run test
         uses: ./
         with:
-          subFolder: github-tests/docker-from-docker-root
+          subFolder: github-tests/Dockerfile/docker-from-docker-root
           imageName: ghcr.io/stuartleeks/devcontainer-build-run/tests/docker-from-docker-root
           runCmd: make docker-build
           imageTag: ${{ needs.build.outputs.image_tag }}
@@ -470,7 +471,7 @@ jobs:
   #     - name: Run test
   #       uses: ./
   #       with:
-  #         subFolder: github-tests/image-tag
+  #         subFolder: github-tests/Dockerfile/image-tag
   #         imageName: ghcr.io/stuartleeks/devcontainer-build-run/tests/image-tag
   #         # Don't push this as we have a fixed custom tag
   #         imageTag: custom-tag
@@ -505,7 +506,7 @@ jobs:
       - name: Run test
         uses: ./
         with:
-          subFolder: github-tests/skip-user-update
+          subFolder: github-tests/Dockerfile/skip-user-update
           imageName: ghcr.io/stuartleeks/devcontainer-build-run/tests/skip-user-update
           skipContainerUserIdUpdate: true
           runCmd: |
@@ -515,6 +516,36 @@ jobs:
             group_id=$(id -g $(whoami))
             echo "Group ID: $group_id"
             [[ $user_id == 1000 ]] && [[ $group_id == 1000 ]]
+          imageTag: ${{ needs.build.outputs.image_tag }}
+          eventFilterForPush: | # allow image push on pull_request
+            push
+            pull_request
+
+
+  test-compose-features:
+    name: Run GitHub docker-compose with features test
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v1
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run test
+        uses: ./
+        with:
+          subFolder: github-tests/docker-compose/features
+          imageName: ghcr.io/stuartleeks/devcontainer-build-run/tests/compose-features
+          runCmd: go version
           imageTag: ${{ needs.build.outputs.image_tag }}
           eventFilterForPush: | # allow image push on pull_request
             push
