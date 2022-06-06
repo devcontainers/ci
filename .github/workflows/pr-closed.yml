@@ -22,4 +22,4 @@ jobs:
         env:
           PR_IMAGE_TAG: pr-${{ github.event.pull_request.number }}
         run:
-          ./github/workflows/clean_tags.sh --tag $PR_IMAGE_TAG
+          ./.github/workflows/clean_tags.sh --tag $PR_IMAGE_TAG
