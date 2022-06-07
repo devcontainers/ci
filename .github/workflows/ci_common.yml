@@ -76,7 +76,7 @@ jobs:
               core.setOutput("image_tag", "latest");
               return;
             }
-            if (context.eventName === "pull_request") {
+            if (context.eventName === "issue_comment") { // would be "pull_request" normally
               const prTag = `pr-${context.payload.pull_request.number}`;
               console.log(`Setting image_tag=${prTag} for pull_request`);
               core.setOutput("image_tag", prTag);
