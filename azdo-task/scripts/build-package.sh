@@ -73,7 +73,7 @@ npm prune --production
 
 figlet Package extension
 cd "$script_dir/../"
-echo "Build stuartleeks extension vsix..."
+echo "Build devcontainers extension vsix..."
 tfx extension create --manifests vss-extension.json --override "{\"public\": true}"
-echo "Build stuartleeks-dev extension vsix..."
-tfx extension create --manifests vss-extension.json --override "{\"public\": false, \"publisher\": \"stuartleeks-dev\"}"
+echo "Build devcontainers-dev extension vsix..."
+tfx extension create --manifests vss-extension.json --override "{\"public\": false, \"publisher\": \"devcontainers-dev\"}"

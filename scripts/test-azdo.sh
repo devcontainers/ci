@@ -13,11 +13,11 @@ if [[ -z "$MARKETPLACE_TOKEN" ]]; then
 fi
 
 cd "$script_dir/.."
-vsix_file=$(ls output/stuartleeks-dev.*.vsix)
+vsix_file=$(ls output/devcontainers-dev.*.vsix)
 echo "Using VSIX_FILE=$vsix_file"
 
-# Publish as non-public and as stuartleeks-dev
-tfx extension publish  --token "$MARKETPLACE_TOKEN" --vsix "$vsix_file" --override "{\"public\": false, \"publisher\": \"stuartleeks-dev\"}" --share-with devcontainer-build-run,stuartle
+# Publish as non-public and as devcontainers-dev
+tfx extension publish  --token "$MARKETPLACE_TOKEN" --vsix "$vsix_file" --override "{\"public\": false, \"publisher\": \"devcontainers-dev\"}" --share-with devcontainer-build-run,stuartle
 
 tfx extension install  --token "$AZDO_TOKEN" --vsix "$vsix_file" --service-url "$AZDO_ORG"
 

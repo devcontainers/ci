@@ -22,7 +22,7 @@ jobs:
 
     - task: DevContainerBuildRun@0
       inputs:
-        imageName: '$(ACR_NAME).azurecr.io/stuartleeks/azdo-devcontainer-build-run-examples-acr'
+        imageName: '$(ACR_NAME).azurecr.io/devcontainers-ci/azdo-devcontainer-build-run-examples-acr'
         runCmd: 'echo $PWD'
         subFolder: '.'
         env: ''
@@ -47,7 +47,7 @@ jobs:
 
     - task: DevContainerBuildRun@0
       inputs:
-        imageName: '$(ACR_NAME).azurecr.io/stuartleeks/azdo-devcontainer-build-run/test/run-args'
+        imageName: '$(ACR_NAME).azurecr.io/devcontainers-ci/azdo-devcontainer-build-run/test/run-args'
         subFolder: github-tests/Dockerfile/run-args
         runCmd: echo $HOSTNAME && [[ $HOSTNAME == "my-host" ]]
         env: ''
@@ -72,7 +72,7 @@ jobs:
 
     - task: DevContainerBuildRun@0
       inputs:
-        imageName: '$(ACR_NAME).azurecr.io/stuartleeks/azdo-devcontainer-build-run/test/build-args'
+        imageName: '$(ACR_NAME).azurecr.io/devcontainers-ci/azdo-devcontainer-build-run/test/build-args'
         subFolder: github-tests/Dockerfile/build-args
         runCmd: echo $BUILD_ARG_TEST && [[ $BUILD_ARG_TEST == "Hello build-args!" ]]
         env: ''
@@ -97,7 +97,7 @@ jobs:
 
     - task: DevContainerBuildRun@0
       inputs:
-        imageName: '$(ACR_NAME).azurecr.io/stuartleeks/azdo-devcontainer-build-run/test/dockerfile-context'
+        imageName: '$(ACR_NAME).azurecr.io/devcontainers-ci/azdo-devcontainer-build-run/test/dockerfile-context'
         subFolder: github-tests/Dockerfile/dockerfile-context
         runCmd: /tmp/dummy.sh
         env: ''
@@ -122,7 +122,7 @@ jobs:
 
     - task: DevContainerBuildRun@0
       inputs:
-        imageName: '$(ACR_NAME).azurecr.io/stuartleeks/azdo-devcontainer-build-run/test/feature-docker-from-docker'
+        imageName: '$(ACR_NAME).azurecr.io/devcontainers-ci/azdo-devcontainer-build-run/test/feature-docker-from-docker'
         subFolder: github-tests/Dockerfile/feature-docker-from-docker
         runCmd: make docker-build
         env: ''
