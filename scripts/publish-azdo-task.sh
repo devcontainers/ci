@@ -9,4 +9,4 @@ cd "$script_dir/.."
 echo "Publishing extension..."
 vsix_file=$(ls output/stuartleeks.*.vsix)
 echo "Using VSIX_FILE=$vsix_file"
-tfx extension publish  --token $AZDO_TOKEN --vsix $vsix_file  --override "{\"public\": true}"
+tfx extension publish  --token $MARKETPLACE_TOKEN --vsix $vsix_file  --override "{\"public\": true}"

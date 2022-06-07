@@ -10,7 +10,7 @@ vsix_file=$(ls output/stuartleeks-dev.*.vsix)
 echo "Using VSIX_FILE=$vsix_file"
 
 # Publish as non-public and as stuartleeks-dev
-tfx extension publish  --token "$AZDO_TOKEN" --vsix "$vsix_file" --override "{\"public\": false, \"publisher\": \"stuartleeks-dev\"}" --share-with devcontainer-build-run,stuartle
+tfx extension publish  --token "$MARKETPLACE_TOKEN" --vsix "$vsix_file" --override "{\"public\": false, \"publisher\": \"stuartleeks-dev\"}" --share-with devcontainer-build-run,stuartle
 
 tfx extension install  --token "$AZDO_TOKEN" --vsix "$vsix_file" --service-url "$AZDO_ORG"
 
