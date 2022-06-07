@@ -3,7 +3,10 @@ set -e
 
 script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 
-sudo chown -R $(whoami) ~ # TODO - remove this
+if [[ -z "$MARKETPLACE_TOKEN" ]]; then
+	echo "MARKETPLACE_TOKEN must be specified"
+	exit 1
+fi
 
 cd "$script_dir/.."
 echo "Publishing extension..."
