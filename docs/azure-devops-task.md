@@ -4,7 +4,7 @@ devcontainer-build-run is an Azure DevOps task aimed at making it easier to re-u
 
 **Status: this is a pet project that I've been experimenting with. It is not supported and you should expect bugs :-)**
 
-The [`devcontainer-build-run` task](https://marketplace.visualstudio.com/items?itemName=stuartleeks.devcontainer-build-run) uses Docker BuildKit to perform the Docker builds as this has support for storing layer cache metadata with the image. A version of Docker that supports BuiltKit is installed on the default hosted agents - if using a custom agent ensure that you make BuildKit available.
+The [`devcontainer-build-run` task](https://marketplace.visualstudio.com/items?itemName=devcontainers.devcontainer-build-run) uses Docker BuildKit to perform the Docker builds as this has support for storing layer cache metadata with the image. A version of Docker that supports BuiltKit is installed on the default hosted agents - if using a custom agent ensure that you make BuildKit available.
 
 To enable pushing the dev container image to a container registry you need to ensure that your pipeline is signed in to that registry.
 
