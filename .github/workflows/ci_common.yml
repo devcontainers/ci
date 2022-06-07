@@ -87,7 +87,7 @@ jobs:
               core.setOutput("image_tag", prTag);
               return;
             }
-            if (context.eventName === "push" && context.ref === "refs/heads/main") {
+            if ((context.eventName === "push" || context.eventName === "workflow_dispatch") && context.ref === "refs/heads/main") {
               console.log("Setting image_tag=latest for push to main");
               core.setOutput("image_tag", "latest");
               return;
