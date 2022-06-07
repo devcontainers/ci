@@ -155,7 +155,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           # the name must be identical to the one received by the real job
           sha: ${{ inputs.prHeadSha }}
-          name: "build-test / build, test, package"
+          name: "build, test, package"
           status: "completed"
           conclusion: "success"
 
