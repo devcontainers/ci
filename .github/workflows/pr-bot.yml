@@ -79,3 +79,4 @@ jobs:
     secrets:
       AZDO_TOKEN: ${{ secrets.AZDO_TOKEN }}
       AZDO_SERVICE_URL: ${{ secrets.AZDO_SERVICE_URL }}
+      MARKETPLACE_TOKEN: ${{ secrets.MARKETPLACE_TOKEN }}
