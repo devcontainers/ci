@@ -15,6 +15,5 @@ jobs:
     with:
       release: true
     secrets:
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       AZDO_TOKEN: ${{ secrets.AZDO_TOKEN }}
       AZDO_SERVICE_URL: ${{ secrets.AZDO_SERVICE_URL }}

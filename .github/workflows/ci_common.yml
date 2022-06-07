@@ -22,9 +22,6 @@ on:
         default: false
         required: false
     secrets:
-      GITHUB_TOKEN:
-        description: ""
-        required: true
       AZDO_TOKEN:
         description: ""
         required: true

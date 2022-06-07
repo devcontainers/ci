@@ -74,6 +74,5 @@ jobs:
       prHeadSha: ${{ needs.pr_comment.outputs.prHeadSha }}
       release: false
     secrets:
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       AZDO_TOKEN: ${{ secrets.AZDO_TOKEN }}
       AZDO_SERVICE_URL: ${{ secrets.AZDO_SERVICE_URL }}
