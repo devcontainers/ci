@@ -176,7 +176,7 @@ jobs:
       - test-gh-docker-from-docker-root
       - test-gh-skip-user-update
       - test-compose-features
-    if: ${{ inputs.release == 'true' }}
+    if: ${{ inputs.release == true }}
     env:
       VERSION: ${{ needs.build.outputs.version }}
       VERSION_SHORT: ${{ needs.build.outputs.version_short }}
