@@ -6,6 +6,10 @@ name: 'build-test'
 on: 
   workflow_call:
     inputs:
+      prNumber:
+        description: The PR number (if building for a PR)
+        type: string
+        required: false
       prRef:
         description: The git ref to checkout
         type: string
@@ -69,17 +73,20 @@ jobs:
       - id: set_image_tag
         name: Set image_tag...
         uses: actions/github-script@v6
+        env:
+          PR_NUMBER: ${{ inputs.prNumber }}
         with:
           script: |
+            const {PR_NUMBER} = process.env
+            if (PR_NUMBER) {
+              const prTag = `pr-${PR_NUMBER}`;
+              console.log(`Setting image_tag=${prTag} for pull_request`);
+              core.setOutput("image_tag", prTag);
+              return;
+            }
             if (context.eventName === "push" && context.ref === "refs/heads/main") {
               console.log("Setting image_tag=latest for push to main");
               core.setOutput("image_tag", "latest");
-              return;
-            }
-            if (context.eventName === "issue_comment") { // would be "pull_request" normally
-              const prTag = `pr-${context.payload.pull_request.number}`;
-              console.log(`Setting image_tag=${prTag} for pull_request`);
-              core.setOutput("image_tag", prTag);
               return;
             }
             core.error('Failed to set image_tag');

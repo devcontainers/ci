@@ -25,6 +25,7 @@ jobs:
     outputs:
       command: ${{ steps.check_command.outputs.command }}
       prRef: ${{ steps.check_command.outputs.prRef }}
+      prNumber: ${{ steps.check_command.outputs.prNumber }}
       prHeadSha: ${{ steps.check_command.outputs.prHeadSha }}
     steps:
       # Ensure we have the script file for the github-script action to use
@@ -47,6 +48,7 @@ jobs:
           echo "PR Details"
           echo "=========="
           echo "command     : ${{ steps.check_command.outputs.command }}"
+          echo "prNumber    : ${{ steps.check_command.outputs.prNumber }}"
           echo "prRef       : ${{ steps.check_command.outputs.prRef }}"
           echo "prHeadSha   : ${{ steps.check_command.outputs.prHeadSha }}"
 
@@ -70,6 +72,7 @@ jobs:
     name: build-test
     uses: ./.github/workflows/ci_common.yml
     with:
+      prNumber: ${{ needs.pr_comment.outputs.prNumber }}
       prRef: ${{ needs.pr_comment.outputs.prRef }}
       prHeadSha: ${{ needs.pr_comment.outputs.prHeadSha }}
       release: false

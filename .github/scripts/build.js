@@ -17,6 +17,7 @@ async function getCommandFromComment({ core, context, github }) {
 
   // Determine PR ref
   const pr = (await github.rest.pulls.get({ owner: repoOwner, repo: repoName, pull_number: prNumber })).data;
+  logAndSetOutput(core, "prNumber", prNumber);
   const potentialMergeCommit = pr.merge_commit_sha;
   logAndSetOutput(core, "prRef", potentialMergeCommit);
 
