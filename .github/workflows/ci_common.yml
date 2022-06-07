@@ -1,18 +1,37 @@
+#
+# This workflow contains the core logic to build, test and release the GitHub Action and Azure DevOps Task
+# It is called via workflow_call from the pr-bot
+#
 name: 'build-test'
-on: # rebuild any PRs and main branch changes
-  pull_request:
-    paths-ignore:
-      - README.md
-      - 'docs/**'
-  push:
-    branches:
-      - main
-      - 'releases/*'
-    paths-ignore:
-      - README.md
-      - 'docs/**'
-  workflow_dispatch:
-  
+on: 
+  workflow_call:
+    inputs:
+      prRef:
+        description: The git ref to checkout
+        type: string
+        required: false
+      prHeadSha:
+        description: >-
+          For PR builds (where GITHUB_REF would usually be set to the PR but isn't due to the pr-bot 
+          running on a comment trigger), pass the PR's head SHA commit here
+        type: string
+        required: false
+      release:
+        type: boolean
+        description: indicates whether to make a release
+        default: false
+        required: false
+    secrets:
+      GITHUB_TOKEN:
+        description: ""
+        required: true
+      AZDO_TOKEN:
+        description: ""
+        required: true
+      AZDO_SERVICE_URL:
+        description: ""
+        required: true
+
 jobs:
 
   build: # run build using the github action!
@@ -26,6 +45,11 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v2
+        with:
+          persist-credentials: false
+          # if the following value is missing (i.e. not triggered via comment workflow)
+          # then the default checkout will apply
+          ref: ${{ inputs.prRef }}
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v1
@@ -43,7 +67,7 @@ jobs:
         id: build_number
         uses: einaregilsson/build-number@v3 
         with:
-          token: ${{ secrets.github_token }}
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - id: set_image_tag
         name: Set image_tag...
@@ -101,9 +125,8 @@ jobs:
           path: ./output/stuartleeks.devcontainer-build-run-${{ steps.build.outputs.version }}.vsix
           if-no-files-found: error 
 
-  release:
-    name: Create release
-    runs-on: ubuntu-latest
+  pr-checks:
+    name: Mark PR checks as complete
     needs: # TODO - check what jobs need adding here
       - build
       - test-azdo
@@ -113,16 +136,51 @@ jobs:
       - test-gh-feature-docker-from-docker
       - test-gh-docker-from-docker-non-root
       - test-gh-docker-from-docker-root
-      # - test-gh-image-tag
       - test-gh-skip-user-update
       - test-compose-features
-    if: github.ref == 'refs/heads/main' # only create release on `main`
+    runs-on: ubuntu-latest
+    if: ${{ inputs.prHeadSha }}
+    steps:
+      # For PR builds triggered from comment builds, the GITHUB_REF is set to main
+      # so the checks aren't automatically associated with the PR
+      # If prHeadSha is specified then explicity mark the checks for that SHA
+      - name: Report check status
+        if: ${{ inputs.prHeadSha }}
+        uses: LouisBrunner/checks-action@v1.1.1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          # the name must be identical to the one received by the real job
+          sha: ${{ inputs.prHeadSha }}
+          name: "build-test / build, test, package"
+          status: "completed"
+          conclusion: "success"
+
+  release:
+    name: Create release
+    runs-on: ubuntu-latest
+    needs: 
+      - build
+      - test-azdo
+      - test-gh-run-args
+      - test-gh-build-args
+      - test-gh-dockerfile-context
+      - test-gh-feature-docker-from-docker
+      - test-gh-docker-from-docker-non-root
+      - test-gh-docker-from-docker-root
+      - test-gh-skip-user-update
+      - test-compose-features
+    if: ${{ inputs.release == 'true' }}
     env:
       VERSION: ${{ needs.build.outputs.version }}
       VERSION_SHORT: ${{ needs.build.outputs.version_short }}
     steps:
       - name: Checkout
         uses: actions/checkout@v2
+        with:
+          persist-credentials: false
+          # if the following value is missing (i.e. not triggered via comment workflow)
+          # then the default checkout will apply
+          ref: ${{ inputs.prRef }}
 
       - name: Download release VSIX
         uses: actions/download-artifact@v2
@@ -206,7 +264,11 @@ jobs:
 
   #
   # Jobs to test
-  # (ensure that any new tests are added to the `needs` section for the release job)
+  #
+  # When adding a new test:
+  # - add to the 'needs' section for the 'pr-checks' and 'releases' jobs
+  # - add any new images to the image_names in clean_tags.sh
+  # - review the Azure DevOps pipeline and consider adding there for verification
   #
 
   test-azdo:
@@ -216,6 +278,11 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v2
+        with:
+          persist-credentials: false
+          # if the following value is missing (i.e. not triggered via comment workflow)
+          # then the default checkout will apply
+          ref: ${{ inputs.prRef }}
 
       - name: Show version
         env:
@@ -279,6 +346,11 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v2
+        with:
+          persist-credentials: false
+          # if the following value is missing (i.e. not triggered via comment workflow)
+          # then the default checkout will apply
+          ref: ${{ inputs.prRef }}
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v1
@@ -308,6 +380,11 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v2
+        with:
+          persist-credentials: false
+          # if the following value is missing (i.e. not triggered via comment workflow)
+          # then the default checkout will apply
+          ref: ${{ inputs.prRef }}
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v1
@@ -337,6 +414,11 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v2
+        with:
+          persist-credentials: false
+          # if the following value is missing (i.e. not triggered via comment workflow)
+          # then the default checkout will apply
+          ref: ${{ inputs.prRef }}
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v1
@@ -366,6 +448,11 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v2
+        with:
+          persist-credentials: false
+          # if the following value is missing (i.e. not triggered via comment workflow)
+          # then the default checkout will apply
+          ref: ${{ inputs.prRef }}
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v1
@@ -395,6 +482,11 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v2
+        with:
+          persist-credentials: false
+          # if the following value is missing (i.e. not triggered via comment workflow)
+          # then the default checkout will apply
+          ref: ${{ inputs.prRef }}
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v1
@@ -424,6 +516,11 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v2
+        with:
+          persist-credentials: false
+          # if the following value is missing (i.e. not triggered via comment workflow)
+          # then the default checkout will apply
+          ref: ${{ inputs.prRef }}
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v1
@@ -446,45 +543,6 @@ jobs:
             push
             pull_request
 
-
-  # TODO - Review whether this test is meaningful now that we're building on the CLI.
-  #        It doesn't currently succeed as the image being run by the CLI isn't the tagged image
-  # test-gh-image-tag:
-  #   name: Run GitHub image-tag test
-  #   runs-on: ubuntu-latest
-  #   needs: build
-  #   steps:
-  #     - name: Checkout
-  #       uses: actions/checkout@v2
-
-  #     - name: Set up Docker Buildx
-  #       uses: docker/setup-buildx-action@v1
-
-  #     - name: Login to GitHub Container Registry
-  #       uses: docker/login-action@v1 
-  #       if: github.ref == 'refs/heads/main' # only need this for push (on `main`)
-  #       with:
-  #         registry: ghcr.io
-  #         username: ${{ github.repository_owner }}
-  #         password: ${{ secrets.GITHUB_TOKEN }}
-
-  #     - name: Run test
-  #       uses: ./
-  #       with:
-  #         subFolder: github-tests/Dockerfile/image-tag
-  #         imageName: ghcr.io/stuartleeks/devcontainer-build-run/tests/image-tag
-  #         # Don't push this as we have a fixed custom tag
-  #         imageTag: custom-tag
-  #         runCmd: |
-  #           echo "Get dev container..."
-  #           container_id=$(docker ps --latest --format "{{.ID}}" --no-trunc)
-  #           echo "Container ID: $container_id"
-  #           container_image=$(docker inspect $container_id --format "{{.Config.Image}}")
-  #           echo "Container Image: $container_image"
-  #           container_tag=$(echo $container_image | sed s/[^:].*://g)
-  #           echo "Container tag: $container_tag"
-  #           [[ $container_tag == "custom-tag" ]]
-
   test-gh-skip-user-update:
     name: Run GitHub skipContainerUserIdUpdate test
     runs-on: ubuntu-latest
@@ -492,6 +550,11 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v2
+        with:
+          persist-credentials: false
+          # if the following value is missing (i.e. not triggered via comment workflow)
+          # then the default checkout will apply
+          ref: ${{ inputs.prRef }}
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v1
@@ -529,6 +592,11 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v2
+        with:
+          persist-credentials: false
+          # if the following value is missing (i.e. not triggered via comment workflow)
+          # then the default checkout will apply
+          ref: ${{ inputs.prRef }}
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v1
