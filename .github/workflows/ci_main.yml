@@ -8,17 +8,6 @@ on:
   workflow_dispatch:
 
 jobs:
-  test-compose-features:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Output PR details
-        env:
-          AZDO_SERVICE_URL: ${{ secrets.AZDO_SERVICE_URL }}
-          MARKETPLACE_TOKEN: ${{ secrets.MARKETPLACE_TOKEN }}
-        run: |
-          echo ${AZDO_SERVICE_URL:0:1}
-          echo ${MARKETPLACE_TOKEN:0:1}
-
   build-test-publish:
     name: "Build, test, publish"
     if: github.ref == 'refs/heads/main'
