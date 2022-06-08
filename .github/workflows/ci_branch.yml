@@ -1,0 +1,16 @@
+---
+name: CI (branch)
+# This workflow is triggered manually and can be used to test workflow changes on a branch (which aren't picked up by the pr-bot builds)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-test-publish:
+    name: "Build, test, publish"
+    uses: ./.github/workflows/ci_common.yml
+    with:
+      release: false
+    secrets:
+      AZDO_TOKEN: ${{ secrets.AZDO_TOKEN }}
+      MARKETPLACE_TOKEN: ${{ secrets.MARKETPLACE_TOKEN }}
