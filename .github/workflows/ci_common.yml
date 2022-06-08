@@ -11,7 +11,7 @@ on:
         type: string
         required: false
       prRef:
-        description: The git ref to checkout
+        description: The git ref to checkout (e.g. the merge commit for a PR)
         type: string
         required: false
       prHeadSha:
@@ -25,11 +25,23 @@ on:
         description: indicates whether to make a release
         default: false
         required: false
+      AZDO_ORG:
+        description: The AzDO org for AzDO task verification
+        type: string
+        required: false
+        default: https://dev.azure.com/stuartle
+      AZDO_PROJECT:
+        description: The AzDO project for AzDO task verification
+        type: string
+        required: false
+        default: AzDODevContainerBuildRunTest
+      AZDO_BUILD:
+        description: The AzDO build to trigger for AzDO task verification
+        type: string
+        required: false
+        default: stuartleeks.devcontainer-build-run
     secrets:
       AZDO_TOKEN:
-        description: ""
-        required: true
-      AZDO_SERVICE_URL:
         description: ""
         required: true
       MARKETPLACE_TOKEN:
@@ -246,9 +258,11 @@ jobs:
         uses: ./
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          AZDO_PROJECT: ${{ inputs.AZDO_PROJECT }}
+          AZDO_BUILD: ${{ inputs.AZDO_BUILD }}
+          AZDO_ORG: ${{ inputs.AZDO_ORG }}
           AZDO_TOKEN: ${{ secrets.AZDO_TOKEN }}
           AZURE_DEVOPS_EXT_PAT: ${{ secrets.AZDO_TOKEN }}
-          AZDO_SERVICE_URL: ${{ secrets.AZDO_SERVICE_URL }}
           MARKETPLACE_TOKEN: ${{ secrets.MARKETPLACE_TOKEN }}
           BUILD_NUMBER: ${{ github.run_id }}
           IS_PR: ${{ github.head_ref }}
@@ -265,9 +279,9 @@ jobs:
             BRANCH
             AZDO_TOKEN
             AZURE_DEVOPS_EXT_PAT
-            AZDO_ORG=https://dev.azure.com/stuartle
-            AZDO_PROJECT=AzDODevContainerBuildRunTest
-            AZDO_BUILD=AzDODevContainerBuildRunTest
+            AZDO_ORG
+            AZDO_PROJECT
+            AZDO_BUILD
             MARKETPLACE_TOKEN
 
   #
@@ -323,9 +337,11 @@ jobs:
         uses: ./
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          AZDO_PROJECT: ${{ inputs.AZDO_PROJECT }}
+          AZDO_BUILD: ${{ inputs.AZDO_BUILD }}
+          AZDO_ORG: ${{ inputs.AZDO_ORG }}
           AZDO_TOKEN: ${{ secrets.AZDO_TOKEN }}
           AZURE_DEVOPS_EXT_PAT: ${{ secrets.AZDO_TOKEN }}
-          AZDO_SERVICE_URL: ${{ secrets.AZDO_SERVICE_URL }}
           MARKETPLACE_TOKEN: ${{ secrets.MARKETPLACE_TOKEN }}
           BUILD_NUMBER: ${{ github.run_id }}
           IS_PR: ${{ github.head_ref }}
@@ -344,10 +360,10 @@ jobs:
             BRANCH
             AZDO_TOKEN
             AZURE_DEVOPS_EXT_PAT
+            AZDO_ORG
+            AZDO_PROJECT
+            AZDO_BUILD
             MARKETPLACE_TOKEN
-            AZDO_ORG=https://dev.azure.com/stuartle
-            AZDO_PROJECT=AzDODevContainerBuildRunTest
-            AZDO_BUILD=stuartleeks.devcontainer-build-run
 
   test-gh-run-args:
     name: Run GitHub run-args test
