@@ -29,17 +29,17 @@ on:
         description: The AzDO org for AzDO task verification
         type: string
         required: false
-        default: https://dev.azure.com/stuartle
+        default: https://dev.azure.com/devcontainers-ci
       AZDO_PROJECT:
         description: The AzDO project for AzDO task verification
         type: string
         required: false
-        default: AzDODevContainerBuildRunTest
+        default: devcontainers-ci-build
       AZDO_BUILD:
         description: The AzDO build to trigger for AzDO task verification
         type: string
         required: false
-        default: stuartleeks.devcontainer-build-run
+        default: devcontainers.devcontainer-build-run
     secrets:
       AZDO_TOKEN:
         description: ""
