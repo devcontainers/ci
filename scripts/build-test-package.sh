@@ -16,7 +16,7 @@ npm install
 npm run all
 
 figlet AzDO Task
-cd "$script_dir/../azdo-task/DevContainerBuildRun"
+cd "$script_dir/../azdo-task/DevcontainersCi"
 cp "$script_dir/../docs/azure-devops-task.md" "$script_dir/../azdo-task/README.md"
 cp "$script_dir/../LICENSE" "$script_dir/../azdo-task/LICENSE.md"
 npm install 
@@ -43,7 +43,7 @@ cd "$script_dir/.."
 # vss-extension.json and task.json have their version info modified by the build
 # reset these before checking for changes
 git checkout azdo-task/vss-extension.json
-git checkout azdo-task/DevContainerBuildRun/task.json
+git checkout azdo-task/DevcontainersCi/task.json
 # The GH action to generate the build number leaves a BUILD_NUMBER file behind
 rm BUILD_NUMBER
 if [[ -n $(git status --short) ]]; then

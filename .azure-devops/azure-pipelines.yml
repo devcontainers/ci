@@ -20,7 +20,7 @@ jobs:
       env:
         IMAGE_TAG: $(IMAGE_TAG)
 
-    - task: DevContainerBuildRun@0
+    - task: DevcontainersCi@0
       inputs:
         imageName: '$(ACR_NAME).azurecr.io/devcontainers-ci/azdo-devcontainer-build-run-examples-acr'
         runCmd: 'echo $PWD'
@@ -45,7 +45,7 @@ jobs:
       env:
         IMAGE_TAG: $(IMAGE_TAG)
 
-    - task: DevContainerBuildRun@0
+    - task: DevcontainersCi@0
       inputs:
         imageName: '$(ACR_NAME).azurecr.io/devcontainers-ci/azdo-devcontainer-build-run/test/run-args'
         subFolder: github-tests/Dockerfile/run-args
@@ -70,7 +70,7 @@ jobs:
       env:
         IMAGE_TAG: $(IMAGE_TAG)
 
-    - task: DevContainerBuildRun@0
+    - task: DevcontainersCi@0
       inputs:
         imageName: '$(ACR_NAME).azurecr.io/devcontainers-ci/azdo-devcontainer-build-run/test/build-args'
         subFolder: github-tests/Dockerfile/build-args
@@ -95,7 +95,7 @@ jobs:
       env:
         IMAGE_TAG: $(IMAGE_TAG)
 
-    - task: DevContainerBuildRun@0
+    - task: DevcontainersCi@0
       inputs:
         imageName: '$(ACR_NAME).azurecr.io/devcontainers-ci/azdo-devcontainer-build-run/test/dockerfile-context'
         subFolder: github-tests/Dockerfile/dockerfile-context
@@ -120,7 +120,7 @@ jobs:
       env:
         IMAGE_TAG: $(IMAGE_TAG)
 
-    - task: DevContainerBuildRun@0
+    - task: DevcontainersCi@0
       inputs:
         imageName: '$(ACR_NAME).azurecr.io/devcontainers-ci/azdo-devcontainer-build-run/test/feature-docker-from-docker'
         subFolder: github-tests/Dockerfile/feature-docker-from-docker

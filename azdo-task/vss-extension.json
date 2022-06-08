@@ -1,6 +1,6 @@
 {
     "manifestVersion": 1,
-    "id": "devcontainer-build-run",
+    "id": "ci",
     "name": "Dev Container Build & Run Task",
     "version": "0.2.0",
     "publisher": "devcontainers",
@@ -43,18 +43,18 @@
     },
     "files": [
         {
-            "path": "DevContainerBuildRun"
+            "path": "DevcontainersCi"
         }
     ],
     "contributions": [
         {
-            "id": "dev-container-build-run",
+            "id": "DevcontainersCi",
             "type": "ms.vss-distributed-task.task",
             "targets": [
                 "ms.vss-distributed-task.tasks"
             ],
             "properties": {
-                "name": "DevContainerBuildRun"
+                "name": "DevcontainersCi"
             }
         }
     ]

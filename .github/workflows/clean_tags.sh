@@ -40,23 +40,23 @@ if [[ -z $tag ]]; then
 fi
 
 image_names=(
-	"devcontainer-build-run-devcontainer"
-	"devcontainer-build-run/tests/run-args"
-	"devcontainer-build-run/tests/build-args"
-	"devcontainer-build-run/tests/dockerfile-context"
-	"devcontainer-build-run/tests/feature-docker-from-docker"
-	"devcontainer-build-run/tests/docker-from-docker-non-root"
-	"devcontainer-build-run/tests/docker-from-docker-root"
-	"devcontainer-build-run/tests/skip-user-update"
+	"ci-devcontainer"
+	"ci/tests/run-args"
+	"ci/tests/build-args"
+	"ci/tests/dockerfile-context"
+	"ci/tests/feature-docker-from-docker"
+	"ci/tests/docker-from-docker-non-root"
+	"ci/tests/docker-from-docker-root"
+	"ci/tests/skip-user-update"
 )
 
 for image_name in ${image_names[@]}; 
 do
 	escaped_image_name=$(echo ${image_name} | sed "s/\//%2f/g")
-	version_id=$( curl -s  -H "Authorization: Bearer $GITHUB_TOKEN"  -H "Accept: application/vnd.github.v3+json" "https://api.github.com/orgs/devcontainers/packages/container/$escaped_image_name/versions" | jq -r ".[] | select(.metadata.container.tags | index(\"${tag}\")) | .id")
+	version_id=$( curl -s  -H "Authorization: Bearer $GITHUB_TOKEN"  -H "Accept: application/vnd.github.v3+json" "https://api.github.com/users/stuartleeks/packages/container/$escaped_image_name/versions" | jq -r ".[] | select(.metadata.container.tags | index(\"${tag}\")) | .id")
 	if [[ -n $version_id ]]; then
 		echo "Found version '$version_id' for '$image_name:$tag' - deleting..."
-	curl -s -X DELETE -H "Authorization: Bearer $GITHUB_TOKEN"  -H "Accept: application/vnd.github.v3+json" "https://api.github.com/orgs/devcontainers/packages/container/$escaped_image_name/versions/$version_id"
+	curl -s -X DELETE -H "Authorization: Bearer $GITHUB_TOKEN"  -H "Accept: application/vnd.github.v3+json" "https://api.github.com/users/stuartleeks/packages/container/$escaped_image_name/versions/$version_id"
 	else
 		echo "Tag '$tag' not found for '$image_name:$tag' - skipping"
 	fi
