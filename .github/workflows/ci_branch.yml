@@ -4,6 +4,12 @@ name: CI (branch)
 
 on:
   workflow_dispatch:
+    inputs:
+      prNumber:
+        description: set to the PR number if testing a branch for a PR (used to derive the image tag)
+        default: ''
+        type: string
+        required: false
 
 jobs:
   build-test-publish:
@@ -11,6 +17,7 @@ jobs:
     uses: ./.github/workflows/ci_common.yml
     with:
       release: false
+      prNumber: ${{ inputs.prNumber }}
     secrets:
       AZDO_TOKEN: ${{ secrets.AZDO_TOKEN }}
       MARKETPLACE_TOKEN: ${{ secrets.MARKETPLACE_TOKEN }}
