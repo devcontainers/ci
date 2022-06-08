@@ -1,5 +1,5 @@
 {
-  "name": "devcontainer-build-run",
+  "name": "ci",
   "version": "0.0.0",
   "private": true,
   "description": "Azure DevOps task for building and running VS Code dev containers",
@@ -16,7 +16,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/sdevcontainers/ci.git"
+    "url": "git+https://github.com/devcontainers/ci.git"
   },
   "keywords": [
     "actions",

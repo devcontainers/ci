@@ -24,7 +24,7 @@ steps:
   env:
     ACR_TOKEN: $(ACR_TOKEN)
 
-- task: DevContainerBuildRun@0
+- task: DevcontainersCi@0
   inputs:
     # Change this to point to your image name
     imageName: 'yourregistry.azurecr.io/example-dev-container'
@@ -76,7 +76,7 @@ Suppose your repo has the following structure:
 To build and run the dev container from `folderB` you can specify the `subFolder` input as shown below.
 
 ```yaml
-- task: DevContainerBuildRun@0
+- task: DevcontainersCi@0
   inputs:
     imageName: 'yourregistry.azurecr.io/example-dev-container'
     subFolder: folderB
@@ -89,7 +89,7 @@ If you want to pass additional environment variables to the dev container when i
 
 
 ```yaml
-- task: DevContainerBuildRun@0
+- task: DevcontainersCi@0
   inputs:
     imageName: 'yourregistry.azurecr.io/example-dev-container'
     runCmd: echo "$HELLO - $WORLD"

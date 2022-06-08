@@ -41,14 +41,14 @@ figlet Version
 
 if [[ -n $set_patch_version ]]; then
     echo "--set-patch-version specified. Setting task patch version to $set_patch_version"
-    sed -i "s/\"Patch\": 0/\"Patch\": $set_patch_version/g" DevContainerBuildRun/task.json
+    sed -i "s/\"Patch\": 0/\"Patch\": $set_patch_version/g" DevcontainersCi/task.json
 else
     echo "--set-patch-version not set"
 fi
 
-VERSION_MAJOR=$(cat DevContainerBuildRun/task.json   |jq .version.Major)
-VERSION_MINOR=$(cat DevContainerBuildRun/task.json   |jq .version.Minor)
-VERSION_PATCH=$(cat DevContainerBuildRun/task.json   |jq .version.Patch)
+VERSION_MAJOR=$(cat DevcontainersCi/task.json   |jq .version.Major)
+VERSION_MINOR=$(cat DevcontainersCi/task.json   |jq .version.Minor)
+VERSION_PATCH=$(cat DevcontainersCi/task.json   |jq .version.Patch)
 
 echo "VERSION_MAJOR=${VERSION_MAJOR}"
 echo "VERSION_MINOR=${VERSION_MINOR}"
@@ -64,7 +64,7 @@ fi
 
 
 figlet Build task
-cd "$script_dir/../DevContainerBuildRun"
+cd "$script_dir/../DevcontainersCi"
 npm install
 npm run all
 

@@ -3,14 +3,14 @@ set -e
 
 
 image_names=(
-	"devcontainer-build-run-devcontainer"
-	"devcontainer-build-run/tests/run-args"
-	"devcontainer-build-run/tests/build-args"
-	"devcontainer-build-run/tests/dockerfile-context"
-	"devcontainer-build-run/tests/feature-docker-from-docker"
-	"devcontainer-build-run/tests/docker-from-docker-non-root"
-	"devcontainer-build-run/tests/docker-from-docker-root"
-	"devcontainer-build-run/tests/skip-user-update"
+	"ci-devcontainer"
+	"ci/tests/run-args"
+	"ci/tests/build-args"
+	"ci/tests/dockerfile-context"
+	"ci/tests/feature-docker-from-docker"
+	"ci/tests/docker-from-docker-non-root"
+	"ci/tests/docker-from-docker-root"
+	"ci/tests/skip-user-update"
 )
 
 for image_name in ${image_names[@]}; 

@@ -1,6 +1,6 @@
-# devcontainer-build-run
+# devcontainers/ci
 
-devcontainer-build-run contains a GitHub action and Azure DevOps task aimed at making it easier to re-use a [Visual Studio Code dev container](https://code.visualstudio.com/) in a GitHub workflow or Azure DevOps pipeline.
+devcontainers/ci contains a GitHub action and Azure DevOps task aimed at making it easier to re-use a [Visual Studio Code dev container](https://code.visualstudio.com/) in a GitHub workflow or Azure DevOps pipeline.
 
 This project builds on top of [@devcontainers/cli](https://www.npmjs.com/package/@devcontainers/cli)
 
@@ -12,7 +12,7 @@ The example below shows usage of the GitHub Action - see the [GitHub Action docu
 
 ```yaml
 - name: Build and run dev container task
-  uses: devcontainers/ci@v0.1
+  uses: devcontainers/ci@v0.2
   with:
     imageName: ghcr.io/example/example-devcontainer
     runCmd: make ci-build
@@ -23,7 +23,7 @@ The example below shows usage of the GitHub Action - see the [GitHub Action docu
 The example below shows usage of the Azure DevOps Task - see the [Azure DevOps Task documentation](./docs/azure-devops-task.md) for more details:
 
 ```yaml
-- task: DevContainerBuildRun@0
+- task: DevcontainersCI@0
   inputs:
     imageName: 'yourregistry.azurecr.io/example-dev-container'
     runCmd: 'make ci-build'
