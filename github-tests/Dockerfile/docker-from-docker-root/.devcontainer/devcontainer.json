@@ -4,7 +4,7 @@
 	"name": "dc-test",
 	"dockerFile": "Dockerfile",
 	"build": {
-		"cacheFrom": "ghcr.io/stuartleeks/devcontainer-build-run/tests/docker-from-docker-root:latest"
+		"cacheFrom": "ghcr.io/devcontainers/ci/tests/docker-from-docker-root:latest"
 	},
 	"mounts": [
 		// Mount host docker socket

@@ -270,7 +270,7 @@ export async function runContainer(
 	const remoteUser = config.getRemoteUser(devcontainerConfig);
 
 	const args = ['run', '--rm'];
-	args.push('--label', `github.com/stuartleeks/devcontainer-build-run/`);
+	args.push('--label', `github.com/devcontainers/ci/`);
 	args.push(
 		'--mount',
 		`type=bind,src=${checkoutPathAbsolute},dst=${workspaceFolder}`,

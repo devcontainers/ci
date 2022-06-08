@@ -20,10 +20,10 @@
     ],
     "links": {
         "repository": {
-            "uri": "https://github.com/stuartleeks/devcontainer-build-run/"
+            "uri": "https://github.com/devcontainers/ci"
         },
         "issues": {
-            "uri": "https://github.com/stuartleeks/devcontainer-build-run/issues"
+            "uri": "https://github.com/devcontainers/ci/issues"
         }
     },
     "icons": {
@@ -31,7 +31,7 @@
     },
     "repository": {
         "type": "git",
-        "uri": "https://github.com/stuartleeks/devcontainer-build-run/"
+        "uri": "https://github.com/devcontainers/ci"
     },
     "content": {
         "details": {

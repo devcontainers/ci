@@ -1,6 +1,6 @@
-name: 'devcontainer-build-run'
+name: 'devcontainers-ci'
 description: 'Action to simplify using VS Code dev containers in GitHub workflows'
-author: 'stuartleeks'
+author: 'devcontainers'
 branding:
   color: purple
   icon: box

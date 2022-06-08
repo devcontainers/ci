@@ -4,7 +4,7 @@
 	"name": "devcontainer-build-run",
 	"dockerFile": "Dockerfile",
 	"build": {
-		"cacheFrom": "ghcr.io/stuartleeks/devcontainer-build-run-devcontainer:latest"
+		"cacheFrom": "ghcr.io/devcontainers/ci-devcontainer:latest"
 	},
 	"mounts": [
 		// Keep command history 

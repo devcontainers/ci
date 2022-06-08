@@ -18,7 +18,7 @@ export async function runMain(): Promise<void> {
 		const buildXInstalled = await isDockerBuildXInstalled();
 		if (!buildXInstalled) {
 			core.warning(
-				'docker buildx not available: add a step to set up with docker/setup-buildx-action - see https://github.com/stuartleeks/devcontainer-build-run/blob/main/docs/github-action.md',
+				'docker buildx not available: add a step to set up with docker/setup-buildx-action - see https://github.com/devcontainers/ci/blob/main/docs/github-action.md',
 			);
 			return;
 		}
