@@ -17,7 +17,7 @@ jobs:
     uses: ./.github/workflows/ci_common.yml
     with:
       release: false
-      prNumber: ${{ inputs.prNumber }}
+      prNumber: ${{ github.event.inputs.prNumber }}
     secrets:
       AZDO_TOKEN: ${{ secrets.AZDO_TOKEN }}
       MARKETPLACE_TOKEN: ${{ secrets.MARKETPLACE_TOKEN }}
