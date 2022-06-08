@@ -2,7 +2,7 @@
   "$schema": "https://raw.githubusercontent.com/microsoft/azure-pipelines-task-lib/master/tasks.schema.json",
   "id": "d784888b-f54b-4926-a8d1-3a159d2de8e0",
   "name": "DevcontainersCi",
-  "friendlyName": "Devcontainers CI Extension",
+  "friendlyName": "Devcontainers CI Task",
   "description": "Build and run VS Code dev containers in Azure DevOps Pipelines",
   "author": "Devcontainers",
   "helpMarkDown": "",

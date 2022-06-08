@@ -1,7 +1,7 @@
 {
     "manifestVersion": 1,
     "id": "ci",
-    "name": "Dev Container Build & Run Task",
+    "name": "Devcontainers CI",
     "version": "0.2.0",
     "publisher": "devcontainers",
     "targets": [
