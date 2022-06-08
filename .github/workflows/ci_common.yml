@@ -170,9 +170,29 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           # the name must be identical to the one received by the real job
           sha: ${{ inputs.prHeadSha }}
-          name: "build, test, package"
+          name: "Build, test, publish / All succeeded"
           status: "completed"
           conclusion: "success"
+
+  pr-succeeded:
+    # simple no-op job to use as step for checks for PR checks
+    name: All succeeded
+    needs: # TODO - check what jobs need adding here
+      - build
+      - test-azdo
+      - test-gh-run-args
+      - test-gh-build-args
+      - test-gh-dockerfile-context
+      - test-gh-feature-docker-from-docker
+      - test-gh-docker-from-docker-non-root
+      - test-gh-docker-from-docker-root
+      - test-gh-skip-user-update
+      - test-compose-features
+    runs-on: ubuntu-latest
+    steps:
+      - name: Simple step
+        run: |
+          echo Done!
 
   release:
     name: Create release

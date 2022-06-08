@@ -61,7 +61,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           # the name must be identical to the one received by the real job
           sha: ${{ steps.check_command.outputs.prHeadSha }}
-          name: "build, test, package"
+          name: "Build, test, publish / All succeeded"
           status: "completed"
           conclusion: "success"
 
