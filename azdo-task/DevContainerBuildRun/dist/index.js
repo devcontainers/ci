@@ -235,7 +235,7 @@ function runMain() {
             task.setTaskVariable('hasRunMain', 'true');
             const buildXInstalled = yield docker_1.isDockerBuildXInstalled();
             if (!buildXInstalled) {
-                console.log('### WARNING: docker buildx not available: add a step to set up with docker/setup-buildx-action - see https://github.com/stuartleeks/devcontainer-build-run/blob/main/docs/azure-devops-task.md');
+                console.log('### WARNING: docker buildx not available: add a step to set up with docker/setup-buildx-action - see https://github.com/devcontainers/ci/blob/main/docs/azure-devops-task.md');
                 return;
             }
             const devContainerCliInstalled = yield dev_container_cli_1.devcontainer.isCliInstalled(exec_1.exec);
@@ -17109,7 +17109,7 @@ function loadFromString(content) {
     return config;
 }
 function getWorkspaceFolder(config, repoPath) {
-    // TODO - need to check workspaceMount/workspaceFolder to set the source mount (https://github.com/stuartleeks/devcontainer-build-run/issues/66)
+    // TODO - need to check workspaceMount/workspaceFolder to set the source mount (https://github.com/devcontainers/ci/issues/66)
     // // https://code.visualstudio.com/docs/remote/containers-advanced#_changing-the-default-source-code-mount
     // if (config.workspaceFolder) {
     // 	return config.workspaceFolder
@@ -17346,7 +17346,7 @@ function runContainer(exec, imageName, imageTag, checkoutPath, subFolder, comman
         const workdir = external_path_default().join(workspaceFolder, subFolder);
         const remoteUser = getRemoteUser(devcontainerConfig);
         const args = ['run', '--rm'];
-        args.push('--label', `github.com/stuartleeks/devcontainer-build-run/`);
+        args.push('--label', `github.com/devcontainers/ci/`);
         args.push('--mount', `type=bind,src=${checkoutPathAbsolute},dst=${workspaceFolder}`);
         if (devcontainerConfig.mounts) {
             devcontainerConfig.mounts

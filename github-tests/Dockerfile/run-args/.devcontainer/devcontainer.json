@@ -4,7 +4,7 @@
 	"name": "run-args",
 	"dockerFile": "Dockerfile",
 	"build": {
-		"cacheFrom": "ghcr.io/stuartleeks/devcontainer-build-run/tests/run-args:latest"
+		"cacheFrom": "ghcr.io/devcontainers/ci/tests/run-args:latest"
 	},
 
 

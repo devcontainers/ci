@@ -116,7 +116,7 @@ jobs:
           IS_PR: ${{ github.head_ref }}
           BRANCH: ${{ github.ref }}
         with:
-          imageName: ghcr.io/stuartleeks/devcontainer-build-run-devcontainer
+          imageName: ghcr.io/devcontainers/ci-devcontainer
           imageTag: ${{ steps.set_image_tag.outputs.image_tag }} 
           runCmd: |
             echo "Starting"
@@ -268,7 +268,7 @@ jobs:
           IS_PR: ${{ github.head_ref }}
           BRANCH: ${{ github.ref }}
         with:
-          imageName: ghcr.io/stuartleeks/devcontainer-build-run-devcontainer
+          imageName: ghcr.io/devcontainers/ci-devcontainer
           runCmd: |
             echo "Starting"
             ./scripts/publish-azdo-task.sh
@@ -348,7 +348,7 @@ jobs:
           BRANCH: ${{ github.ref }}
           IMAGE_TAG: ${{ needs.build.outputs.image_tag }}
         with:
-          imageName: ghcr.io/stuartleeks/devcontainer-build-run-devcontainer
+          imageName: ghcr.io/devcontainers/ci-devcontainer
           runCmd: |
             echo "Starting"
             ./scripts/test-azdo.sh
@@ -392,7 +392,7 @@ jobs:
         uses: ./
         with:
           subFolder: github-tests/Dockerfile/run-args
-          imageName: ghcr.io/stuartleeks/devcontainer-build-run/tests/run-args
+          imageName: ghcr.io/devcontainers/ci/tests/run-args
           runCmd: echo $HOSTNAME && [[ $HOSTNAME == "my-host" ]]
           imageTag: ${{ needs.build.outputs.image_tag }}
           eventFilterForPush: | # allow image push on pull_request
@@ -426,7 +426,7 @@ jobs:
         uses: ./
         with:
           subFolder: github-tests/Dockerfile/build-args
-          imageName: ghcr.io/stuartleeks/devcontainer-build-run/tests/build-args
+          imageName: ghcr.io/devcontainers/ci/tests/build-args
           runCmd: echo $BUILD_ARG_TEST && [[ $BUILD_ARG_TEST == "Hello build-args!" ]]
           imageTag: ${{ needs.build.outputs.image_tag }}
           eventFilterForPush: | # allow image push on pull_request
@@ -460,7 +460,7 @@ jobs:
         uses: ./
         with:
           subFolder: github-tests/Dockerfile/dockerfile-context
-          imageName: ghcr.io/stuartleeks/devcontainer-build-run/tests/dockerfile-context
+          imageName: ghcr.io/devcontainers/ci/tests/dockerfile-context
           runCmd: /tmp/dummy.sh
           imageTag: ${{ needs.build.outputs.image_tag }}
           eventFilterForPush: | # allow image push on pull_request
@@ -494,7 +494,7 @@ jobs:
         uses: ./
         with:
           subFolder: github-tests/Dockerfile/feature-docker-from-docker
-          imageName: ghcr.io/stuartleeks/devcontainer-build-run/tests/feature-docker-from-docker
+          imageName: ghcr.io/devcontainers/ci/tests/feature-docker-from-docker
           runCmd: make docker-build
           imageTag: ${{ needs.build.outputs.image_tag }}
           eventFilterForPush: | # allow image push on pull_request
@@ -528,7 +528,7 @@ jobs:
         uses: ./
         with:
           subFolder: github-tests/Dockerfile/docker-from-docker-non-root
-          imageName: ghcr.io/stuartleeks/devcontainer-build-run/tests/docker-from-docker-non-root
+          imageName: ghcr.io/devcontainers/ci/tests/docker-from-docker-non-root
           runCmd: make docker-build
           imageTag: ${{ needs.build.outputs.image_tag }}
           eventFilterForPush: | # allow image push on pull_request
@@ -562,7 +562,7 @@ jobs:
         uses: ./
         with:
           subFolder: github-tests/Dockerfile/docker-from-docker-root
-          imageName: ghcr.io/stuartleeks/devcontainer-build-run/tests/docker-from-docker-root
+          imageName: ghcr.io/devcontainers/ci/tests/docker-from-docker-root
           runCmd: make docker-build
           imageTag: ${{ needs.build.outputs.image_tag }}
           eventFilterForPush: | # allow image push on pull_request
@@ -596,7 +596,7 @@ jobs:
         uses: ./
         with:
           subFolder: github-tests/Dockerfile/skip-user-update
-          imageName: ghcr.io/stuartleeks/devcontainer-build-run/tests/skip-user-update
+          imageName: ghcr.io/devcontainers/ci/tests/skip-user-update
           skipContainerUserIdUpdate: true
           runCmd: |
             echo "Get user/group info ..."
@@ -638,7 +638,7 @@ jobs:
         uses: ./
         with:
           subFolder: github-tests/docker-compose/features
-          imageName: ghcr.io/stuartleeks/devcontainer-build-run/tests/compose-features
+          imageName: ghcr.io/devcontainers/ci/tests/compose-features
           runCmd: go version
           imageTag: ${{ needs.build.outputs.image_tag }}
           eventFilterForPush: | # allow image push on pull_request

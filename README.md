@@ -12,7 +12,7 @@ The example below shows usage of the GitHub Action - see the [GitHub Action docu
 
 ```yaml
 - name: Build and run dev container task
-  uses: stuartleeks/devcontainer-build-run@v0.1
+  uses: devcontainers/ci@v0.1
   with:
     imageName: ghcr.io/example/example-devcontainer
     runCmd: make ci-build

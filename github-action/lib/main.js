@@ -45,7 +45,7 @@ function runMain() {
             core.saveState('hasRunMain', 'true');
             const buildXInstalled = yield docker_1.isDockerBuildXInstalled();
             if (!buildXInstalled) {
-                core.warning('docker buildx not available: add a step to set up with docker/setup-buildx-action - see https://github.com/stuartleeks/devcontainer-build-run/blob/main/docs/github-action.md');
+                core.warning('docker buildx not available: add a step to set up with docker/setup-buildx-action - see https://github.com/devcontainers/ci/blob/main/docs/github-action.md');
                 return;
             }
             const devContainerCliInstalled = yield dev_container_cli_1.devcontainer.isCliInstalled(exec_1.exec);

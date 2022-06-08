@@ -6,7 +6,7 @@ import {
 } from '../src/config';
 
 describe('getWorkspaceFolder', () => {
-	// TODO - need to check workspaceMount/workspaceFolder to set the source mount (https://github.com/stuartleeks/devcontainer-build-run/issues/66)
+	// TODO - need to check workspaceMount/workspaceFolder to set the source mount (https://github.com/devcontainers/ci/issues/66)
 	// test('returns configured workspaceFolder', () => {
 	// 	const repoPath = '/path/to/project-folder'
 	// 	const devcontainerConfig: DevContainerConfig = {
