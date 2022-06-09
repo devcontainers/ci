@@ -33,7 +33,7 @@ export async function runMain(): Promise<void> {
 		}
 
 		const checkoutPath: string = core.getInput('checkoutPath');
-		const imageName: string = core.getInput('imageName', {required: true});
+		const imageName = emptyStringAsUndefined(core.getInput('imageName'));
 		const imageTag = emptyStringAsUndefined(core.getInput('imageTag'));
 		const subFolder: string = core.getInput('subFolder');
 		const runCommand: string = core.getInput('runCmd', {required: true});
@@ -49,14 +49,25 @@ export async function runMain(): Promise<void> {
 
 		const log = (message: string): void => core.info(message);
 		const workspaceFolder = path.resolve(checkoutPath, subFolder);
-		const fullImageName = `${imageName}:${imageTag ?? 'latest'}`;
-		if (!cacheFrom.includes(fullImageName)) {
-			// If the cacheFrom options don't include the fullImageName, add it here
-			// This ensures that when building a PR where the image specified in the action
-			// isn't included in devcontainer.json (or docker-compose.yml), the action still
-			// resolves a previous image for the tag as a layer cache (if pushed to a registry)
-			core.info(`Adding --cache-from ${fullImageName} to build args`);
-			cacheFrom.splice(0, 0, fullImageName);
+
+		const fullImageName = imageName
+			? `${imageName}:${imageTag ?? 'latest'}`
+			: undefined;
+		if (fullImageName) {
+			if (!cacheFrom.includes(fullImageName)) {
+				// If the cacheFrom options don't include the fullImageName, add it here
+				// This ensures that when building a PR where the image specified in the action
+				// isn't included in devcontainer.json (or docker-compose.yml), the action still
+				// resolves a previous image for the tag as a layer cache (if pushed to a registry)
+				core.info(`Adding --cache-from ${fullImageName} to build args`);
+				cacheFrom.splice(0, 0, fullImageName);
+			}
+		} else {
+			if (imageTag) {
+				core.warning(
+					'imageTag specified without specifying imageName - ignoring imageTag',
+				);
+			}
 		}
 		const buildResult = await core.group('🏗️ build container', async () => {
 			const args: DevContainerCliBuildArgs = {

@@ -6,7 +6,34 @@ devcontainer-build-run is a GitHub action aimed at making it easier to re-use a 
 
 The [`devcontainer-build-run` action](https://github.com/marketplace/actions/devcontainer-build-run) uses Docker BuildKit to perform the Docker builds as this has support for storing layer cache metadata with the image. You can use the [docker/setup-buildx-action](https://github.com/docker/setup-buildx-action) to install this (see example below).
 
-To enable pushing the dev container image to a container registry you need to ensure that your GitHub workflow is signed in to that registry.
+The simplest example of using the action is shown below:
+
+```yaml
+name: 'build' 
+on: # rebuild any PRs and main branch changes
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: Checkout (GitHub)
+        uses: actions/checkout@v2
+
+      - name: Build and run dev container task
+        uses: devcontainers/ci@v0.2
+        with:
+          # Change this to be your CI task/script
+          runCmd: yarn test
+```
+
+With the example above, each time the action runs it will rebuild the Docker image for the dev container. To save time in builds, you can push the dev container image to a container registry (e.g. [GitHub Container Registry](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-container-registry)) and re-used the cached image in future builds.
+
+To enable pushing the dev container image to a container registry you need to specify a qualified `imageName` and ensure that your GitHub workflow is signed in to that registry.
 
 The example below shows installing Docker BuildKit, logging in to GitHub Container Registry, and then building and running the dev container with the devcontainer-build-run action:
 
@@ -43,8 +70,10 @@ jobs:
           # Change this to point to your image name
           imageName: ghcr.io/example/example-devcontainer
           # Change this to be your CI task/script
-          runCmd: make ci-build
-
+          runCmd: |
+            # Add multiple commands to run if needed
+            make install-packages
+            make ci-build
 ```
 
 In the example above, the devcontainer-build-run will perform the following steps:
@@ -67,6 +96,7 @@ In the example above, the devcontainer-build-run will perform the following step
 | refFilterForPush          | false    | Set the source branches (e.g. `refs/heads/main`) that are allowed to trigger a push of the dev container image. Leave empty to allow all (default)                                                                  |
 | eventFilterForPush        | false    | Set the event names (e.g. `pull_request`, `push`) that are allowed to trigger a push of the dev container image. Defaults to `push`. Leave empty for all                                                            |
 | skipContainerUserIdUpdate | false    | For non-root dev containers (i.e. where `remoteUser` is specified), the action attempts to make the container user UID and GID match those of the host user. Set this to true to skip this step (defaults to false) |
+
 ## Specifying a sub-folder
 
 Suppose your repo has the following structure:
