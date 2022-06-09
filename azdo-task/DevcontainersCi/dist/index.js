@@ -248,11 +248,7 @@ function runMain() {
                 }
             }
             const checkoutPath = (_a = task.getInput('checkoutPath')) !== null && _a !== void 0 ? _a : '';
-            const imageName = task.getInput('imageName', true);
-            if (!imageName) {
-                task.setResult(task.TaskResult.Failed, 'imageName input is required');
-                return;
-            }
+            const imageName = task.getInput('imageName');
             const imageTag = task.getInput('imageTag');
             const subFolder = (_b = task.getInput('subFolder')) !== null && _b !== void 0 ? _b : '.';
             const runCommand = task.getInput('runCmd', true);
@@ -266,13 +262,20 @@ function runMain() {
             const skipContainerUserIdUpdate = ((_g = task.getInput('skipContainerUserIdUpdate')) !== null && _g !== void 0 ? _g : 'false') === 'true';
             const log = (message) => console.log(message);
             const workspaceFolder = path_1.default.resolve(checkoutPath, subFolder);
-            const fullImageName = `${imageName}:${imageTag !== null && imageTag !== void 0 ? imageTag : 'latest'}`;
-            if (!cacheFrom.includes(fullImageName)) {
-                // If the cacheFrom options don't include the fullImageName, add it here
-                // This ensures that when building a PR where the image specified in the action
-                // isn't included in devcontainer.json (or docker-compose.yml), the action still
-                // resolves a previous image for the tag as a layer cache (if pushed to a registry)
-                cacheFrom.splice(0, 0, fullImageName);
+            const fullImageName = imageName
+                ? `${imageName}:${imageTag !== null && imageTag !== void 0 ? imageTag : 'latest'}`
+                : undefined;
+            if (fullImageName) {
+                if (!cacheFrom.includes(fullImageName)) {
+                    // If the cacheFrom options don't include the fullImageName, add it here
+                    // This ensures that when building a PR where the image specified in the action
+                    // isn't included in devcontainer.json (or docker-compose.yml), the action still
+                    // resolves a previous image for the tag as a layer cache (if pushed to a registry)
+                    cacheFrom.splice(0, 0, fullImageName);
+                }
+            }
+            else {
+                console.log('!! imageTag specified without specifying imageName - ignoring imageTag');
             }
             const buildArgs = {
                 workspaceFolder,

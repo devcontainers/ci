@@ -6,7 +6,7 @@ branding:
   icon: box
 inputs:
   imageName:
-    required: true
+    required: false
     description: Image name (including registry)
   imageTag:
     required: false

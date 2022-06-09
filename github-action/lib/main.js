@@ -58,7 +58,7 @@ function runMain() {
                 }
             }
             const checkoutPath = core.getInput('checkoutPath');
-            const imageName = core.getInput('imageName', { required: true });
+            const imageName = emptyStringAsUndefined(core.getInput('imageName'));
             const imageTag = emptyStringAsUndefined(core.getInput('imageTag'));
             const subFolder = core.getInput('subFolder');
             const runCommand = core.getInput('runCmd', { required: true });
@@ -70,14 +70,23 @@ function runMain() {
             // TODO - nocache
             const log = (message) => core.info(message);
             const workspaceFolder = path_1.default.resolve(checkoutPath, subFolder);
-            const fullImageName = `${imageName}:${imageTag !== null && imageTag !== void 0 ? imageTag : 'latest'}`;
-            if (!cacheFrom.includes(fullImageName)) {
-                // If the cacheFrom options don't include the fullImageName, add it here
-                // This ensures that when building a PR where the image specified in the action
-                // isn't included in devcontainer.json (or docker-compose.yml), the action still
-                // resolves a previous image for the tag as a layer cache (if pushed to a registry)
-                core.info(`Adding --cache-from ${fullImageName} to build args`);
-                cacheFrom.splice(0, 0, fullImageName);
+            const fullImageName = imageName
+                ? `${imageName}:${imageTag !== null && imageTag !== void 0 ? imageTag : 'latest'}`
+                : undefined;
+            if (fullImageName) {
+                if (!cacheFrom.includes(fullImageName)) {
+                    // If the cacheFrom options don't include the fullImageName, add it here
+                    // This ensures that when building a PR where the image specified in the action
+                    // isn't included in devcontainer.json (or docker-compose.yml), the action still
+                    // resolves a previous image for the tag as a layer cache (if pushed to a registry)
+                    core.info(`Adding --cache-from ${fullImageName} to build args`);
+                    cacheFrom.splice(0, 0, fullImageName);
+                }
+            }
+            else {
+                if (imageTag) {
+                    core.warning('imageTag specified without specifying imageName - ignoring imageTag');
+                }
             }
             const buildResult = yield core.group('🏗️ build container', () => __awaiter(this, void 0, void 0, function* () {
                 const args = {
