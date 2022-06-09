@@ -6,7 +6,7 @@ This document is targetted at maintainers of the project.
 
 **Notes**
 - these commands are not immediate - you need to wait for the GitHub action that performs the task to start up.
-- builds triggered via these commands will use the workflow definitions from `main`.
+- builds triggered via these commands will use the workflow definitions from `main`. To test workflow changes before merging to `main`, push the changes to a branch in the repo and use the `ci_branch` workflow.
 
 These commands can only be run when commented by a user who is identified as a repo collaborator (see [granting access to run commands](#granting-access-to-run-commands))
 
@@ -41,3 +41,9 @@ This is intended to be used in scenarios where running the tests for a PR doesn'
 ## Granting access to run commands
 
 Currently, the GitHub API to determine whether a user is a collaborator doesn't seem to respect permissions that a user is granted via a group. As a result, users need to be directly granted `write` permission in the repo to be able to run the comment bot commands.
+
+## Implementation notes
+
+The pr-bot workflow is in `.github/workflows/pr-bot.yml`. Most of the logic for handling commands is split out into `.github/scripts/build.js` and there are accompanying tests in the same folder (`yarn install && yarn test` to run tests).
+
+The `build.js` script parses the comment text and sets various output values that are then used to control the behaviour of the remaining workflow. The core of the workflow is in `ci_common.yml` and is re-used between the pr-bot and `ci_main.yml` (triggered for merges into `main` to make a release).
