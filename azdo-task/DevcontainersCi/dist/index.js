@@ -376,9 +376,12 @@ function runPost() {
                 return;
             }
         }
-        const imageName = task.getInput('imageName', true);
+        const imageName = task.getInput('imageName');
         if (!imageName) {
-            task.setResult(task.TaskResult.Failed, 'imageName input is required');
+            if (pushOption) {
+                // pushOption was set (and not to "never") - give an error that imageName is required
+                task.setResult(task.TaskResult.Failed, 'imageName input is required to push images');
+            }
             return;
         }
         const imageTag = task.getInput('imageTag');
