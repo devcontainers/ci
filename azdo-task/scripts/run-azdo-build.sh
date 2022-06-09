@@ -96,7 +96,7 @@ do
     if [[ $finish_time != "null" ]]; then
         result=$(echo $run_state | jq -r .result)
         echo "Pipeline completed with result: $result"
-        if [[ $result != "succeeded" ]]; then
+        if [[ $result != "succeeded" && $result != "partiallySucceeded" ]]; then
             echo "Run url: $run_url"
             echo "::error ::AzDO pipeline test did not complete successfully"
             exit 1
