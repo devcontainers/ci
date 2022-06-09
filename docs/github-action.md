@@ -1,10 +1,9 @@
-# devcontainer-build-run GitHub Action
+# devcontainers/ci GitHub Action
 
 devcontainer-build-run is a GitHub action aimed at making it easier to re-use a [Visual Studio Code dev container](https://code.visualstudio.com/) in a GitHub workflow.
 
 ##  Getting Started
 
-The [`devcontainer-build-run` action](https://github.com/marketplace/actions/devcontainer-build-run) uses Docker BuildKit to perform the Docker builds as this has support for storing layer cache metadata with the image. You can use the [docker/setup-buildx-action](https://github.com/docker/setup-buildx-action) to install this (see example below).
 
 The simplest example of using the action is shown below:
 
@@ -34,6 +33,8 @@ jobs:
 With the example above, each time the action runs it will rebuild the Docker image for the dev container. To save time in builds, you can push the dev container image to a container registry (e.g. [GitHub Container Registry](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-container-registry)) and re-used the cached image in future builds.
 
 To enable pushing the dev container image to a container registry you need to specify a qualified `imageName` and ensure that your GitHub workflow is signed in to that registry.
+
+The [`devcontainers/ci` action](https://github.com/marketplace/actions/devcontainer-build-run) uses Docker BuildKit to perform the Docker builds as this has support for storing layer cache metadata with the image. You can use the [docker/setup-buildx-action](https://github.com/docker/setup-buildx-action) to install this (see example below).
 
 The example below shows installing Docker BuildKit, logging in to GitHub Container Registry, and then building and running the dev container with the devcontainer-build-run action:
 
