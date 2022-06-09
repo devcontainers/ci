@@ -34,10 +34,7 @@ With the example above, each time the action runs it will rebuild the Docker ima
 
 To enable pushing the dev container image to a container registry you need to specify a qualified `imageName` and ensure that your GitHub workflow is signed in to that registry.
 
-The [`devcontainers/ci` action](https://github.com/marketplace/actions/devcontainer-build-run) uses Docker BuildKit to perform the Docker builds as this has support for storing layer cache metadata with the image. You can use the [docker/setup-buildx-action](https://github.com/docker/setup-buildx-action) to install this (see example below).
-
 The example below shows installing Docker BuildKit, logging in to GitHub Container Registry, and then building and running the dev container with the devcontainer-build-run action:
-
 
 ```yaml
 name: 'build' 
@@ -54,9 +51,6 @@ jobs:
 
       - name: Checkout (GitHub)
         uses: actions/checkout@v2
-
-      - name: Set up Docker BuildKit
-        uses: docker/setup-buildx-action@v1
 
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v1 
@@ -82,6 +76,8 @@ In the example above, the devcontainer-build-run will perform the following step
 1. Build the dev container using the `.devcontainer/devcontainer.json` from the root of the repo
 2. Run the dev container with the `make ci-build` command specified in the `runCmd` input
 3. If the run succeeds (and we're not building from a PR branch) then push the image to the container registry. This enables future image builds in step 1 to use the image layers as a cache to improve performance
+
+The [`devcontainers/ci` action](https://github.com/marketplace/actions/devcontainer-build-run) uses Docker BuildKit to perform the Docker builds as this has support for storing layer cache metadata with the image.  This is installed by default on hosted runners but you can use the [docker/setup-buildx-action](https://github.com/docker/setup-buildx-action) to install this on your own runners.
 
 ## Inputs
 
