@@ -175,8 +175,15 @@ function runPost() {
             core.setFailed(`Unexpected push value ('${pushOption})'`);
             return;
         }
-        const imageName = core.getInput('imageName', { required: true });
+        const imageName = emptyStringAsUndefined(core.getInput('imageName'));
         const imageTag = emptyStringAsUndefined(core.getInput('imageTag'));
+        if (!imageName) {
+            if (pushOption) {
+                // pushOption was set (and not to "never") - give an error that imageName is required
+                core.error('imageName is required to push images');
+            }
+            return;
+        }
         core.info(`Pushing image ''${imageName}:${imageTag !== null && imageTag !== void 0 ? imageTag : 'latest'}...`);
         yield docker_1.pushImage(imageName, imageTag);
     });
