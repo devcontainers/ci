@@ -68,7 +68,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v2
         with:
-          persist-credentials: false
           # if the following value is missing (i.e. not triggered via comment workflow)
           # then the default checkout will apply
           ref: ${{ inputs.prRef }}
@@ -100,6 +99,8 @@ jobs:
       # but this got outside the limit for AzDO extensions (0 to 2147483647)
       - name: Generate build number
         id: build_number
+        # only run this if we are going to run the AzDO publishing
+        if: ${{ steps.set_image_push_option.outputs.image_push_option == 'filter' }}
         uses: einaregilsson/build-number@v3 
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
