@@ -29,17 +29,17 @@ on:
         description: The AzDO org for AzDO task verification
         type: string
         required: false
-        default: https://dev.azure.com/devcontainers-ci
+        default: https://dev.azure.com/monacotools
       AZDO_PROJECT:
         description: The AzDO project for AzDO task verification
         type: string
         required: false
-        default: devcontainers-ci-build
+        default: Monaco
       AZDO_BUILD:
         description: The AzDO build to trigger for AzDO task verification
         type: string
         required: false
-        default: devcontainers.devcontainer-build-run
+        default: devcontainers.ci
     secrets:
       AZDO_TOKEN:
         description: ""
