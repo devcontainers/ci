@@ -26,7 +26,7 @@
       "name": "imageName",
       "type": "string",
       "label": "Image name (including registry)",
-      "required": true
+      "required": false
     },
     {
       "name": "imageTag",

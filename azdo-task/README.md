@@ -1,10 +1,33 @@
-# devcontainer-build-run
+# DevcontainersCi
 
-devcontainer-build-run is an Azure DevOps task aimed at making it easier to re-use a [Visual Studio Code dev container](https://code.visualstudio.com/) in an Azure DevOps pipeline.
+DevcontainersCi is an Azure DevOps task aimed at making it easier to re-use a [Visual Studio Code dev container](https://code.visualstudio.com/) in an Azure DevOps pipeline.
 
-The [`devcontainer-build-run` task](https://marketplace.visualstudio.com/items?itemName=devcontainers.devcontainer-build-run) uses Docker BuildKit to perform the Docker builds as this has support for storing layer cache metadata with the image. A version of Docker that supports BuiltKit is installed on the default hosted agents - if using a custom agent ensure that you make BuildKit available.
+## Getting Started
+
+
+
+The simplest example of using the action is shown below:
+
+```yaml
+trigger:
+- main
+
+pool:
+  vmImage: ubuntu-latest
+
+steps:
+
+- task: DevcontainersCi@0
+  inputs:
+    # Change this to be your CI task/script
+    runCmd: 'make ci-build'
+```
+
+With the example above, each time the action runs it will rebuild the Docker image for the dev container. To save time in builds, you can push the dev container image to a container registry (e.g. [Azure Container Registry](https://docs.microsoft.com/en-us/azure/container-registry/container-registry-intro)) and re-used the cached image in future builds.
 
 To enable pushing the dev container image to a container registry you need to ensure that your pipeline is signed in to that registry.
+
+The [`DevcontainersCi` task](https://marketplace.visualstudio.com/items?itemName=devcontainers.ci) uses Docker BuildKit to perform the Docker builds as this has support for storing layer cache metadata with the image. A version of Docker that supports BuiltKit is installed on the default hosted agents - if using a custom agent ensure that you make BuildKit available.
 
 The example below shows logging in to an Azure Container Registry instance, and then building and running the dev container with the devcontainer-build-run action:
 

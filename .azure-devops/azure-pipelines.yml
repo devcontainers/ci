@@ -40,11 +40,6 @@ jobs:
         ACR_TOKEN: $(ACR_TOKEN)
         ACR_USERNAME: $(ACR_USERNAME)
 
-    - script: |
-        printenv | sort
-      env:
-        IMAGE_TAG: $(IMAGE_TAG)
-
     - task: DevcontainersCi@0
       inputs:
         imageName: '$(ACR_NAME).azurecr.io/devcontainers-ci/azdo-devcontainer-build-run/test/run-args'
@@ -53,6 +48,14 @@ jobs:
         env: ''
         imageTag: $(IMAGE_TAG)
         sourceBranchFilterForPush: ''
+
+  - job: test_simple
+    displayName: Test simple
+    steps:
+    - task: DevcontainersCi@0
+      inputs:
+        subFolder: github-tests/Dockerfile/run-args
+        runCmd: echo $HOSTNAME && [[ $HOSTNAME == "my-host" ]]
 
   - job: test_build_args
     displayName: Test build-args
