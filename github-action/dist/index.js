@@ -1918,14 +1918,17 @@ function runMain() {
 exports.runMain = runMain;
 function runPost() {
     return __awaiter(this, void 0, void 0, function* () {
-        const pushOption = valueOrDefault(core.getInput('push'), 'filter');
+        const pushOption = emptyStringAsUndefined(core.getInput('push'));
+        const imageName = emptyStringAsUndefined(core.getInput('imageName'));
         const refFilterForPush = core.getMultilineInput('refFilterForPush');
         const eventFilterForPush = core.getMultilineInput('eventFilterForPush');
-        if (pushOption === 'never') {
+        // default to 'never' if not set and no imageName
+        if (pushOption === 'never' || (!pushOption && !imageName)) {
             core.info(`Image push skipped because 'push' is set to '${pushOption}'`);
             return;
         }
-        if (pushOption === 'filter') {
+        // default to 'filter' if not set and imageName is set
+        if (pushOption === 'filter' || (!pushOption && imageName)) {
             // https://docs.github.com/en/actions/reference/environment-variables#default-environment-variables
             const ref = process.env.GITHUB_REF;
             if (refFilterForPush.length !== 0 && // empty filter allows all
@@ -1944,7 +1947,6 @@ function runPost() {
             core.setFailed(`Unexpected push value ('${pushOption})'`);
             return;
         }
-        const imageName = emptyStringAsUndefined(core.getInput('imageName'));
         const imageTag = emptyStringAsUndefined(core.getInput('imageTag'));
         if (!imageName) {
             if (pushOption) {
@@ -1958,12 +1960,6 @@ function runPost() {
     });
 }
 exports.runPost = runPost;
-function valueOrDefault(value, defaultValue) {
-    if (!value || value === '') {
-        return defaultValue;
-    }
-    return value;
-}
 function emptyStringAsUndefined(value) {
     if (value === '') {
         return undefined;

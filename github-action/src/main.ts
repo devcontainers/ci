@@ -140,17 +140,20 @@ export async function runMain(): Promise<void> {
 }
 
 export async function runPost(): Promise<void> {
-	const pushOption: string = valueOrDefault(core.getInput('push'), 'filter');
+	const pushOption = emptyStringAsUndefined(core.getInput('push'));
+	const imageName = emptyStringAsUndefined(core.getInput('imageName'));
 	const refFilterForPush: string[] = core.getMultilineInput('refFilterForPush');
 	const eventFilterForPush: string[] =
 		core.getMultilineInput('eventFilterForPush');
 
-	if (pushOption === 'never') {
+	// default to 'never' if not set and no imageName
+	if (pushOption === 'never' || (!pushOption && !imageName)) {
 		core.info(`Image push skipped because 'push' is set to '${pushOption}'`);
 		return;
 	}
 
-	if (pushOption === 'filter') {
+	// default to 'filter' if not set and imageName is set
+	if (pushOption === 'filter' || (!pushOption && imageName)) {
 		// https://docs.github.com/en/actions/reference/environment-variables#default-environment-variables
 		const ref = process.env.GITHUB_REF;
 		if (
@@ -177,7 +180,6 @@ export async function runPost(): Promise<void> {
 		return;
 	}
 
-	const imageName = emptyStringAsUndefined(core.getInput('imageName'));
 	const imageTag = emptyStringAsUndefined(core.getInput('imageTag'));
 	if (!imageName) {
 		if (pushOption) {
@@ -190,12 +192,6 @@ export async function runPost(): Promise<void> {
 	await pushImage(imageName, imageTag);
 }
 
-function valueOrDefault(value: string, defaultValue: string): string {
-	if (!value || value === '') {
-		return defaultValue;
-	}
-	return value;
-}
 function emptyStringAsUndefined(value: string): string | undefined {
 	if (value === '') {
 		return undefined;

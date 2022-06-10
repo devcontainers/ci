@@ -136,15 +136,19 @@ export async function runMain(): Promise<void> {
 }
 
 export async function runPost(): Promise<void> {
-	const pushOption = task.getInput('push') ?? 'filter';
+	const pushOption = task.getInput('push');
+	const imageName = task.getInput('imageName');
 	const pushOnFailedBuild =
 		(task.getInput('pushOnFailedBuild') ?? 'false') === 'true';
 
-	if (pushOption === 'never') {
+	// default to 'never' if not set and no imageName
+	if (pushOption === 'never' || (!pushOption && !imageName)) {
 		console.log(`Image push skipped because 'push' is set to '${pushOption}'`);
 		return;
 	}
-	if (pushOption === 'filter') {
+
+	// default to 'filter' if not set and imageName is set
+	if (pushOption === 'filter' || (!pushOption && imageName)) {
 		// https://docs.microsoft.com/en-us/azure/devops/pipelines/build/variables?view=azure-devops&tabs=yaml
 		const agentJobStatus = process.env.AGENT_JOBSTATUS;
 		switch (agentJobStatus) {
@@ -192,7 +196,6 @@ export async function runPost(): Promise<void> {
 		}
 	}
 
-	const imageName = task.getInput('imageName');
 	if (!imageName) {
 		if (pushOption) {
 			// pushOption was set (and not to "never") - give an error that imageName is required
