@@ -337,15 +337,18 @@ function runMain() {
 }
 exports.runMain = runMain;
 function runPost() {
-    var _a, _b, _c, _d, _e, _f;
+    var _a, _b, _c, _d, _e;
     return __awaiter(this, void 0, void 0, function* () {
-        const pushOption = (_a = task.getInput('push')) !== null && _a !== void 0 ? _a : 'filter';
-        const pushOnFailedBuild = ((_b = task.getInput('pushOnFailedBuild')) !== null && _b !== void 0 ? _b : 'false') === 'true';
-        if (pushOption === 'never') {
+        const pushOption = task.getInput('push');
+        const imageName = task.getInput('imageName');
+        const pushOnFailedBuild = ((_a = task.getInput('pushOnFailedBuild')) !== null && _a !== void 0 ? _a : 'false') === 'true';
+        // default to 'never' if not set and no imageName
+        if (pushOption === 'never' || (!pushOption && !imageName)) {
             console.log(`Image push skipped because 'push' is set to '${pushOption}'`);
             return;
         }
-        if (pushOption === 'filter') {
+        // default to 'filter' if not set and imageName is set
+        if (pushOption === 'filter' || (!pushOption && imageName)) {
             // https://docs.microsoft.com/en-us/azure/devops/pipelines/build/variables?view=azure-devops&tabs=yaml
             const agentJobStatus = process.env.AGENT_JOBSTATUS;
             switch (agentJobStatus) {
@@ -359,8 +362,8 @@ function runPost() {
                         return;
                     }
             }
-            const buildReasonsForPush = (_d = (_c = task.getInput('buildReasonsForPush')) === null || _c === void 0 ? void 0 : _c.split('\n')) !== null && _d !== void 0 ? _d : [];
-            const sourceBranchFilterForPush = (_f = (_e = task.getInput('sourceBranchFilterForPush')) === null || _e === void 0 ? void 0 : _e.split('\n')) !== null && _f !== void 0 ? _f : [];
+            const buildReasonsForPush = (_c = (_b = task.getInput('buildReasonsForPush')) === null || _b === void 0 ? void 0 : _b.split('\n')) !== null && _c !== void 0 ? _c : [];
+            const sourceBranchFilterForPush = (_e = (_d = task.getInput('sourceBranchFilterForPush')) === null || _d === void 0 ? void 0 : _d.split('\n')) !== null && _e !== void 0 ? _e : [];
             // check build reason is allowed
             const buildReason = process.env.BUILD_REASON;
             if (buildReasonsForPush.length !== 0 && // empty filter allows all
@@ -376,7 +379,6 @@ function runPost() {
                 return;
             }
         }
-        const imageName = task.getInput('imageName');
         if (!imageName) {
             if (pushOption) {
                 // pushOption was set (and not to "never") - give an error that imageName is required
