@@ -1,6 +1,6 @@
 # devcontainers/ci
 
-devcontainers/ci contains a GitHub action and Azure DevOps task aimed at making it easier to re-use a [Visual Studio Code dev container](https://code.visualstudio.com/) in a GitHub workflow or Azure DevOps pipeline.
+devcontainers/ci contains a GitHub action and Azure DevOps task aimed at making it easier to re-use a [development container](https://github.com/devcontainers/spec) in a GitHub workflow or Azure DevOps pipeline.
 
 This project builds on top of [@devcontainers/cli](https://www.npmjs.com/package/@devcontainers/cli)
 
