@@ -67,8 +67,7 @@ jobs:
 
   run_test:
     needs: [pr_comment]
-    if: |
-      ${{ needs.pr_comment.outputs.command == 'run-tests' }}
+    if: ${{ needs.pr_comment.outputs.command == 'run-tests' }}
     name: build-test
     uses: ./.github/workflows/ci_common.yml
     with:
