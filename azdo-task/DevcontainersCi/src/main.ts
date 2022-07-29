@@ -201,7 +201,7 @@ export async function runPost(): Promise<void> {
 			// pushOption was set (and not to "never") - give an error that imageName is required
 			task.setResult(
 				task.TaskResult.Failed,
-				'imageName input is required to push images',
+				`imageName input is required to push images (push: ${pushOption})`,
 			);
 		}
 		return;

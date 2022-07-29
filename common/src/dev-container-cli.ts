@@ -4,6 +4,9 @@ import path from 'path';
 import {env} from 'process';
 import {promisify} from 'util';
 import {ExecFunction} from './exec';
+
+const cliVersion = "0.7.1";
+
 export interface DevContainerCliError {
   outcome: 'error';
   code: number;
@@ -50,7 +53,7 @@ async function installCli(exec: ExecFunction): Promise<boolean> {
     return exitCode === 0;
   }
   console.log('** Installing @devcontainers/cli');
-  const {exitCode, stdout, stderr} = await exec('bash', ['-c', 'npm install -g @devcontainers/cli'], {});
+  const {exitCode, stdout, stderr} = await exec('bash', ['-c', `npm install -g @devcontainers/cli@${cliVersion}`], {});
   if (exitCode != 0) {
     console.log(stdout);
     console.error(stderr);

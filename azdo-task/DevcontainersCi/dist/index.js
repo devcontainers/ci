@@ -382,7 +382,7 @@ function runPost() {
         if (!imageName) {
             if (pushOption) {
                 // pushOption was set (and not to "never") - give an error that imageName is required
-                task.setResult(task.TaskResult.Failed, 'imageName input is required to push images');
+                task.setResult(task.TaskResult.Failed, `imageName input is required to push images (push: ${pushOption})`);
             }
             return;
         }
@@ -16886,6 +16886,7 @@ var __awaiter = (undefined && undefined.__awaiter) || function (thisArg, _argume
 
 
 
+const cliVersion = "0.7.1";
 function getSpecCliInfo() {
     // // TODO - this is temporary until the CLI is installed via npm
     // // TODO - ^ could consider an `npm install` from the folder
@@ -16930,7 +16931,7 @@ function installCli(exec) {
             return exitCode === 0;
         }
         console.log('** Installing @devcontainers/cli');
-        const { exitCode, stdout, stderr } = yield exec('bash', ['-c', 'npm install -g @devcontainers/cli'], {});
+        const { exitCode, stdout, stderr } = yield exec('bash', ['-c', `npm install -g @devcontainers/cli@${cliVersion}`], {});
         if (exitCode != 0) {
             console.log(stdout);
             console.error(stderr);

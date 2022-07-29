@@ -61,7 +61,6 @@
         "filter": "Push if buildReasonsForPush, sourceBranchFilterForPush, and pushOnFailedBuild conditions are met",
         "always": "Always push"
       },
-      "defaultValue": "filter",
       "required": false,
       "label": "Control when images are pushed to the registry"
     },

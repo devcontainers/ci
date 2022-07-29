@@ -193,7 +193,7 @@ function runPost() {
         if (!imageName) {
             if (pushOption) {
                 // pushOption was set (and not to "never") - give an error that imageName is required
-                task.setResult(task.TaskResult.Failed, 'imageName input is required to push images');
+                task.setResult(task.TaskResult.Failed, `imageName input is required to push images (push: ${pushOption})`);
             }
             return;
         }
