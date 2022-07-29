@@ -1,3 +1,3 @@
 #!/bin/bash
 
-sudo npm install -g yarn
+sudo npm install --location=global yarn
