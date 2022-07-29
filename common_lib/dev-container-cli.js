@@ -16,6 +16,7 @@ exports.devcontainer = void 0;
 const child_process_1 = require("child_process");
 const fs_1 = __importDefault(require("fs"));
 const util_1 = require("util");
+const cliVersion = "0.7.1";
 function getSpecCliInfo() {
     // // TODO - this is temporary until the CLI is installed via npm
     // // TODO - ^ could consider an `npm install` from the folder
@@ -60,7 +61,7 @@ function installCli(exec) {
             return exitCode === 0;
         }
         console.log('** Installing @devcontainers/cli');
-        const { exitCode, stdout, stderr } = yield exec('bash', ['-c', 'npm install -g @devcontainers/cli'], {});
+        const { exitCode, stdout, stderr } = yield exec('bash', ['-c', `npm install -g @devcontainers/cli@${cliVersion}`], {});
         if (exitCode != 0) {
             console.log(stdout);
             console.error(stderr);
