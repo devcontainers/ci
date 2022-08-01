@@ -132,4 +132,10 @@ jobs:
         imageTag: $(IMAGE_TAG)
         sourceBranchFilterForPush: ''
 
+  - job: test_no_runCmd
+    displayName: Test without runCmd
+    steps:
+    - task: DevcontainersCi@0
+      inputs:
+        subFolder: github-tests/Dockerfile/build-only
 

@@ -12,8 +12,8 @@ inputs:
     required: false
     description: Image tag (defaults to latest)
   runCmd:
-    required: true
-    description: Specify the command to run after building the dev container image
+    required: false
+    description: Specify the command to run after building the dev container image. Can be omitted to skip starting the container.
   subFolder:
     required: false
     description: Specify a child folder (containing a .devcontainer) instead of using the repository root

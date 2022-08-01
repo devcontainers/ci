@@ -38,8 +38,7 @@
       "name": "runCmd",
       "type": "multiLine",
       "label": "Specify the command to run after building the dev container image",
-      "required": true,
-      "defaultValue": "echo \"Put your command(s) here\""
+      "required": false
     },
     {
       "name": "subFolder",
