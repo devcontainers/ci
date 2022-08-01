@@ -62,11 +62,7 @@ function runMain() {
             const imageName = task.getInput('imageName');
             const imageTag = task.getInput('imageTag');
             const subFolder = (_b = task.getInput('subFolder')) !== null && _b !== void 0 ? _b : '.';
-            const runCommand = task.getInput('runCmd', true);
-            if (!runCommand) {
-                task.setResult(task.TaskResult.Failed, 'runCmd input is required');
-                return;
-            }
+            const runCommand = task.getInput('runCmd');
             const envs = (_d = (_c = task.getInput('env')) === null || _c === void 0 ? void 0 : _c.split('\n')) !== null && _d !== void 0 ? _d : [];
             const inputEnvsWithDefaults = envvars_1.populateDefaults(envs);
             const cacheFrom = (_f = (_e = task.getInput('cacheFrom')) === null || _e === void 0 ? void 0 : _e.split('\n')) !== null && _f !== void 0 ? _f : [];
@@ -105,39 +101,44 @@ function runMain() {
             if (buildResult.outcome !== 'success') {
                 return;
             }
-            console.log('\n\n');
-            console.log('***');
-            console.log('*** Starting the dev container');
-            console.log('***');
-            const upArgs = {
-                workspaceFolder,
-                additionalCacheFroms: cacheFrom,
-                skipContainerUserIdUpdate,
-            };
-            const upResult = yield dev_container_cli_1.devcontainer.up(upArgs, log);
-            if (upResult.outcome !== 'success') {
-                console.log(`### ERROR: Dev container up failed: ${upResult.message} (exit code: ${upResult.code})\n${upResult.description}`);
-                task.setResult(task_1.TaskResult.Failed, upResult.message);
+            if (runCommand) {
+                console.log('\n\n');
+                console.log('***');
+                console.log('*** Starting the dev container');
+                console.log('***');
+                const upArgs = {
+                    workspaceFolder,
+                    additionalCacheFroms: cacheFrom,
+                    skipContainerUserIdUpdate,
+                };
+                const upResult = yield dev_container_cli_1.devcontainer.up(upArgs, log);
+                if (upResult.outcome !== 'success') {
+                    console.log(`### ERROR: Dev container up failed: ${upResult.message} (exit code: ${upResult.code})\n${upResult.description}`);
+                    task.setResult(task_1.TaskResult.Failed, upResult.message);
+                }
+                if (upResult.outcome !== 'success') {
+                    return;
+                }
+                console.log('\n\n');
+                console.log('***');
+                console.log('*** Running command in the dev container');
+                console.log('***');
+                const execArgs = {
+                    workspaceFolder,
+                    command: ['bash', '-c', runCommand],
+                    env: inputEnvsWithDefaults,
+                };
+                const execResult = yield dev_container_cli_1.devcontainer.exec(execArgs, log);
+                if (execResult.outcome !== 'success') {
+                    console.log(`### ERROR: Dev container exec: ${execResult.message} (exit code: ${execResult.code})\n${execResult.description}`);
+                    task.setResult(task_1.TaskResult.Failed, execResult.message);
+                }
+                if (execResult.outcome !== 'success') {
+                    return;
+                }
             }
-            if (upResult.outcome !== 'success') {
-                return;
-            }
-            console.log('\n\n');
-            console.log('***');
-            console.log('*** Running command in the dev container');
-            console.log('***');
-            const execArgs = {
-                workspaceFolder,
-                command: ['bash', '-c', runCommand],
-                env: inputEnvsWithDefaults,
-            };
-            const execResult = yield dev_container_cli_1.devcontainer.exec(execArgs, log);
-            if (execResult.outcome !== 'success') {
-                console.log(`### ERROR: Dev container exec: ${execResult.message} (exit code: ${execResult.code})\n${execResult.description}`);
-                task.setResult(task_1.TaskResult.Failed, execResult.message);
-            }
-            if (execResult.outcome !== 'success') {
-                return;
+            else {
+                console.log('No runCmd set - skipping starting/running container');
             }
             // TODO - should we stop the container?
         }

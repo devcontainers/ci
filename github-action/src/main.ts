@@ -36,7 +36,7 @@ export async function runMain(): Promise<void> {
 		const imageName = emptyStringAsUndefined(core.getInput('imageName'));
 		const imageTag = emptyStringAsUndefined(core.getInput('imageTag'));
 		const subFolder: string = core.getInput('subFolder');
-		const runCommand: string = core.getInput('runCmd', {required: true});
+		const runCommand = core.getInput('runCmd');
 		const inputEnvs: string[] = core.getMultilineInput('env');
 		const inputEnvsWithDefaults = populateDefaults(inputEnvs);
 		const cacheFrom: string[] = core.getMultilineInput('cacheFrom');
@@ -90,47 +90,51 @@ export async function runMain(): Promise<void> {
 			return;
 		}
 
-		const upResult = await core.group('🏃 start container', async () => {
-			const args: DevContainerCliUpArgs = {
-				workspaceFolder,
-				additionalCacheFroms: cacheFrom,
-				skipContainerUserIdUpdate,
-				userDataFolder,
-			};
-			const result = await devcontainer.up(args, log);
-			if (result.outcome !== 'success') {
-				core.error(
-					`Dev container up failed: ${result.message} (exit code: ${result.code})\n${result.description}`,
-				);
-				core.setFailed(result.message);
-			}
-			return result;
-		});
-		if (upResult.outcome !== 'success') {
-			return;
-		}
-
-		const execResult = await core.group(
-			'🚀 Run command in container',
-			async () => {
-				const args: DevContainerCliExecArgs = {
+		if (runCommand) {
+			const upResult = await core.group('🏃 start container', async () => {
+				const args: DevContainerCliUpArgs = {
 					workspaceFolder,
-					command: ['bash', '-c', runCommand],
-					env: inputEnvsWithDefaults,
+					additionalCacheFroms: cacheFrom,
+					skipContainerUserIdUpdate,
 					userDataFolder,
 				};
-				const result = await devcontainer.exec(args, log);
+				const result = await devcontainer.up(args, log);
 				if (result.outcome !== 'success') {
 					core.error(
-						`Dev container exec: ${result.message} (exit code: ${result.code})\n${result.description}`,
+						`Dev container up failed: ${result.message} (exit code: ${result.code})\n${result.description}`,
 					);
 					core.setFailed(result.message);
 				}
 				return result;
-			},
-		);
-		if (execResult.outcome !== 'success') {
-			return;
+			});
+			if (upResult.outcome !== 'success') {
+				return;
+			}
+
+			const execResult = await core.group(
+				'🚀 Run command in container',
+				async () => {
+					const args: DevContainerCliExecArgs = {
+						workspaceFolder,
+						command: ['bash', '-c', runCommand],
+						env: inputEnvsWithDefaults,
+						userDataFolder,
+					};
+					const result = await devcontainer.exec(args, log);
+					if (result.outcome !== 'success') {
+						core.error(
+							`Dev container exec: ${result.message} (exit code: ${result.code})\n${result.description}`,
+						);
+						core.setFailed(result.message);
+					}
+					return result;
+				},
+			);
+			if (execResult.outcome !== 'success') {
+				return;
+			}
+		} else {
+			core.info('No runCmd set - skipping starting/running container');
 		}
 
 		// TODO - should we stop the container?

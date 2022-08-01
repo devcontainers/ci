@@ -39,11 +39,7 @@ export async function runMain(): Promise<void> {
 		const imageName = task.getInput('imageName');
 		const imageTag = task.getInput('imageTag');
 		const subFolder = task.getInput('subFolder') ?? '.';
-		const runCommand = task.getInput('runCmd', true);
-		if (!runCommand) {
-			task.setResult(task.TaskResult.Failed, 'runCmd input is required');
-			return;
-		}
+		const runCommand = task.getInput('runCmd');
 		const envs = task.getInput('env')?.split('\n') ?? [];
 		const inputEnvsWithDefaults = populateDefaults(envs);
 		const cacheFrom = task.getInput('cacheFrom')?.split('\n') ?? [];
@@ -89,44 +85,48 @@ export async function runMain(): Promise<void> {
 			return;
 		}
 
-		console.log('\n\n');
-		console.log('***');
-		console.log('*** Starting the dev container');
-		console.log('***');
-		const upArgs: DevContainerCliUpArgs = {
-			workspaceFolder,
-			additionalCacheFroms: cacheFrom,
-			skipContainerUserIdUpdate,
-		};
-		const upResult = await devcontainer.up(upArgs, log);
-		if (upResult.outcome !== 'success') {
-			console.log(
-				`### ERROR: Dev container up failed: ${upResult.message} (exit code: ${upResult.code})\n${upResult.description}`,
-			);
-			task.setResult(TaskResult.Failed, upResult.message);
-		}
-		if (upResult.outcome !== 'success') {
-			return;
-		}
+		if (runCommand) {
+			console.log('\n\n');
+			console.log('***');
+			console.log('*** Starting the dev container');
+			console.log('***');
+			const upArgs: DevContainerCliUpArgs = {
+				workspaceFolder,
+				additionalCacheFroms: cacheFrom,
+				skipContainerUserIdUpdate,
+			};
+			const upResult = await devcontainer.up(upArgs, log);
+			if (upResult.outcome !== 'success') {
+				console.log(
+					`### ERROR: Dev container up failed: ${upResult.message} (exit code: ${upResult.code})\n${upResult.description}`,
+				);
+				task.setResult(TaskResult.Failed, upResult.message);
+			}
+			if (upResult.outcome !== 'success') {
+				return;
+			}
 
-		console.log('\n\n');
-		console.log('***');
-		console.log('*** Running command in the dev container');
-		console.log('***');
-		const execArgs: DevContainerCliExecArgs = {
-			workspaceFolder,
-			command: ['bash', '-c', runCommand],
-			env: inputEnvsWithDefaults,
-		};
-		const execResult = await devcontainer.exec(execArgs, log);
-		if (execResult.outcome !== 'success') {
-			console.log(
-				`### ERROR: Dev container exec: ${execResult.message} (exit code: ${execResult.code})\n${execResult.description}`,
-			);
-			task.setResult(TaskResult.Failed, execResult.message);
-		}
-		if (execResult.outcome !== 'success') {
-			return;
+			console.log('\n\n');
+			console.log('***');
+			console.log('*** Running command in the dev container');
+			console.log('***');
+			const execArgs: DevContainerCliExecArgs = {
+				workspaceFolder,
+				command: ['bash', '-c', runCommand],
+				env: inputEnvsWithDefaults,
+			};
+			const execResult = await devcontainer.exec(execArgs, log);
+			if (execResult.outcome !== 'success') {
+				console.log(
+					`### ERROR: Dev container exec: ${execResult.message} (exit code: ${execResult.code})\n${execResult.description}`,
+				);
+				task.setResult(TaskResult.Failed, execResult.message);
+			}
+			if (execResult.outcome !== 'success') {
+				return;
+			}
+		} else {
+			console.log('No runCmd set - skipping starting/running container');
 		}
 
 		// TODO - should we stop the container?

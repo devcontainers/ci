@@ -61,7 +61,7 @@ function runMain() {
             const imageName = emptyStringAsUndefined(core.getInput('imageName'));
             const imageTag = emptyStringAsUndefined(core.getInput('imageTag'));
             const subFolder = core.getInput('subFolder');
-            const runCommand = core.getInput('runCmd', { required: true });
+            const runCommand = core.getInput('runCmd');
             const inputEnvs = core.getMultilineInput('env');
             const inputEnvsWithDefaults = envvars_1.populateDefaults(inputEnvs);
             const cacheFrom = core.getMultilineInput('cacheFrom');
@@ -105,39 +105,44 @@ function runMain() {
             if (buildResult.outcome !== 'success') {
                 return;
             }
-            const upResult = yield core.group('🏃 start container', () => __awaiter(this, void 0, void 0, function* () {
-                const args = {
-                    workspaceFolder,
-                    additionalCacheFroms: cacheFrom,
-                    skipContainerUserIdUpdate,
-                    userDataFolder,
-                };
-                const result = yield dev_container_cli_1.devcontainer.up(args, log);
-                if (result.outcome !== 'success') {
-                    core.error(`Dev container up failed: ${result.message} (exit code: ${result.code})\n${result.description}`);
-                    core.setFailed(result.message);
+            if (runCommand) {
+                const upResult = yield core.group('🏃 start container', () => __awaiter(this, void 0, void 0, function* () {
+                    const args = {
+                        workspaceFolder,
+                        additionalCacheFroms: cacheFrom,
+                        skipContainerUserIdUpdate,
+                        userDataFolder,
+                    };
+                    const result = yield dev_container_cli_1.devcontainer.up(args, log);
+                    if (result.outcome !== 'success') {
+                        core.error(`Dev container up failed: ${result.message} (exit code: ${result.code})\n${result.description}`);
+                        core.setFailed(result.message);
+                    }
+                    return result;
+                }));
+                if (upResult.outcome !== 'success') {
+                    return;
                 }
-                return result;
-            }));
-            if (upResult.outcome !== 'success') {
-                return;
+                const execResult = yield core.group('🚀 Run command in container', () => __awaiter(this, void 0, void 0, function* () {
+                    const args = {
+                        workspaceFolder,
+                        command: ['bash', '-c', runCommand],
+                        env: inputEnvsWithDefaults,
+                        userDataFolder,
+                    };
+                    const result = yield dev_container_cli_1.devcontainer.exec(args, log);
+                    if (result.outcome !== 'success') {
+                        core.error(`Dev container exec: ${result.message} (exit code: ${result.code})\n${result.description}`);
+                        core.setFailed(result.message);
+                    }
+                    return result;
+                }));
+                if (execResult.outcome !== 'success') {
+                    return;
+                }
             }
-            const execResult = yield core.group('🚀 Run command in container', () => __awaiter(this, void 0, void 0, function* () {
-                const args = {
-                    workspaceFolder,
-                    command: ['bash', '-c', runCommand],
-                    env: inputEnvsWithDefaults,
-                    userDataFolder,
-                };
-                const result = yield dev_container_cli_1.devcontainer.exec(args, log);
-                if (result.outcome !== 'success') {
-                    core.error(`Dev container exec: ${result.message} (exit code: ${result.code})\n${result.description}`);
-                    core.setFailed(result.message);
-                }
-                return result;
-            }));
-            if (execResult.outcome !== 'success') {
-                return;
+            else {
+                core.info('No runCmd set - skipping starting/running container');
             }
             // TODO - should we stop the container?
         }
