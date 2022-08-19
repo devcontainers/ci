@@ -120,13 +120,21 @@ export async function runMain(): Promise<void> {
 						env: inputEnvsWithDefaults,
 						userDataFolder,
 					};
-					const result = await devcontainer.exec(args, log);
+					let execLogString = '';
+					const execLog = (message: string): void => {
+						core.info(message);
+						if (!message.includes('@devcontainers/cli')) {
+							execLogString += message;
+						}
+					};
+					const result = await devcontainer.exec(args, execLog);
 					if (result.outcome !== 'success') {
 						core.error(
 							`Dev container exec: ${result.message} (exit code: ${result.code})\n${result.description}`,
 						);
 						core.setFailed(result.message);
 					}
+					core.setOutput('runCmdOutput', execLogString);
 					return result;
 				},
 			);

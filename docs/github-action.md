@@ -94,6 +94,12 @@ The [`devcontainers/ci` action](https://github.com/marketplace/actions/devcontai
 | eventFilterForPush        | false    | Set the event names (e.g. `pull_request`, `push`) that are allowed to trigger a push of the dev container image. Defaults to `push`. Leave empty for all                                                            |
 | skipContainerUserIdUpdate | false    | For non-root dev containers (i.e. where `remoteUser` is specified), the action attempts to make the container user UID and GID match those of the host user. Set this to true to skip this step (defaults to false) |
 
+## Outputs
+
+| Name         | Description                                             |
+| ------------ | ------------------------------------------------------- |
+| runCmdOutput | The output of the command specified in the runCmd input |
+
 ## Specifying a sub-folder
 
 Suppose your repo has the following structure:

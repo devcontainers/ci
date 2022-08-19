@@ -130,11 +130,19 @@ function runMain() {
                         env: inputEnvsWithDefaults,
                         userDataFolder,
                     };
-                    const result = yield dev_container_cli_1.devcontainer.exec(args, log);
+                    let execLogString = '';
+                    const execLog = (message) => {
+                        core.info(message);
+                        if (!message.includes('@devcontainers/cli')) {
+                            execLogString += message;
+                        }
+                    };
+                    const result = yield dev_container_cli_1.devcontainer.exec(args, execLog);
                     if (result.outcome !== 'success') {
                         core.error(`Dev container exec: ${result.message} (exit code: ${result.code})\n${result.description}`);
                         core.setFailed(result.message);
                     }
+                    core.setOutput('runCmdOutput', execLogString);
                     return result;
                 }));
                 if (execResult.outcome !== 'success') {
