@@ -35,6 +35,12 @@
       "required": false
     },
     {
+      "name": "platform",
+      "type": "string",
+      "label": "Platforms for which the image should be built. If omitted, defaults to the platform of the Azure DevOps Agent. Multiple platforms should be comma separated.",
+      "required": false
+    },
+    {
       "name": "runCmd",
       "type": "multiLine",
       "label": "Specify the command to run after building the dev container image",

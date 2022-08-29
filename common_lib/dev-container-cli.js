@@ -16,7 +16,7 @@ exports.devcontainer = void 0;
 const child_process_1 = require("child_process");
 const fs_1 = __importDefault(require("fs"));
 const util_1 = require("util");
-const cliVersion = "0.7.1";
+const cliVersion = "0.8.1";
 function getSpecCliInfo() {
     // // TODO - this is temporary until the CLI is installed via npm
     // // TODO - ^ could consider an `npm install` from the folder
@@ -124,6 +124,10 @@ function devContainerBuild(args, log) {
         ];
         if (args.imageName) {
             commandArgs.push('--image-name', args.imageName);
+        }
+        if (args.platform) {
+            commandArgs.push('--platform', args.platform);
+            commandArgs.push('--push', 'true');
         }
         if (args.userDataFolder) {
             commandArgs.push("--user-data-folder", args.userDataFolder);

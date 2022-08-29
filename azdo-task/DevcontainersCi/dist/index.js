@@ -16887,7 +16887,7 @@ var __awaiter = (undefined && undefined.__awaiter) || function (thisArg, _argume
 
 
 
-const cliVersion = "0.7.1";
+const cliVersion = "0.8.1";
 function getSpecCliInfo() {
     // // TODO - this is temporary until the CLI is installed via npm
     // // TODO - ^ could consider an `npm install` from the folder
@@ -16995,6 +16995,10 @@ function devContainerBuild(args, log) {
         ];
         if (args.imageName) {
             commandArgs.push('--image-name', args.imageName);
+        }
+        if (args.platform) {
+            commandArgs.push('--platform', args.platform);
+            commandArgs.push('--push', 'true');
         }
         if (args.userDataFolder) {
             commandArgs.push("--user-data-folder", args.userDataFolder);

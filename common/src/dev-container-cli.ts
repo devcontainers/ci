@@ -5,7 +5,7 @@ import {env} from 'process';
 import {promisify} from 'util';
 import {ExecFunction} from './exec';
 
-const cliVersion = "0.7.1";
+const cliVersion = "0.8.1";
 
 export interface DevContainerCliError {
   outcome: 'error';
@@ -136,6 +136,7 @@ export interface DevContainerCliBuildResult
 export interface DevContainerCliBuildArgs {
   workspaceFolder: string;
   imageName?: string;
+  platform?: string;
   additionalCacheFroms?: string[];
   userDataFolder?: string;
 }
@@ -150,6 +151,10 @@ async function devContainerBuild(
   ];
   if (args.imageName) {
     commandArgs.push('--image-name', args.imageName);
+  }
+  if (args.platform) {
+    commandArgs.push('--platform', args.platform);
+    commandArgs.push('--push', 'true');
   }
   if (args.userDataFolder) {
     commandArgs.push("--user-data-folder", args.userDataFolder);

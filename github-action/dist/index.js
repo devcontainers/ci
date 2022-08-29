@@ -1829,6 +1829,7 @@ function runMain() {
             const checkoutPath = core.getInput('checkoutPath');
             const imageName = emptyStringAsUndefined(core.getInput('imageName'));
             const imageTag = emptyStringAsUndefined(core.getInput('imageTag'));
+            const platform = emptyStringAsUndefined(core.getInput('platform'));
             const subFolder = core.getInput('subFolder');
             const runCommand = core.getInput('runCmd');
             const inputEnvs = core.getMultilineInput('env');
@@ -1861,6 +1862,7 @@ function runMain() {
                 const args = {
                     workspaceFolder,
                     imageName: fullImageName,
+                    platform,
                     additionalCacheFroms: cacheFrom,
                     userDataFolder,
                 };
@@ -3740,7 +3742,7 @@ var __awaiter = (undefined && undefined.__awaiter) || function (thisArg, _argume
 
 
 
-const cliVersion = "0.7.1";
+const cliVersion = "0.8.1";
 function getSpecCliInfo() {
     // // TODO - this is temporary until the CLI is installed via npm
     // // TODO - ^ could consider an `npm install` from the folder
@@ -3848,6 +3850,10 @@ function devContainerBuild(args, log) {
         ];
         if (args.imageName) {
             commandArgs.push('--image-name', args.imageName);
+        }
+        if (args.platform) {
+            commandArgs.push('--platform', args.platform);
+            commandArgs.push('--push', 'true');
         }
         if (args.userDataFolder) {
             commandArgs.push("--user-data-folder", args.userDataFolder);

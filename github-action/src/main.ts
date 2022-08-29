@@ -35,6 +35,7 @@ export async function runMain(): Promise<void> {
 		const checkoutPath: string = core.getInput('checkoutPath');
 		const imageName = emptyStringAsUndefined(core.getInput('imageName'));
 		const imageTag = emptyStringAsUndefined(core.getInput('imageTag'));
+		const platform = emptyStringAsUndefined(core.getInput('platform'));
 		const subFolder: string = core.getInput('subFolder');
 		const runCommand = core.getInput('runCmd');
 		const inputEnvs: string[] = core.getMultilineInput('env');
@@ -73,6 +74,7 @@ export async function runMain(): Promise<void> {
 			const args: DevContainerCliBuildArgs = {
 				workspaceFolder,
 				imageName: fullImageName,
+				platform,
 				additionalCacheFroms: cacheFrom,
 				userDataFolder,
 			};

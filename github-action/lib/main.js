@@ -60,6 +60,7 @@ function runMain() {
             const checkoutPath = core.getInput('checkoutPath');
             const imageName = emptyStringAsUndefined(core.getInput('imageName'));
             const imageTag = emptyStringAsUndefined(core.getInput('imageTag'));
+            const platform = emptyStringAsUndefined(core.getInput('platform'));
             const subFolder = core.getInput('subFolder');
             const runCommand = core.getInput('runCmd');
             const inputEnvs = core.getMultilineInput('env');
@@ -92,6 +93,7 @@ function runMain() {
                 const args = {
                     workspaceFolder,
                     imageName: fullImageName,
+                    platform,
                     additionalCacheFroms: cacheFrom,
                     userDataFolder,
                 };
