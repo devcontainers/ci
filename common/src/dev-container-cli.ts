@@ -5,7 +5,7 @@ import {env} from 'process';
 import {promisify} from 'util';
 import {ExecFunction} from './exec';
 
-const cliVersion = "0.8.1";
+const cliVersion = "0.14.1";
 
 export interface DevContainerCliError {
   outcome: 'error';
