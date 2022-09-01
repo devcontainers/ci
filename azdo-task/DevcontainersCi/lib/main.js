@@ -145,7 +145,7 @@ function runMain() {
                 }
                 if (execLogString.length >= 25000) {
                     execLogString = execLogString.substring(0, 24963);
-                    execLogString += "TRUNCATED TO 25K CHAR MAX OUTPUT SIZE";
+                    execLogString += 'TRUNCATED TO 25K CHAR MAX OUTPUT SIZE';
                 }
                 console.log(`##vso[task.setvariable variable=runCmdOutput]${execLog}`);
             }

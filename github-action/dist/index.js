@@ -1915,7 +1915,7 @@ function runMain() {
                     core.setOutput('runCmdOutput', execLogString);
                     if (Buffer.byteLength(execLogString, 'utf-8') > 1000000) {
                         execLogString = truncate_utf8_bytes_1.default(execLogString, 999966);
-                        execLogString += "TRUNCATED TO 1 MB MAX OUTPUT SIZE";
+                        execLogString += 'TRUNCATED TO 1 MB MAX OUTPUT SIZE';
                     }
                     core.setOutput('runCmdOutput', execLogString);
                     return result;
