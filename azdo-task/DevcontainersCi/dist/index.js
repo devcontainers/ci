@@ -16887,7 +16887,7 @@ var __awaiter = (undefined && undefined.__awaiter) || function (thisArg, _argume
 
 
 
-const cliVersion = "0.8.1";
+const cliVersion = "latest"; // Use 'latest' to get latest CLI version, or pin to specific version e.g. '0.14.1' if required
 function getSpecCliInfo() {
     // // TODO - this is temporary until the CLI is installed via npm
     // // TODO - ^ could consider an `npm install` from the folder
