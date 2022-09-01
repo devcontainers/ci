@@ -154,7 +154,7 @@ async function devContainerBuild(
   }
   if (args.platform) {
     commandArgs.push('--platform', args.platform);
-    commandArgs.push('--push', 'true');
+    commandArgs.push('--no-push');
   }
   if (args.userDataFolder) {
     commandArgs.push("--user-data-folder", args.userDataFolder);
