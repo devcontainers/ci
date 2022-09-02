@@ -8,7 +8,7 @@ import {
 	DevContainerCliUpArgs,
 } from '../../common/src/dev-container-cli';
 
-import {isDockerBuildXInstalled, pushImage} from './docker';
+import {isDockerBuildXInstalled, pushImage, pushManifest} from './docker';
 import {populateDefaults} from '../../common/src/envvars';
 
 export async function runMain(): Promise<void> {
@@ -194,8 +194,15 @@ export async function runPost(): Promise<void> {
 		}
 		return;
 	}
-	core.info(`Pushing image ''${imageName}:${imageTag ?? 'latest'}...`);
-	await pushImage(imageName, imageTag);
+
+	const platform = emptyStringAsUndefined(core.getInput('platform'));
+	if (platform) {
+		core.info(`Pushing manifest ''${imageName}:${imageTag ?? 'latest'}...`);
+		await pushManifest(imageName, imageTag);
+	} else {
+		core.info(`Pushing image ''${imageName}:${imageTag ?? 'latest'}...`);
+		await pushImage(imageName, imageTag);
+	}
 }
 
 function emptyStringAsUndefined(value: string): string | undefined {

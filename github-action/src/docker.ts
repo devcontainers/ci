@@ -75,3 +75,19 @@ export async function pushImage(
 		core.endGroup();
 	}
 }
+
+export async function pushManifest(
+	imageName: string,
+	imageTag: string | undefined,
+): Promise<boolean> {
+	core.startGroup('📌 Pushing manifest...');
+	try {
+		await docker.pushManifest(exec, imageName, imageTag);
+		return true;
+	} catch (error) {
+		core.setFailed(error);
+		return false;
+	} finally {
+		core.endGroup();
+	}
+}

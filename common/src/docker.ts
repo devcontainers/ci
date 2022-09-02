@@ -328,6 +328,22 @@ export async function pushImage(
 	}
 }
 
+export async function pushManifest(
+	exec: ExecFunction,
+	imageName: string,
+	imageTag: string | undefined,
+): Promise<void> {
+	const args = ['manifest'];
+	args.push('push');
+	args.push(`${imageName}:${imageTag ?? 'latest'}`);
+
+	const {exitCode} = await exec('docker', args, {});
+
+	if (exitCode !== 0) {
+		throw new Error(`manifest push failed with ${exitCode}`);
+	}
+}
+
 export interface DockerMount {
 	type: string;
 	source: string;

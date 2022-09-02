@@ -193,8 +193,15 @@ function runPost() {
             }
             return;
         }
-        core.info(`Pushing image ''${imageName}:${imageTag !== null && imageTag !== void 0 ? imageTag : 'latest'}...`);
-        yield docker_1.pushImage(imageName, imageTag);
+        const platform = emptyStringAsUndefined(core.getInput('platform'));
+        if (platform) {
+            core.info(`Pushing manifest ''${imageName}:${imageTag !== null && imageTag !== void 0 ? imageTag : 'latest'}...`);
+            yield docker_1.pushManifest(imageName, imageTag);
+        }
+        else {
+            core.info(`Pushing image ''${imageName}:${imageTag !== null && imageTag !== void 0 ? imageTag : 'latest'}...`);
+            yield docker_1.pushImage(imageName, imageTag);
+        }
     });
 }
 exports.runPost = runPost;

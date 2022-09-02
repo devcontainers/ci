@@ -1643,7 +1643,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.pushImage = exports.runContainer = exports.buildImage = exports.isDockerBuildXInstalled = void 0;
+exports.pushManifest = exports.pushImage = exports.runContainer = exports.buildImage = exports.isDockerBuildXInstalled = void 0;
 const core = __importStar(__nccwpck_require__(186));
 const docker = __importStar(__nccwpck_require__(365));
 const exec_1 = __nccwpck_require__(757);
@@ -1703,6 +1703,23 @@ function pushImage(imageName, imageTag) {
     });
 }
 exports.pushImage = pushImage;
+function pushManifest(imageName, imageTag) {
+    return __awaiter(this, void 0, void 0, function* () {
+        core.startGroup('📌 Pushing manifest...');
+        try {
+            yield docker.pushManifest(exec_1.exec, imageName, imageTag);
+            return true;
+        }
+        catch (error) {
+            core.setFailed(error);
+            return false;
+        }
+        finally {
+            core.endGroup();
+        }
+    });
+}
+exports.pushManifest = pushManifest;
 
 
 /***/ }),
@@ -1962,8 +1979,15 @@ function runPost() {
             }
             return;
         }
-        core.info(`Pushing image ''${imageName}:${imageTag !== null && imageTag !== void 0 ? imageTag : 'latest'}...`);
-        yield docker_1.pushImage(imageName, imageTag);
+        const platform = emptyStringAsUndefined(core.getInput('platform'));
+        if (platform) {
+            core.info(`Pushing manifest ''${imageName}:${imageTag !== null && imageTag !== void 0 ? imageTag : 'latest'}...`);
+            yield docker_1.pushManifest(imageName, imageTag);
+        }
+        else {
+            core.info(`Pushing image ''${imageName}:${imageTag !== null && imageTag !== void 0 ? imageTag : 'latest'}...`);
+            yield docker_1.pushImage(imageName, imageTag);
+        }
     });
 }
 exports.runPost = runPost;
@@ -3853,7 +3877,7 @@ function devContainerBuild(args, log) {
         }
         if (args.platform) {
             commandArgs.push('--platform', args.platform);
-            commandArgs.push('--push', 'true');
+            commandArgs.push('--no-push');
         }
         if (args.userDataFolder) {
             commandArgs.push("--user-data-folder", args.userDataFolder);
@@ -3941,6 +3965,7 @@ __nccwpck_require__.d(__webpack_exports__, {
   "isDockerBuildXInstalled": () => (/* binding */ isDockerBuildXInstalled),
   "parseMount": () => (/* binding */ parseMount),
   "pushImage": () => (/* binding */ pushImage),
+  "pushManifest": () => (/* binding */ pushManifest),
   "runContainer": () => (/* binding */ runContainer)
 });
 
@@ -4258,6 +4283,17 @@ function pushImage(exec, imageName, imageTag) {
         const { exitCode } = yield exec('docker', args, {});
         if (exitCode !== 0) {
             throw new Error(`push failed with ${exitCode}`);
+        }
+    });
+}
+function pushManifest(exec, imageName, imageTag) {
+    return docker_awaiter(this, void 0, void 0, function* () {
+        const args = ['manifest'];
+        args.push('push');
+        args.push(`${imageName}:${imageTag !== null && imageTag !== void 0 ? imageTag : 'latest'}`);
+        const { exitCode } = yield exec('docker', args, {});
+        if (exitCode !== 0) {
+            throw new Error(`manifest push failed with ${exitCode}`);
         }
     });
 }

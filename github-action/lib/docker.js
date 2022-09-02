@@ -28,7 +28,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.pushImage = exports.runContainer = exports.buildImage = exports.isDockerBuildXInstalled = void 0;
+exports.pushManifest = exports.pushImage = exports.runContainer = exports.buildImage = exports.isDockerBuildXInstalled = void 0;
 const core = __importStar(require("@actions/core"));
 const docker = __importStar(require("../../common/src/docker"));
 const exec_1 = require("./exec");
@@ -88,3 +88,20 @@ function pushImage(imageName, imageTag) {
     });
 }
 exports.pushImage = pushImage;
+function pushManifest(imageName, imageTag) {
+    return __awaiter(this, void 0, void 0, function* () {
+        core.startGroup('📌 Pushing manifest...');
+        try {
+            yield docker.pushManifest(exec_1.exec, imageName, imageTag);
+            return true;
+        }
+        catch (error) {
+            core.setFailed(error);
+            return false;
+        }
+        finally {
+            core.endGroup();
+        }
+    });
+}
+exports.pushManifest = pushManifest;
