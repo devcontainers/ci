@@ -97,6 +97,12 @@
       "required": false,
       "defaultValue": false
 
+    },
+    {
+      "name": "cacheFrom",
+      "type": "multiLine",
+      "label": "Specify additional images to use for build caching",
+      "required": false
     }
   ],
   "outputVariables": [],
