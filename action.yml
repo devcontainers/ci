@@ -44,6 +44,9 @@ inputs:
   userDataFolder:
     required: false
     description: Some steps for building the dev container (e.g. container-features) require generating additional build files. To aid docker build cache re-use, you can use this property to set the path that these files will be generated under and use the actions/cache action to cache that folder across runs
+  cacheFrom:
+    required: False
+    description: Specify additional images to use for build caching
 outputs:
   runCmdOutput:
     description: The output of the command specified in the runCmd input
