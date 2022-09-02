@@ -16998,6 +16998,7 @@ function devContainerBuild(args, log) {
         }
         if (args.platform) {
             commandArgs.push('--platform', args.platform);
+            commandArgs.push('--push', 'false');
         }
         if (args.userDataFolder) {
             commandArgs.push("--user-data-folder", args.userDataFolder);
