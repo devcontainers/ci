@@ -37,6 +37,7 @@ const path_1 = __importDefault(require("path"));
 const exec_1 = require("./exec");
 const dev_container_cli_1 = require("../../common/src/dev-container-cli");
 const docker_1 = require("./docker");
+const skopeo_1 = require("./skopeo");
 const envvars_1 = require("../../common/src/envvars");
 function runMain() {
     return __awaiter(this, void 0, void 0, function* () {
@@ -68,6 +69,14 @@ function runMain() {
             const cacheFrom = core.getMultilineInput('cacheFrom');
             const skipContainerUserIdUpdate = core.getBooleanInput('skipContainerUserIdUpdate');
             const userDataFolder = core.getInput('userDataFolder');
+            if (platform) {
+                const skopeoInstalled = yield skopeo_1.isSkopeoInstalled();
+                if (!skopeoInstalled) {
+                    core.warning('skopeo not available and is required for multi-platform builds - make sure it is installed in your runner image');
+                    return;
+                }
+            }
+            const buildxOutput = platform ? 'type=oci,dest=/tmp/output.tar' : undefined;
             // TODO - nocache
             const log = (message) => core.info(message);
             const workspaceFolder = path_1.default.resolve(checkoutPath, subFolder);
@@ -96,6 +105,7 @@ function runMain() {
                     platform,
                     additionalCacheFroms: cacheFrom,
                     userDataFolder,
+                    output: buildxOutput,
                 };
                 const result = yield dev_container_cli_1.devcontainer.build(args, log);
                 if (result.outcome !== 'success') {
@@ -195,8 +205,10 @@ function runPost() {
         }
         const platform = emptyStringAsUndefined(core.getInput('platform'));
         if (platform) {
-            core.info(`Pushing manifest ''${imageName}:${imageTag !== null && imageTag !== void 0 ? imageTag : 'latest'}...`);
-            yield docker_1.pushManifest(imageName, imageTag);
+            core.info(`Copying multiplatform image ''${imageName}:${imageTag !== null && imageTag !== void 0 ? imageTag : 'latest'}...`);
+            const imageSource = 'oci-archive:/tmp/output.tar';
+            const imageDest = `docker://${imageName}:${imageTag}`;
+            yield skopeo_1.copyImage(true, imageSource, imageDest);
         }
         else {
             core.info(`Pushing image ''${imageName}:${imageTag !== null && imageTag !== void 0 ? imageTag : 'latest'}...`);

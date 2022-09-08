@@ -16998,7 +16998,9 @@ function devContainerBuild(args, log) {
         }
         if (args.platform) {
             commandArgs.push('--platform', args.platform);
-            commandArgs.push('--push', 'false');
+        }
+        if (args.output) {
+            commandArgs.push('--output', args.output);
         }
         if (args.userDataFolder) {
             commandArgs.push("--user-data-folder", args.userDataFolder);
@@ -17086,7 +17088,6 @@ __nccwpck_require__.d(__webpack_exports__, {
   "isDockerBuildXInstalled": () => (/* binding */ isDockerBuildXInstalled),
   "parseMount": () => (/* binding */ parseMount),
   "pushImage": () => (/* binding */ pushImage),
-  "pushManifest": () => (/* binding */ pushManifest),
   "runContainer": () => (/* binding */ runContainer)
 });
 
@@ -17404,17 +17405,6 @@ function pushImage(exec, imageName, imageTag) {
         const { exitCode } = yield exec('docker', args, {});
         if (exitCode !== 0) {
             throw new Error(`push failed with ${exitCode}`);
-        }
-    });
-}
-function pushManifest(exec, imageName, imageTag) {
-    return docker_awaiter(this, void 0, void 0, function* () {
-        const args = ['manifest'];
-        args.push('push');
-        args.push(`${imageName}:${imageTag !== null && imageTag !== void 0 ? imageTag : 'latest'}`);
-        const { exitCode } = yield exec('docker', args, {});
-        if (exitCode !== 0) {
-            throw new Error(`manifest push failed with ${exitCode}`);
         }
     });
 }

@@ -18,6 +18,7 @@ export interface DevContainerCliBuildArgs {
     platform?: string;
     additionalCacheFroms?: string[];
     userDataFolder?: string;
+    output?: string;
 }
 declare function devContainerBuild(args: DevContainerCliBuildArgs, log: (data: string) => void): Promise<DevContainerCliBuildResult | DevContainerCliError>;
 export interface DevContainerCliUpResult extends DevContainerCliSuccessResult {

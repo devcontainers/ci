@@ -31,7 +31,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.parseMount = exports.pushManifest = exports.pushImage = exports.runContainer = exports.buildImage = exports.isDockerBuildXInstalled = void 0;
+exports.parseMount = exports.pushImage = exports.runContainer = exports.buildImage = exports.isDockerBuildXInstalled = void 0;
 const path_1 = __importDefault(require("path"));
 const fs = __importStar(require("fs"));
 const os = __importStar(require("os"));
@@ -247,18 +247,6 @@ function pushImage(exec, imageName, imageTag) {
     });
 }
 exports.pushImage = pushImage;
-function pushManifest(exec, imageName, imageTag) {
-    return __awaiter(this, void 0, void 0, function* () {
-        const args = ['manifest'];
-        args.push('push');
-        args.push(`${imageName}:${imageTag !== null && imageTag !== void 0 ? imageTag : 'latest'}`);
-        const { exitCode } = yield exec('docker', args, {});
-        if (exitCode !== 0) {
-            throw new Error(`manifest push failed with ${exitCode}`);
-        }
-    });
-}
-exports.pushManifest = pushManifest;
 function parseMount(mountString) {
     // https://docs.docker.com/engine/reference/commandline/service_create/#add-bind-mounts-volumes-or-memory-filesystems
     // examples:

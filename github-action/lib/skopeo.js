@@ -28,37 +28,21 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.pushImage = exports.runContainer = exports.buildImage = exports.isDockerBuildXInstalled = void 0;
+exports.copyImage = exports.isSkopeoInstalled = void 0;
 const core = __importStar(require("@actions/core"));
-const docker = __importStar(require("../../common/src/docker"));
+const skopeo = __importStar(require("../../common/src/skopeo"));
 const exec_1 = require("./exec");
-function isDockerBuildXInstalled() {
+function isSkopeoInstalled() {
     return __awaiter(this, void 0, void 0, function* () {
-        return yield docker.isDockerBuildXInstalled(exec_1.exec);
+        return yield skopeo.isSkopeoInstalled(exec_1.exec);
     });
 }
-exports.isDockerBuildXInstalled = isDockerBuildXInstalled;
-function buildImage(imageName, imageTag, checkoutPath, subFolder, skipContainerUserIdUpdate, cacheFrom) {
+exports.isSkopeoInstalled = isSkopeoInstalled;
+function copyImage(all, source, dest) {
     return __awaiter(this, void 0, void 0, function* () {
-        core.startGroup('🏗 Building dev container...');
+        core.startGroup('📌 Copying image...');
         try {
-            return yield docker.buildImage(exec_1.exec, imageName, imageTag, checkoutPath, subFolder, skipContainerUserIdUpdate, cacheFrom);
-        }
-        catch (error) {
-            core.setFailed(error);
-            return '';
-        }
-        finally {
-            core.endGroup();
-        }
-    });
-}
-exports.buildImage = buildImage;
-function runContainer(imageName, imageTag, checkoutPath, subFolder, command, envs) {
-    return __awaiter(this, void 0, void 0, function* () {
-        core.startGroup('🏃‍♀️ Running dev container...');
-        try {
-            yield docker.runContainer(exec_1.exec, imageName, imageTag, checkoutPath, subFolder, command, envs);
+            yield skopeo.copyImage(exec_1.exec, all, source, dest);
             return true;
         }
         catch (error) {
@@ -70,21 +54,4 @@ function runContainer(imageName, imageTag, checkoutPath, subFolder, command, env
         }
     });
 }
-exports.runContainer = runContainer;
-function pushImage(imageName, imageTag) {
-    return __awaiter(this, void 0, void 0, function* () {
-        core.startGroup('📌 Pushing image...');
-        try {
-            yield docker.pushImage(exec_1.exec, imageName, imageTag);
-            return true;
-        }
-        catch (error) {
-            core.setFailed(error);
-            return false;
-        }
-        finally {
-            core.endGroup();
-        }
-    });
-}
-exports.pushImage = pushImage;
+exports.copyImage = copyImage;

@@ -139,6 +139,7 @@ export interface DevContainerCliBuildArgs {
   platform?: string;
   additionalCacheFroms?: string[];
   userDataFolder?: string;
+  output?: string,
 }
 async function devContainerBuild(
   args: DevContainerCliBuildArgs,
@@ -154,7 +155,9 @@ async function devContainerBuild(
   }
   if (args.platform) {
     commandArgs.push('--platform', args.platform);
-    commandArgs.push('--push', 'false');
+  }
+  if (args.output) {
+    commandArgs.push('--output', args.output);
   }
   if (args.userDataFolder) {
     commandArgs.push("--user-data-folder", args.userDataFolder);
