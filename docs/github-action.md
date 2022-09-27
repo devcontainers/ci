@@ -150,3 +150,5 @@ If you want to pass additional environment variables to the dev container when i
 In this example, the `HELLO` environment variable is specified with the value `Hello` in the `env` input on the devcontainer-build-run step. The `WORLD` environment variable is specified without a value so will pick up the value that is assigned in the standard action's `env` configuration (it could also be picked up from the job environment variables - see the [GitHub Action Environment Variables docs](https://docs.github.com/en/actions/reference/environment-variables) for more information).
 
 The result from running the container is to output "Hello - World".
+
+The environment variables specified in the workflow step are passed along when the run-command is executed. Therefore, they replace environmental variables with the same name that are set either directly in the Dockerfile or the `.devcontainer/devcontainer.json` under the [`containerEnv`](https://code.visualstudio.com/remote/advancedcontainers/environment-variables#_option-1-add-individual-variables) key.
