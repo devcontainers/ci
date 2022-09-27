@@ -115,7 +115,14 @@ export async function runMain(): Promise<void> {
 				command: ['bash', '-c', runCommand],
 				env: inputEnvsWithDefaults,
 			};
-			const execResult = await devcontainer.exec(execArgs, log);
+			let execLogString = '';
+			const execLog = (message: string): void => {
+				console.log(message);
+				if (!message.includes('@devcontainers/cli')) {
+					execLogString += message;
+				}
+			};
+			const execResult = await devcontainer.exec(execArgs, execLog);
 			if (execResult.outcome !== 'success') {
 				console.log(
 					`### ERROR: Dev container exec: ${execResult.message} (exit code: ${execResult.code})\n${execResult.description}`,
@@ -125,6 +132,11 @@ export async function runMain(): Promise<void> {
 			if (execResult.outcome !== 'success') {
 				return;
 			}
+			if (execLogString.length >= 25000) {
+				execLogString = execLogString.substring(0, 24963);
+				execLogString += 'TRUNCATED TO 25K CHAR MAX OUTPUT SIZE';
+			}
+			console.log(`##vso[task.setvariable variable=runCmdOutput]${execLog}`);
 		} else {
 			console.log('No runCmd set - skipping starting/running container');
 		}

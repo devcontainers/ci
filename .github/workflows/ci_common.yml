@@ -429,9 +429,19 @@ jobs:
 
       - name: Run test
         uses: ./
+        id: simpletest
         with:
           subFolder: github-tests/Dockerfile/run-args
           runCmd: echo $HOSTNAME && [[ $HOSTNAME == "my-host" ]]
+      - name: Validate runCmdOutput output
+        run: |
+          echo "'runCmdOutput' value: $runCmdOutput"
+          if [["$runCmdOutput" = *my-host*]]; then
+            echo "'runCmdOutput' output of simpletest step doesn't contain expected value 'my-host'"
+            exit 1
+          fi
+        env:
+          runCmdOutput: ${{ steps.simpletest.outputs.runCmdOutput }}
 
   test-gh-run-args:
     name: Run GitHub run-args test

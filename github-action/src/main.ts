@@ -1,4 +1,5 @@
 import * as core from '@actions/core';
+import truncate from 'truncate-utf8-bytes';
 import path from 'path';
 import {exec} from './exec';
 import {
@@ -120,13 +121,26 @@ export async function runMain(): Promise<void> {
 						env: inputEnvsWithDefaults,
 						userDataFolder,
 					};
-					const result = await devcontainer.exec(args, log);
+					let execLogString = '';
+					const execLog = (message: string): void => {
+						core.info(message);
+						if (!message.includes('@devcontainers/cli')) {
+							execLogString += message;
+						}
+					};
+					const result = await devcontainer.exec(args, execLog);
 					if (result.outcome !== 'success') {
 						core.error(
 							`Dev container exec: ${result.message} (exit code: ${result.code})\n${result.description}`,
 						);
 						core.setFailed(result.message);
 					}
+					core.setOutput('runCmdOutput', execLogString);
+					if (Buffer.byteLength(execLogString, 'utf-8') > 1000000) {
+						execLogString = truncate(execLogString, 999966);
+						execLogString += 'TRUNCATED TO 1 MB MAX OUTPUT SIZE';
+					}
+					core.setOutput('runCmdOutput', execLogString);
 					return result;
 				},
 			);

@@ -30,7 +30,8 @@
     "@actions/core": "^1.4.0",
     "@actions/exec": "^1.1.0",
     "devcontainer-build-run-common": "file:../common",
-    "jsonc-parser": "^3.0.0"
+    "jsonc-parser": "^3.0.0",
+    "truncate-utf8-bytes": "^1.0.2"
   },
   "devDependencies": {
     "@types/jest": "^26.0.23",
@@ -45,6 +46,7 @@
     "js-yaml": "^4.1.0",
     "prettier": "2.3.1",
     "ts-jest": "^26.5.6",
-    "typescript": "^4.3.2"
+    "typescript": "^4.3.2",
+    "@types/truncate-utf8-bytes": "^1.0.0"
   }
 }

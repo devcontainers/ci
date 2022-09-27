@@ -56,6 +56,12 @@ jobs:
       inputs:
         subFolder: github-tests/Dockerfile/run-args
         runCmd: echo $HOSTNAME && [[ $HOSTNAME == "my-host" ]]
+    - script: |
+        echo "'runCmdOutput' value: $runCmdOutput"
+        if [["$runCmdOutput" = *my-host*]]; then
+          echo "'runCmdOutput' output of test_simple job doesn't contain expected value 'my-host'"
+          exit 1
+        fi
 
   - job: test_build_args
     displayName: Test build-args
