@@ -1807,6 +1807,7 @@ const path_1 = __importDefault(__nccwpck_require__(622));
 const exec_1 = __nccwpck_require__(757);
 const dev_container_cli_1 = __nccwpck_require__(331);
 const docker_1 = __nccwpck_require__(476);
+const skopeo_1 = __nccwpck_require__(898);
 const envvars_1 = __nccwpck_require__(228);
 function runMain() {
     return __awaiter(this, void 0, void 0, function* () {
