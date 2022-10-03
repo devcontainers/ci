@@ -10,6 +10,7 @@ import {
 } from '../../common/src/dev-container-cli';
 
 import {isDockerBuildXInstalled, pushImage} from './docker';
+import {isSkopeoInstalled, copyImage} from './skopeo';
 import {populateDefaults} from '../../common/src/envvars';
 
 export async function runMain(): Promise<void> {
@@ -36,6 +37,7 @@ export async function runMain(): Promise<void> {
 		const checkoutPath: string = core.getInput('checkoutPath');
 		const imageName = emptyStringAsUndefined(core.getInput('imageName'));
 		const imageTag = emptyStringAsUndefined(core.getInput('imageTag'));
+		const platform = emptyStringAsUndefined(core.getInput('platform'));
 		const subFolder: string = core.getInput('subFolder');
 		const runCommand = core.getInput('runCmd');
 		const inputEnvs: string[] = core.getMultilineInput('env');
@@ -45,6 +47,17 @@ export async function runMain(): Promise<void> {
 			'skipContainerUserIdUpdate',
 		);
 		const userDataFolder: string = core.getInput('userDataFolder');
+
+		if (platform) {
+			const skopeoInstalled = await isSkopeoInstalled();
+			if (!skopeoInstalled) {
+				core.warning(
+					'skopeo not available and is required for multi-platform builds - make sure it is installed in your runner image',
+				);
+				return;
+			}
+		}
+		const buildxOutput = platform ? 'type=oci,dest=/tmp/output.tar' : undefined;
 
 		// TODO - nocache
 
@@ -74,8 +87,10 @@ export async function runMain(): Promise<void> {
 			const args: DevContainerCliBuildArgs = {
 				workspaceFolder,
 				imageName: fullImageName,
+				platform,
 				additionalCacheFroms: cacheFrom,
 				userDataFolder,
+				output: buildxOutput,
 			};
 			const result = await devcontainer.build(args, log);
 
@@ -206,8 +221,20 @@ export async function runPost(): Promise<void> {
 		}
 		return;
 	}
-	core.info(`Pushing image ''${imageName}:${imageTag ?? 'latest'}...`);
-	await pushImage(imageName, imageTag);
+
+	const platform = emptyStringAsUndefined(core.getInput('platform'));
+	if (platform) {
+		core.info(
+			`Copying multiplatform image ''${imageName}:${imageTag ?? 'latest'}...`,
+		);
+		const imageSource = 'oci-archive:/tmp/output.tar';
+		const imageDest = `docker://${imageName}:${imageTag}`;
+
+		await copyImage(true, imageSource, imageDest);
+	} else {
+		core.info(`Pushing image ''${imageName}:${imageTag ?? 'latest'}...`);
+		await pushImage(imageName, imageTag);
+	}
 }
 
 function emptyStringAsUndefined(value: string): string | undefined {
