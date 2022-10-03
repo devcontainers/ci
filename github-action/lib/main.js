@@ -33,6 +33,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.runPost = exports.runMain = void 0;
 const core = __importStar(require("@actions/core"));
+const truncate_utf8_bytes_1 = __importDefault(require("truncate-utf8-bytes"));
 const path_1 = __importDefault(require("path"));
 const exec_1 = require("./exec");
 const dev_container_cli_1 = require("../../common/src/dev-container-cli");
@@ -142,11 +143,24 @@ function runMain() {
                         env: inputEnvsWithDefaults,
                         userDataFolder,
                     };
-                    const result = yield dev_container_cli_1.devcontainer.exec(args, log);
+                    let execLogString = '';
+                    const execLog = (message) => {
+                        core.info(message);
+                        if (!message.includes('@devcontainers/cli')) {
+                            execLogString += message;
+                        }
+                    };
+                    const result = yield dev_container_cli_1.devcontainer.exec(args, execLog);
                     if (result.outcome !== 'success') {
                         core.error(`Dev container exec: ${result.message} (exit code: ${result.code})\n${result.description}`);
                         core.setFailed(result.message);
                     }
+                    core.setOutput('runCmdOutput', execLogString);
+                    if (Buffer.byteLength(execLogString, 'utf-8') > 1000000) {
+                        execLogString = truncate_utf8_bytes_1.default(execLogString, 999966);
+                        execLogString += 'TRUNCATED TO 1 MB MAX OUTPUT SIZE';
+                    }
+                    core.setOutput('runCmdOutput', execLogString);
                     return result;
                 }));
                 if (execResult.outcome !== 'success') {

@@ -50,6 +50,9 @@ inputs:
   cacheFrom:
     required: False
     description: Specify additional images to use for build caching
+outputs:
+  runCmdOutput:
+    description: The output of the command specified in the runCmd input
 runs:
   using: 'node16'
   main: 'github-action/run-main.js'

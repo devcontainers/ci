@@ -80,6 +80,11 @@ In the example above, the devcontainer-build-run will perform the following step
 | skipContainerUserIdUpdate | false    | For non-root dev containers (i.e. where `remoteUser` is specified), the action attempts to make the container user UID and GID match those of the host user. Set this to true to skip this step (defaults to false)                                              |
 | cacheFrom                 | false    | Specify additional images to use for build caching                                                                                                                                                                                                               |
 
+## Outputs
+
+| Name         | Description                                             |
+| ------------ | ------------------------------------------------------- |
+| runCmdOutput | The output of the command specified in the runCmd input |
 
 ## Specifying a sub-folder
 

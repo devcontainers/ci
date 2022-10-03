@@ -105,7 +105,10 @@
       "required": false
     }
   ],
-  "outputVariables": [],
+  "outputVariables": [{
+    "name": "runCmdOutput",
+    "description": "The output of the command specified in the runCmd input"
+  }],
   "execution": {
     "Node10": {
       "target": "run-main.js",

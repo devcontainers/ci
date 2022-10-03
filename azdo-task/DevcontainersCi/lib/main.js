@@ -128,7 +128,14 @@ function runMain() {
                     command: ['bash', '-c', runCommand],
                     env: inputEnvsWithDefaults,
                 };
-                const execResult = yield dev_container_cli_1.devcontainer.exec(execArgs, log);
+                let execLogString = '';
+                const execLog = (message) => {
+                    console.log(message);
+                    if (!message.includes('@devcontainers/cli')) {
+                        execLogString += message;
+                    }
+                };
+                const execResult = yield dev_container_cli_1.devcontainer.exec(execArgs, execLog);
                 if (execResult.outcome !== 'success') {
                     console.log(`### ERROR: Dev container exec: ${execResult.message} (exit code: ${execResult.code})\n${execResult.description}`);
                     task.setResult(task_1.TaskResult.Failed, execResult.message);
@@ -136,6 +143,11 @@ function runMain() {
                 if (execResult.outcome !== 'success') {
                     return;
                 }
+                if (execLogString.length >= 25000) {
+                    execLogString = execLogString.substring(0, 24963);
+                    execLogString += 'TRUNCATED TO 25K CHAR MAX OUTPUT SIZE';
+                }
+                console.log(`##vso[task.setvariable variable=runCmdOutput]${execLog}`);
             }
             else {
                 console.log('No runCmd set - skipping starting/running container');

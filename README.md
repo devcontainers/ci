@@ -37,7 +37,7 @@ The example below shows usage of the Azure DevOps Task - see the [Azure DevOps T
 
 This version updates the implementation to use [@devcontainers/cli](https://www.npmjs.com/package/@devcontainers/cli).
 
-This brings many benefits around compatibility with VS Code Remote-Containers. One key area is that [container-features](https://code.visualstudio.com/docs/remote/containers#_dev-container-features-preview) can now be used in CI.
+This brings many benefits around compatibility with VS Code Dev Containers. One key area is that [container-features](https://code.visualstudio.com/docs/remote/containers#_dev-container-features-preview) can now be used in CI.
 
 In theory, docker-compose based dev containers should also work however these are currently untested and image caching is blocked on [this issue](https://github.com/devcontainers/cli/issues/10)
 

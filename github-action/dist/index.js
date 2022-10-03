@@ -229,7 +229,7 @@ require('./sourcemap-register.js');/******/ (() => { // webpackBootstrap
     'use strict';
     Object.defineProperty(exports, "__esModule", ({ value: true }));
     exports.isEOL = exports.format = void 0;
-    var scanner_1 = __nccwpck_require__(476);
+    var scanner_1 = __nccwpck_require__(605);
     function format(documentText, range, options) {
         var initialIndentLevel;
         var formatText;
@@ -455,7 +455,7 @@ require('./sourcemap-register.js');/******/ (() => { // webpackBootstrap
     'use strict';
     Object.defineProperty(exports, "__esModule", ({ value: true }));
     exports.getNodeType = exports.stripComments = exports.visit = exports.findNodeAtOffset = exports.contains = exports.getNodeValue = exports.getNodePath = exports.findNodeAtLocation = exports.parseTree = exports.parse = exports.getLocation = void 0;
-    var scanner_1 = __nccwpck_require__(476);
+    var scanner_1 = __nccwpck_require__(605);
     var ParseOptions;
     (function (ParseOptions) {
         ParseOptions.DEFAULT = {
@@ -1087,7 +1087,7 @@ require('./sourcemap-register.js');/******/ (() => { // webpackBootstrap
 
 /***/ }),
 
-/***/ 476:
+/***/ 605:
 /***/ ((module, exports) => {
 
 (function (factory) {
@@ -1491,7 +1491,7 @@ require('./sourcemap-register.js');/******/ (() => { // webpackBootstrap
     exports.applyEdits = exports.modify = exports.format = exports.printParseErrorCode = exports.stripComments = exports.visit = exports.getNodeValue = exports.getNodePath = exports.findNodeAtOffset = exports.findNodeAtLocation = exports.parseTree = exports.parse = exports.getLocation = exports.createScanner = void 0;
     var formatter = __nccwpck_require__(188);
     var edit = __nccwpck_require__(709);
-    var scanner = __nccwpck_require__(476);
+    var scanner = __nccwpck_require__(605);
     var parser = __nccwpck_require__(134);
     /**
      * Creates a JSON scanner on the given text.
@@ -1609,7 +1609,7 @@ require('./sourcemap-register.js');/******/ (() => { // webpackBootstrap
 
 /***/ }),
 
-/***/ 758:
+/***/ 476:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
 "use strict";
@@ -1802,11 +1802,11 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.runPost = exports.runMain = void 0;
 const core = __importStar(__nccwpck_require__(186));
+const truncate_utf8_bytes_1 = __importDefault(__nccwpck_require__(699));
 const path_1 = __importDefault(__nccwpck_require__(622));
 const exec_1 = __nccwpck_require__(757);
 const dev_container_cli_1 = __nccwpck_require__(331);
-const docker_1 = __nccwpck_require__(758);
-const skopeo_1 = __nccwpck_require__(898);
+const docker_1 = __nccwpck_require__(476);
 const envvars_1 = __nccwpck_require__(228);
 function runMain() {
     return __awaiter(this, void 0, void 0, function* () {
@@ -1911,11 +1911,24 @@ function runMain() {
                         env: inputEnvsWithDefaults,
                         userDataFolder,
                     };
-                    const result = yield dev_container_cli_1.devcontainer.exec(args, log);
+                    let execLogString = '';
+                    const execLog = (message) => {
+                        core.info(message);
+                        if (!message.includes('@devcontainers/cli')) {
+                            execLogString += message;
+                        }
+                    };
+                    const result = yield dev_container_cli_1.devcontainer.exec(args, execLog);
                     if (result.outcome !== 'success') {
                         core.error(`Dev container exec: ${result.message} (exit code: ${result.code})\n${result.description}`);
                         core.setFailed(result.message);
                     }
+                    core.setOutput('runCmdOutput', execLogString);
+                    if (Buffer.byteLength(execLogString, 'utf-8') > 1000000) {
+                        execLogString = truncate_utf8_bytes_1.default(execLogString, 999966);
+                        execLogString += 'TRUNCATED TO 1 MB MAX OUTPUT SIZE';
+                    }
+                    core.setOutput('runCmdOutput', execLogString);
                     return result;
                 }));
                 if (execResult.outcome !== 'success') {
@@ -3797,6 +3810,70 @@ function copyFile(srcFile, destFile, force) {
     });
 }
 //# sourceMappingURL=io.js.map
+
+/***/ }),
+
+/***/ 699:
+/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
+
+"use strict";
+
+
+var truncate = __nccwpck_require__(758);
+var getLength = Buffer.byteLength.bind(Buffer);
+module.exports = truncate.bind(null, getLength);
+
+
+/***/ }),
+
+/***/ 758:
+/***/ ((module) => {
+
+"use strict";
+
+
+function isHighSurrogate(codePoint) {
+  return codePoint >= 0xd800 && codePoint <= 0xdbff;
+}
+
+function isLowSurrogate(codePoint) {
+  return codePoint >= 0xdc00 && codePoint <= 0xdfff;
+}
+
+// Truncate string by size in bytes
+module.exports = function truncate(getLength, string, byteLength) {
+  if (typeof string !== "string") {
+    throw new Error("Input must be string");
+  }
+
+  var charLength = string.length;
+  var curByteLength = 0;
+  var codePoint;
+  var segment;
+
+  for (var i = 0; i < charLength; i += 1) {
+    codePoint = string.charCodeAt(i);
+    segment = string[i];
+
+    if (isHighSurrogate(codePoint) && isLowSurrogate(string.charCodeAt(i + 1))) {
+      i += 1;
+      segment += string[i];
+    }
+
+    curByteLength += getLength(segment);
+
+    if (curByteLength === byteLength) {
+      return string.slice(0, i + 1);
+    }
+    else if (curByteLength > byteLength) {
+      return string.slice(0, i - segment.length + 1);
+    }
+  }
+
+  return string;
+};
+
+
 
 /***/ }),
 
