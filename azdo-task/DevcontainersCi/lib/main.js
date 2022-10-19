@@ -38,6 +38,7 @@ const path_1 = __importDefault(require("path"));
 const envvars_1 = require("../../../common/src/envvars");
 const dev_container_cli_1 = require("../../../common/src/dev-container-cli");
 const docker_1 = require("./docker");
+const skopeo_1 = require("./skopeo");
 const exec_1 = require("./exec");
 function runMain() {
     var _a, _b, _c, _d, _e, _f, _g;
@@ -61,12 +62,21 @@ function runMain() {
             const checkoutPath = (_a = task.getInput('checkoutPath')) !== null && _a !== void 0 ? _a : '';
             const imageName = task.getInput('imageName');
             const imageTag = task.getInput('imageTag');
+            const platform = task.getInput('platform');
             const subFolder = (_b = task.getInput('subFolder')) !== null && _b !== void 0 ? _b : '.';
             const runCommand = task.getInput('runCmd');
             const envs = (_d = (_c = task.getInput('env')) === null || _c === void 0 ? void 0 : _c.split('\n')) !== null && _d !== void 0 ? _d : [];
             const inputEnvsWithDefaults = envvars_1.populateDefaults(envs);
             const cacheFrom = (_f = (_e = task.getInput('cacheFrom')) === null || _e === void 0 ? void 0 : _e.split('\n')) !== null && _f !== void 0 ? _f : [];
             const skipContainerUserIdUpdate = ((_g = task.getInput('skipContainerUserIdUpdate')) !== null && _g !== void 0 ? _g : 'false') === 'true';
+            if (platform) {
+                const skopeoInstalled = yield skopeo_1.isSkopeoInstalled();
+                if (!skopeoInstalled) {
+                    console.log('skopeo not available and is required for multi-platform builds - make sure it is installed on your build agent');
+                    return;
+                }
+            }
+            const buildxOutput = platform ? 'type=oci,dest=/tmp/output.tar' : undefined;
             const log = (message) => console.log(message);
             const workspaceFolder = path_1.default.resolve(checkoutPath, subFolder);
             const fullImageName = imageName
@@ -87,7 +97,9 @@ function runMain() {
             const buildArgs = {
                 workspaceFolder,
                 imageName: fullImageName,
+                platform,
                 additionalCacheFroms: cacheFrom,
+                output: buildxOutput,
             };
             console.log('\n\n');
             console.log('***');
@@ -211,8 +223,17 @@ function runPost() {
             return;
         }
         const imageTag = task.getInput('imageTag');
-        console.log(`Pushing image ''${imageName}:${imageTag !== null && imageTag !== void 0 ? imageTag : 'latest'}...`);
-        yield docker_1.pushImage(imageName, imageTag);
+        const platform = task.getInput('platform');
+        if (platform) {
+            console.log(`Copying multiplatform image ''${imageName}:${imageTag !== null && imageTag !== void 0 ? imageTag : 'latest'}...`);
+            const imageSource = 'oci-archive:/tmp/output.tar';
+            const imageDest = `docker://${imageName}:${imageTag !== null && imageTag !== void 0 ? imageTag : 'latest'}`;
+            yield skopeo_1.copyImage(true, imageSource, imageDest);
+        }
+        else {
+            console.log(`Pushing image ''${imageName}:${imageTag !== null && imageTag !== void 0 ? imageTag : 'latest'}...`);
+            yield docker_1.pushImage(imageName, imageTag);
+        }
     });
 }
 exports.runPost = runPost;
