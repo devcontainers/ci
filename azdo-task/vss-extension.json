@@ -2,8 +2,8 @@
     "manifestVersion": 1,
     "id": "ci",
     "name": "Devcontainers CI",
-    "version": "0.2.7",
-    "publisher": "NateScherer",
+    "version": "0.2.1",
+    "publisher": "devcontainers",
     "targets": [
         {
             "id": "Microsoft.VisualStudio.Services"
