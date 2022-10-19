@@ -59,16 +59,16 @@ jobs:
   steps:
   - checkout: self
   - task: Docker@2
-  displayName: Login to Container Registry
-  inputs:
+    displayName: Login to Container Registry
+    inputs:
       command: login
       containerRegistry: RegistryNameHere
   - script: docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
-  displayName: Set up QEMU
+    displayName: Set up QEMU
   - script: docker buildx create --use
-  displayName: Set up docker buildx
+    displayName: Set up docker buildx
   - task: DevcontainersCi@0
-  inputs:
+    inputs:
       imageName: UserNameHere/ImageNameHere
       platform: linux/amd64,linux/arm64
 ```
