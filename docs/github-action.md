@@ -94,6 +94,7 @@ The [`devcontainers/ci` action](https://github.com/marketplace/actions/devcontai
 | eventFilterForPush        | false    | Set the event names (e.g. `pull_request`, `push`) that are allowed to trigger a push of the dev container image. Defaults to `push`. Leave empty for all                                                                                       |
 | skipContainerUserIdUpdate | false    | For non-root dev containers (i.e. where `remoteUser` is specified), the action attempts to make the container user UID and GID match those of the host user. Set this to true to skip this step (defaults to false)                            |
 | cacheFrom                 | false    | Specify additional images to use for build caching                                                                                                                                                                                             |
+| platform                 | false    | Platforms for which the image should be built. If omitted, defaults to the platform of the GitHub Actions Runner. Multiple platforms should be comma separated.                                                                                                                                                                                                               |
 
 ## Outputs
 
@@ -150,3 +151,7 @@ If you want to pass additional environment variables to the dev container when i
 In this example, the `HELLO` environment variable is specified with the value `Hello` in the `env` input on the devcontainer-build-run step. The `WORLD` environment variable is specified without a value so will pick up the value that is assigned in the standard action's `env` configuration (it could also be picked up from the job environment variables - see the [GitHub Action Environment Variables docs](https://docs.github.com/en/actions/reference/environment-variables) for more information).
 
 The result from running the container is to output "Hello - World".
+
+## Multi-Platform Builds
+
+Builds for multiple platforms have special considerations, detailed at [mutli-platform-builds.md](multi-platform-builds.md).
