@@ -213,7 +213,8 @@ export async function runPost(): Promise<void> {
 		return;
 	}
 
-	const imageTag = emptyStringAsUndefined(core.getInput('imageTag'));
+	const imageTag =
+		emptyStringAsUndefined(core.getInput('imageTag')) ?? 'latest';
 	if (!imageName) {
 		if (pushOption) {
 			// pushOption was set (and not to "never") - give an error that imageName is required
@@ -224,15 +225,13 @@ export async function runPost(): Promise<void> {
 
 	const platform = emptyStringAsUndefined(core.getInput('platform'));
 	if (platform) {
-		core.info(
-			`Copying multiplatform image ''${imageName}:${imageTag ?? 'latest'}...`,
-		);
+		core.info(`Copying multiplatform image ''${imageName}:${imageTag}...`);
 		const imageSource = 'oci-archive:/tmp/output.tar';
-		const imageDest = `docker://${imageName}:${imageTag ?? 'latest'}`;
+		const imageDest = `docker://${imageName}:${imageTag}`;
 
 		await copyImage(true, imageSource, imageDest);
 	} else {
-		core.info(`Pushing image ''${imageName}:${imageTag ?? 'latest'}...`);
+		core.info(`Pushing image ''${imageName}:${imageTag}...`);
 		await pushImage(imageName, imageTag);
 	}
 }

@@ -233,18 +233,16 @@ export async function runPost(): Promise<void> {
 		}
 		return;
 	}
-	const imageTag = task.getInput('imageTag');
+	const imageTag = task.getInput('imageTag') ?? 'latest';
 	const platform = task.getInput('platform');
 	if (platform) {
-		console.log(
-			`Copying multiplatform image ''${imageName}:${imageTag ?? 'latest'}...`,
-		);
+		console.log(`Copying multiplatform image ''${imageName}:${imageTag}...`);
 		const imageSource = 'oci-archive:/tmp/output.tar';
-		const imageDest = `docker://${imageName}:${imageTag ?? 'latest'}`;
+		const imageDest = `docker://${imageName}:${imageTag}`;
 
 		await copyImage(true, imageSource, imageDest);
 	} else {
-		console.log(`Pushing image ''${imageName}:${imageTag ?? 'latest'}...`);
+		console.log(`Pushing image ''${imageName}:${imageTag}...`);
 		await pushImage(imageName, imageTag);
 	}
 }

@@ -173,7 +173,7 @@ function runMain() {
 }
 exports.runMain = runMain;
 function runPost() {
-    var _a, _b, _c, _d, _e;
+    var _a, _b, _c, _d, _e, _f;
     return __awaiter(this, void 0, void 0, function* () {
         const pushOption = task.getInput('push');
         const imageName = task.getInput('imageName');
@@ -222,16 +222,16 @@ function runPost() {
             }
             return;
         }
-        const imageTag = task.getInput('imageTag');
+        const imageTag = (_f = task.getInput('imageTag')) !== null && _f !== void 0 ? _f : 'latest';
         const platform = task.getInput('platform');
         if (platform) {
-            console.log(`Copying multiplatform image ''${imageName}:${imageTag !== null && imageTag !== void 0 ? imageTag : 'latest'}...`);
+            console.log(`Copying multiplatform image ''${imageName}:${imageTag}...`);
             const imageSource = 'oci-archive:/tmp/output.tar';
-            const imageDest = `docker://${imageName}:${imageTag !== null && imageTag !== void 0 ? imageTag : 'latest'}`;
+            const imageDest = `docker://${imageName}:${imageTag}`;
             yield skopeo_1.copyImage(true, imageSource, imageDest);
         }
         else {
-            console.log(`Pushing image ''${imageName}:${imageTag !== null && imageTag !== void 0 ? imageTag : 'latest'}...`);
+            console.log(`Pushing image ''${imageName}:${imageTag}...`);
             yield docker_1.pushImage(imageName, imageTag);
         }
     });

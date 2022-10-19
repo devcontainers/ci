@@ -179,6 +179,7 @@ function runMain() {
 }
 exports.runMain = runMain;
 function runPost() {
+    var _a;
     return __awaiter(this, void 0, void 0, function* () {
         const pushOption = emptyStringAsUndefined(core.getInput('push'));
         const imageName = emptyStringAsUndefined(core.getInput('imageName'));
@@ -209,7 +210,7 @@ function runPost() {
             core.setFailed(`Unexpected push value ('${pushOption})'`);
             return;
         }
-        const imageTag = emptyStringAsUndefined(core.getInput('imageTag'));
+        const imageTag = (_a = emptyStringAsUndefined(core.getInput('imageTag'))) !== null && _a !== void 0 ? _a : 'latest';
         if (!imageName) {
             if (pushOption) {
                 // pushOption was set (and not to "never") - give an error that imageName is required
@@ -219,13 +220,13 @@ function runPost() {
         }
         const platform = emptyStringAsUndefined(core.getInput('platform'));
         if (platform) {
-            core.info(`Copying multiplatform image ''${imageName}:${imageTag !== null && imageTag !== void 0 ? imageTag : 'latest'}...`);
+            core.info(`Copying multiplatform image ''${imageName}:${imageTag}...`);
             const imageSource = 'oci-archive:/tmp/output.tar';
-            const imageDest = `docker://${imageName}:${imageTag !== null && imageTag !== void 0 ? imageTag : 'latest'}`;
+            const imageDest = `docker://${imageName}:${imageTag}`;
             yield skopeo_1.copyImage(true, imageSource, imageDest);
         }
         else {
-            core.info(`Pushing image ''${imageName}:${imageTag !== null && imageTag !== void 0 ? imageTag : 'latest'}...`);
+            core.info(`Pushing image ''${imageName}:${imageTag}...`);
             yield docker_1.pushImage(imageName, imageTag);
         }
     });
