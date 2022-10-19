@@ -73,7 +73,7 @@ function runMain() {
             if (platform) {
                 const skopeoInstalled = yield skopeo_1.isSkopeoInstalled();
                 if (!skopeoInstalled) {
-                    core.warning('skopeo not available and is required for multi-platform builds - make sure it is installed in your runner image');
+                    core.warning('skopeo not available and is required for multi-platform builds - make sure it is installed on your runner');
                     return;
                 }
             }
@@ -221,7 +221,7 @@ function runPost() {
         if (platform) {
             core.info(`Copying multiplatform image ''${imageName}:${imageTag !== null && imageTag !== void 0 ? imageTag : 'latest'}...`);
             const imageSource = 'oci-archive:/tmp/output.tar';
-            const imageDest = `docker://${imageName}:${imageTag}`;
+            const imageDest = `docker://${imageName}:${imageTag !== null && imageTag !== void 0 ? imageTag : 'latest'}`;
             yield skopeo_1.copyImage(true, imageSource, imageDest);
         }
         else {

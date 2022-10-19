@@ -52,7 +52,7 @@ export async function runMain(): Promise<void> {
 			const skopeoInstalled = await isSkopeoInstalled();
 			if (!skopeoInstalled) {
 				core.warning(
-					'skopeo not available and is required for multi-platform builds - make sure it is installed in your runner image',
+					'skopeo not available and is required for multi-platform builds - make sure it is installed on your runner',
 				);
 				return;
 			}
@@ -228,7 +228,7 @@ export async function runPost(): Promise<void> {
 			`Copying multiplatform image ''${imageName}:${imageTag ?? 'latest'}...`,
 		);
 		const imageSource = 'oci-archive:/tmp/output.tar';
-		const imageDest = `docker://${imageName}:${imageTag}`;
+		const imageDest = `docker://${imageName}:${imageTag ?? 'latest'}`;
 
 		await copyImage(true, imageSource, imageDest);
 	} else {
