@@ -52,7 +52,7 @@
 	// Use 'postCreateCommand' to run commands after the container is created.
 	"postCreateCommand": "./scripts/go-tools.sh",
 
-	// "remoteUser": "vscode",
+	"remoteUser": "root",
 	
 	"extensions": [
 		"golang.go",
