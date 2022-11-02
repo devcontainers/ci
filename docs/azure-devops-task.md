@@ -1,6 +1,6 @@
-# DevcontainersCi
+# Dev Container Build and Run Task
 
-DevcontainersCi is an Azure DevOps task aimed at making it easier to re-use a [Visual Studio Code dev container](https://code.visualstudio.com/) in an Azure DevOps pipeline.
+The Dev Container Build and Run Azure DevOps task aimed at making it easier to re-use a [Dev Container](https://containers.dev) in an Azure DevOps pipeline. It supports both using a Dev Container to run commands for CI, testing, and more along with pre-building Dev Container image. Dev Container image building supports [Dev Container Features](https://containers.dev/implementors/features/#devcontainer-json-properties) and automatically places Dev Container [metadata on an image](https://containers.dev/implementors/spec/#image-metadata) label for simplified use.
 
 ## Getting Started
 
@@ -77,7 +77,7 @@ In the example above, the devcontainer-build-run will perform the following step
 | pushOnFailedBuild         | false    | If `false` (default), only push if the build is successful. Set to true to push on failed builds                                                                                                                                                                 |
 | sourceBranchFilterForPush | false    | Allows you to limit which branch's builds are pushed to the registry (only specified branches are allowed to push). If empty, all branches are allowed                                                                                                           |
 | buildReasonsForPush       | false    | Allows you to limit the Build.Reason values that are allowed to push to the registry. Defaults to Manual, IndividualCI, BatchedCI. See https://docs.microsoft.com/en-us/azure/devops/pipelines/build/variables?view=azure-devops&viewFallbackFrom=vsts&tabs=yaml |
-| skipContainerUserIdUpdate | false    | For non-root dev containers (i.e. where `remoteUser` is specified), the action attempts to make the container user UID and GID match those of the host user. Set this to true to skip this step (defaults to false)                                              |
+| skipContainerUserIdUpdate | false    | For non-root Dev Containers (i.e. where `remoteUser` is specified), the action attempts to make the container user UID and GID match those of the host user. Set this to true to skip this step (defaults to false)                                              |
 | cacheFrom                 | false    | Specify additional images to use for build caching                                                                                                                                                                                                               |
 
 ## Outputs
