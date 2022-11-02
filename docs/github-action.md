@@ -79,7 +79,7 @@ In the example above, the devcontainer-build-run will perform the following step
 2. Run the dev container with the `make ci-build` command specified in the `runCmd` input
 3. If the run succeeds (and we're not building from a PR branch) then push the image to the container registry. This enables future image builds in step 1 to use the image layers as a cache to improve performance
 
-The [`devcontainers/ci` action](https://github.com/marketplace/actions/devcontainers-ci) uses Docker BuildKit to perform the Docker builds as this has support for storing layer cache metadata with the image.  This is installed by default on hosted runners but you can use the [docker/setup-buildx-action](https://github.com/docker/setup-buildx-action) to install this on your own runners.
+The [`devcontainers/ci` action](https://github.com/marketplace/actions/devcontainers-ci) uses Docker BuildKit to perform the Docker builds as this has support for storing layer cache metadata with the image. This is installed by default on hosted runners, but you can use the [docker/setup-buildx-action](https://github.com/docker/setup-buildx-action) to install this on your own runners.
 
 
 ### Other examples
