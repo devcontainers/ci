@@ -1,6 +1,6 @@
 # Dev Container Build and Run Task
 
-The Dev Container Build and Run Azure DevOps task aimed at making it easier to re-use a [Dev Container](https://containers.dev) in an Azure DevOps pipeline. It supports both using a Dev Container to run commands for CI, testing, and more along with pre-building Dev Container image. Dev Container image building supports [Dev Container Features](https://containers.dev/implementors/features/#devcontainer-json-properties) and automatically places Dev Container [metadata on an image](https://containers.dev/implementors/spec/#image-metadata) label for simplified use.
+The Dev Container Build and Run Azure DevOps task is aimed at making it easier to re-use a [Dev Container](https://containers.dev) in an Azure DevOps pipeline. It supports using a Dev Container to run commands for CI, testing, and more along with pre-building Dev Container image. Dev Container image building supports [Dev Container Features](https://containers.dev/implementors/features/#devcontainer-json-properties) and automatically places Dev Container [metadata on an image](https://containers.dev/implementors/spec/#image-metadata) label for simplified use.
 
 
 ## Getting Started
