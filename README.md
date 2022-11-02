@@ -7,7 +7,7 @@ A similar [Azure DevOps Task](./docs/azure-devops-task.md) is also available!
 Note that this project builds on top of [@devcontainers/cli](https://www.npmjs.com/package/@devcontainers/cli) which can be used in other automation systems.
 
 ## GitHub Action
-The examples below shows usage of the GitHub Action - see the [GitHub Action documentation](./docs/github-action.md) for more details.
+The examples below show usage of the GitHub Action - see the [GitHub Action documentation](./docs/github-action.md) for more details.
 
 > **NOTE:** This Action is not currently capable of taking advantage of pre-built Codespaces. However, pre-built images are supported.
 
