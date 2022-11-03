@@ -19,7 +19,7 @@ Here are three examples of using the Action for common scenarios. See the [docum
   with:
     imageName: ghcr.io/example/example-devcontainer
     cacheFrom: ghcr.io/example/example-devcontainer
-    push: true
+    push: always
 ```
 
 **Using a Dev Container for a CI build:**
@@ -45,7 +45,7 @@ Here are three examples of using the Action for common scenarios. See the [docum
   with:
     imageName: ghcr.io/example/example-devcontainer
     cacheFrom: ghcr.io/example/example-devcontainer
-    push: true
+    push: always
     runCmd: make ci-build
 ```
 
