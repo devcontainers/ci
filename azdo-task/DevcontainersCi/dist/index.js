@@ -17013,13 +17013,13 @@ function installCli(exec) {
         // if we have a local 'cli' folder, then use that as we're testing a private cli build
         let cliStat = null;
         try {
-            cliStat = yield fstat('./cli');
+            cliStat = yield fstat('./_devcontainer_cli');
         }
         catch (_a) {
         }
         if (cliStat && cliStat.isDirectory()) {
             console.log('** Installing local cli');
-            const { exitCode, stdout, stderr } = yield exec('bash', ['-c', 'cd cli && npm install && npm install -g'], {});
+            const { exitCode, stdout, stderr } = yield exec('bash', ['-c', 'cd _devcontainer_cli && npm install && npm install -g'], {});
             if (exitCode != 0) {
                 console.log(stdout);
                 console.error(stderr);
