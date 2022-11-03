@@ -151,4 +151,4 @@ In this example, the `HELLO` environment variable is specified with the value `H
 
 The result from running the container is to output "Hello - World".
 
-The environment variables specified in the workflow step are passed along when the run-command is executed. Therefore, they replace environmental variables with the same name that are set either directly in the Dockerfile or the `.devcontainer/devcontainer.json` under the [`containerEnv`](https://code.visualstudio.com/remote/advancedcontainers/environment-variables#_option-1-add-individual-variables) key.
+The environment variables specified in the workflow step are passed along when the run-command is executed. Therefore, they replace environment variables with the same name that are set either directly in the Dockerfile or the `devcontainer.json` under the [`containerEnv`](https://code.visualstudio.com/remote/advancedcontainers/environment-variables#_option-1-add-individual-variables) key.
