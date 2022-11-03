@@ -180,6 +180,7 @@ jobs:
       - test-compose-features
       - test-simple
       - test-no-run
+      - test-platform-with-runcmd
     runs-on: ubuntu-latest
     if: ${{ inputs.prHeadSha }}
     steps:
