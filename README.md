@@ -23,14 +23,15 @@ The examples below show usage of the GitHub Action - see the [GitHub Action docu
     push: true
 ```
 
-**Using a dev container for a CI build:**
+**Using a Dev Container for a CI build:**
 
 ```yaml
 - name: Run make ci-build in dev container
   uses: devcontainers/ci@v0.2
   with:    
-    # [Optional] Even if you're not directly referencing a pre-built image,
-    # you can still use the image as a cache for your Dockerfile build.
+    # [Optional] If you have a separate workflow like the one above
+    # to pre-build your container image, you can reference it here
+    # to speed up your application build workflows as well!
     cacheFrom: ghcr.io/example/example-devcontainer
 
     push: never
