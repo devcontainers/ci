@@ -55,9 +55,7 @@ The examples below show usage of the GitHub Action - see the [GitHub Action docu
 
 This version updates the implementation to use [@devcontainers/cli](https://www.npmjs.com/package/@devcontainers/cli).
 
-This brings many benefits around compatibility with Dev Containers. One key area is that dev container [Features](https://code.visualstudio.com/docs/remote/containers#_dev-container-features-preview) can now be used in CI.
-
-In theory, docker-compose based Dev Containers should also work however these are currently untested and image caching is blocked on [this issue](https://github.com/devcontainers/cli/issues/10)
+This brings many benefits around compatibility with Dev Containers. One key area is that [Dev Container Features](https://containers.dev/features) can now be used in CI along with recent enhancements like [image label support](https://containers.dev/implementors/reference/#labels).
 
 ### Version 0.1.x
 
