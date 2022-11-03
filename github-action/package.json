@@ -2,7 +2,7 @@
   "name": "devcontainer-build-run",
   "version": "0.0.0",
   "private": true,
-  "description": "GitHub action for building and running VS Code dev containers",
+  "description": "Action to simplify using Dev Containers (https://containers.dev) in GitHub workflows",
   "main": "lib/main.js",
   "scripts": {
     "tsc-version": "tsc --version",
