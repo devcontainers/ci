@@ -2,7 +2,7 @@
   "name": "ci",
   "version": "0.0.0",
   "private": true,
-  "description": "Azure DevOps task for building and running VS Code dev containers",
+  "description": "Azure DevOps task for building and running Dev Containers (https://containers.dev)",
   "main": "lib/main.js",
   "scripts": {
     "build": "tsc --build",

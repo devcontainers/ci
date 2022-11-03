@@ -3,7 +3,7 @@
   "id": "d784888b-f54b-4926-a8d1-3a159d2de8e0",
   "name": "DevcontainersCi",
   "friendlyName": "Devcontainers CI Task",
-  "description": "Build and run VS Code dev containers in Azure DevOps Pipelines",
+  "description": "Build and run Dev Containers (https://containers.dev) in Azure DevOps Pipelines",
   "author": "Devcontainers",
   "helpMarkDown": "",
   "category": "Build",
@@ -93,7 +93,7 @@
     {
       "name": "skipContainerUserIdUpdate",
       "type": "boolean",
-      "label": "For non-root dev containers (i.e. where `remoteUser` is specified), the action attempts to make the container user UID and GID match those of the host user. Set this to true to skip this step (defaults to false)",
+      "label": "For non-root Dev Containers (i.e. where `remoteUser` is specified), the action attempts to make the container user UID and GID match those of the host user. Set this to true to skip this step (defaults to false)",
       "required": false,
       "defaultValue": false
 

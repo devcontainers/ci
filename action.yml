@@ -1,5 +1,5 @@
-name: 'devcontainers-ci'
-description: 'Action to simplify using VS Code dev containers in GitHub workflows'
+name: 'Dev Container Build and Run Action'
+description: 'Action to simplify using Dev Containers (https://containers.dev) in GitHub workflows'
 author: 'devcontainers'
 branding:
   color: purple
@@ -43,7 +43,7 @@ inputs:
   skipContainerUserIdUpdate:
     required: false
     default: false
-    description: For non-root dev containers (i.e. where `remoteUser` is specified), the action attempts to make the container user UID and GID match those of the host user. Set this to true to skip this step (defaults to false)
+    description: For non-root Dev Containers (i.e. where `remoteUser` is specified), the action attempts to make the container user UID and GID match those of the host user. Set this to true to skip this step (defaults to false)
   userDataFolder:
     required: false
     description: Some steps for building the dev container (e.g. container-features) require generating additional build files. To aid docker build cache re-use, you can use this property to set the path that these files will be generated under and use the actions/cache action to cache that folder across runs
