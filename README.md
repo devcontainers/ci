@@ -1,16 +1,15 @@
 # Dev Container Build and Run (devcontainers/ci)
 
-The Dev Container Build and Run GitHub Action is aimed at making it easier to re-use [Dev Containers](https://containers.dev) in a GitHub workflow. The Action supports using a Dev Container to run commands for CI, testing, and more, along with pre-building Dev Container image. Dev Container image building supports [Dev Container Features](https://containers.dev/implementors/features/#devcontainer-json-properties) and automatically places Dev Container [metadata on an image](https://containers.dev/implementors/spec/#image-metadata) label for simplified use.
+The Dev Container Build and Run GitHub Action is aimed at making it easier to re-use [Dev Containers](https://containers.dev) in a GitHub workflow. The Action supports using a Dev Container to run commands for CI, testing, and more, along with pre-building a Dev Container image. Dev Container image building supports [Dev Container Features](https://containers.dev/implementors/features/#devcontainer-json-properties) and automatically places Dev Container [metadata on an image](https://containers.dev/implementors/spec/#image-metadata) label for simplified use.
+
+> **NOTE:** The Action is not currently capable of taking advantage of pre-built Codespaces. However, pre-built images are supported.
 
 A similar [Azure DevOps Task](./docs/azure-devops-task.md) is also available!
 
 Note that this project builds on top of [@devcontainers/cli](https://www.npmjs.com/package/@devcontainers/cli) which can be used in other automation systems.
 
-## GitHub Action
-The examples below show usage of the GitHub Action - see the [GitHub Action documentation](./docs/github-action.md) for more details.
-
-> **NOTE:** This Action is not currently capable of taking advantage of pre-built Codespaces. However, pre-built images are supported.
-
+## Quick start
+Here are three examples of using the Action for common scenarios. See the [documentation](./docs/github-action.md) for more details and a list of available [inputs](./docs/github-action.md#inputs).
 
 **Pre-building an image:**
 
