@@ -92,7 +92,7 @@ The [`devcontainers/ci` action](https://github.com/marketplace/actions/devcontai
   with:
     imageName: ghcr.io/example/example-devcontainer
     cacheFrom: ghcr.io/example/example-devcontainer
-    push: true
+    push: always
 ```
 
 **Using a Dev Container for a CI build:**
@@ -118,7 +118,7 @@ The [`devcontainers/ci` action](https://github.com/marketplace/actions/devcontai
   with:
     imageName: ghcr.io/example/example-devcontainer
     cacheFrom: ghcr.io/example/example-devcontainer
-    push: true
+    push: always
     runCmd: make ci-build
 ```
 
