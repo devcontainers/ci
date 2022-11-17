@@ -214,8 +214,8 @@ export async function runPost(): Promise<void> {
 	}
 
 	const imageTag =
-		emptyStringAsUndefined(core.getInput('imageTag'))?.split(',') ?? 'latest';
-	const imageTagArray = coerceToArray(imageTag);
+		emptyStringAsUndefined(core.getInput('imageTag')) ?? 'latest';
+	const imageTagArray = imageTag.split(',');
 	if (!imageName) {
 		if (pushOption) {
 			// pushOption was set (and not to "never") - give an error that imageName is required
@@ -245,8 +245,4 @@ function emptyStringAsUndefined(value: string): string | undefined {
 		return undefined;
 	}
 	return value;
-}
-
-function coerceToArray(value: string | string[]): string[] {
-	return typeof value === 'string' ? [value] : value;
 }

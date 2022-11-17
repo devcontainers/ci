@@ -74,8 +74,12 @@ async function buildImageBase(
 	const contextPath = path.join(folder, '.devcontainer', configContext);
 
 	const args = ['buildx', 'build'];
-	args.push('--tag');
-	args.push(`${imageName}:${imageTag ?? 'latest'}`);
+	imageTag = imageTag ?? 'latest';
+	const imageTagArray = imageTag.split(',');
+	for (const tag of imageTagArray) {
+		args.push('--tag');
+		args.push(`${imageName}:${tag}`);
+	}
 	args.push('--cache-from');
 	args.push(`type=registry,ref=${imageTag ?? 'latest'}`);
 	const configCacheFrom = devcontainerConfig.build?.cacheFrom;

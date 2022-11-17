@@ -179,7 +179,7 @@ function runMain() {
 }
 exports.runMain = runMain;
 function runPost() {
-    var _a, _b;
+    var _a;
     return __awaiter(this, void 0, void 0, function* () {
         const pushOption = emptyStringAsUndefined(core.getInput('push'));
         const imageName = emptyStringAsUndefined(core.getInput('imageName'));
@@ -210,8 +210,8 @@ function runPost() {
             core.setFailed(`Unexpected push value ('${pushOption})'`);
             return;
         }
-        const imageTag = (_b = (_a = emptyStringAsUndefined(core.getInput('imageTag'))) === null || _a === void 0 ? void 0 : _a.split(',')) !== null && _b !== void 0 ? _b : 'latest';
-        const imageTagArray = coerceToArray(imageTag);
+        const imageTag = (_a = emptyStringAsUndefined(core.getInput('imageTag'))) !== null && _a !== void 0 ? _a : 'latest';
+        const imageTagArray = imageTag.split(',');
         if (!imageName) {
             if (pushOption) {
                 // pushOption was set (and not to "never") - give an error that imageName is required
@@ -242,7 +242,4 @@ function emptyStringAsUndefined(value) {
         return undefined;
     }
     return value;
-}
-function coerceToArray(value) {
-    return typeof value === 'string' ? [value] : value;
 }
