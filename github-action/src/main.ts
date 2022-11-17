@@ -214,7 +214,8 @@ export async function runPost(): Promise<void> {
 	}
 
 	const imageTag =
-		emptyStringAsUndefined(core.getInput('imageTag')) ?? 'latest';
+		emptyStringAsUndefined(core.getInput('imageTag'))?.split(',') ?? 'latest';
+	const imageTagArray = coerceToArray(imageTag);
 	if (!imageName) {
 		if (pushOption) {
 			// pushOption was set (and not to "never") - give an error that imageName is required
@@ -225,14 +226,17 @@ export async function runPost(): Promise<void> {
 
 	const platform = emptyStringAsUndefined(core.getInput('platform'));
 	if (platform) {
-		core.info(`Copying multiplatform image ''${imageName}:${imageTag}...`);
-		const imageSource = 'oci-archive:/tmp/output.tar';
-		const imageDest = `docker://${imageName}:${imageTag}`;
-
-		await copyImage(true, imageSource, imageDest);
+		for (const tag of imageTagArray) {
+			core.info(`Copying multiplatform image ''${imageName}:${tag}...`);
+			const imageSource = 'oci-archive:/tmp/output.tar';
+			const imageDest = `docker://${imageName}:${tag}`;
+			await copyImage(true, imageSource, imageDest);
+		}
 	} else {
-		core.info(`Pushing image ''${imageName}:${imageTag}...`);
-		await pushImage(imageName, imageTag);
+		for (const tag of imageTagArray) {
+			core.info(`Pushing image ''${imageName}:${tag}...`);
+			await pushImage(imageName, tag);
+		}
 	}
 }
 
@@ -241,4 +245,8 @@ function emptyStringAsUndefined(value: string): string | undefined {
 		return undefined;
 	}
 	return value;
+}
+
+function coerceToArray(value: string | string[]): string[] {
+	return typeof value === 'string' ? [value] : value;
 }
