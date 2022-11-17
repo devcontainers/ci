@@ -227,6 +227,7 @@ const path_1 = __importDefault(__nccwpck_require__(5622));
 const envvars_1 = __nccwpck_require__(9243);
 const dev_container_cli_1 = __nccwpck_require__(4624);
 const docker_1 = __nccwpck_require__(3758);
+const skopeo_1 = __nccwpck_require__(9898);
 const exec_1 = __nccwpck_require__(7757);
 function runMain() {
     var _a, _b, _c, _d, _e, _f, _g;
@@ -250,12 +251,21 @@ function runMain() {
             const checkoutPath = (_a = task.getInput('checkoutPath')) !== null && _a !== void 0 ? _a : '';
             const imageName = task.getInput('imageName');
             const imageTag = task.getInput('imageTag');
+            const platform = task.getInput('platform');
             const subFolder = (_b = task.getInput('subFolder')) !== null && _b !== void 0 ? _b : '.';
             const runCommand = task.getInput('runCmd');
             const envs = (_d = (_c = task.getInput('env')) === null || _c === void 0 ? void 0 : _c.split('\n')) !== null && _d !== void 0 ? _d : [];
             const inputEnvsWithDefaults = envvars_1.populateDefaults(envs);
             const cacheFrom = (_f = (_e = task.getInput('cacheFrom')) === null || _e === void 0 ? void 0 : _e.split('\n')) !== null && _f !== void 0 ? _f : [];
             const skipContainerUserIdUpdate = ((_g = task.getInput('skipContainerUserIdUpdate')) !== null && _g !== void 0 ? _g : 'false') === 'true';
+            if (platform) {
+                const skopeoInstalled = yield skopeo_1.isSkopeoInstalled();
+                if (!skopeoInstalled) {
+                    console.log('skopeo not available and is required for multi-platform builds - make sure it is installed on your build agent');
+                    return;
+                }
+            }
+            const buildxOutput = platform ? 'type=oci,dest=/tmp/output.tar' : undefined;
             const log = (message) => console.log(message);
             const workspaceFolder = path_1.default.resolve(checkoutPath, subFolder);
             const fullImageName = imageName
@@ -276,7 +286,9 @@ function runMain() {
             const buildArgs = {
                 workspaceFolder,
                 imageName: fullImageName,
+                platform,
                 additionalCacheFroms: cacheFrom,
+                output: buildxOutput,
             };
             console.log('\n\n');
             console.log('***');
@@ -350,7 +362,7 @@ function runMain() {
 }
 exports.runMain = runMain;
 function runPost() {
-    var _a, _b, _c, _d, _e;
+    var _a, _b, _c, _d, _e, _f;
     return __awaiter(this, void 0, void 0, function* () {
         const pushOption = task.getInput('push');
         const imageName = task.getInput('imageName');
@@ -399,12 +411,83 @@ function runPost() {
             }
             return;
         }
-        const imageTag = task.getInput('imageTag');
-        console.log(`Pushing image ''${imageName}:${imageTag !== null && imageTag !== void 0 ? imageTag : 'latest'}...`);
-        yield docker_1.pushImage(imageName, imageTag);
+        const imageTag = (_f = task.getInput('imageTag')) !== null && _f !== void 0 ? _f : 'latest';
+        const platform = task.getInput('platform');
+        if (platform) {
+            console.log(`Copying multiplatform image ''${imageName}:${imageTag}...`);
+            const imageSource = 'oci-archive:/tmp/output.tar';
+            const imageDest = `docker://${imageName}:${imageTag}`;
+            yield skopeo_1.copyImage(true, imageSource, imageDest);
+        }
+        else {
+            console.log(`Pushing image ''${imageName}:${imageTag}...`);
+            yield docker_1.pushImage(imageName, imageTag);
+        }
     });
 }
 exports.runPost = runPost;
+
+
+/***/ }),
+
+/***/ 9898:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    Object.defineProperty(o, k2, { enumerable: true, get: function() { return m[k]; } });
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.copyImage = exports.isSkopeoInstalled = void 0;
+const task = __importStar(__nccwpck_require__(347));
+const skopeo = __importStar(__nccwpck_require__(2754));
+const exec_1 = __nccwpck_require__(7757);
+function isSkopeoInstalled() {
+    return __awaiter(this, void 0, void 0, function* () {
+        return yield skopeo.isSkopeoInstalled(exec_1.exec);
+    });
+}
+exports.isSkopeoInstalled = isSkopeoInstalled;
+function copyImage(all, source, dest) {
+    return __awaiter(this, void 0, void 0, function* () {
+        console.log('📌 Copying image...');
+        try {
+            yield skopeo.copyImage(exec_1.exec, all, source, dest);
+            return true;
+        }
+        catch (error) {
+            task.setResult(task.TaskResult.Failed, error);
+            return false;
+        }
+    });
+}
+exports.copyImage = copyImage;
 
 
 /***/ }),
@@ -16930,13 +17013,13 @@ function installCli(exec) {
         // if we have a local 'cli' folder, then use that as we're testing a private cli build
         let cliStat = null;
         try {
-            cliStat = yield fstat('./cli');
+            cliStat = yield fstat('./_devcontainer_cli');
         }
         catch (_a) {
         }
         if (cliStat && cliStat.isDirectory()) {
             console.log('** Installing local cli');
-            const { exitCode, stdout, stderr } = yield exec('bash', ['-c', 'cd cli && npm install && npm install -g'], {});
+            const { exitCode, stdout, stderr } = yield exec('bash', ['-c', 'cd _devcontainer_cli && npm install && npm install -g'], {});
             if (exitCode != 0) {
                 console.log(stdout);
                 console.error(stderr);
@@ -17007,6 +17090,12 @@ function devContainerBuild(args, log) {
         ];
         if (args.imageName) {
             commandArgs.push('--image-name', args.imageName);
+        }
+        if (args.platform) {
+            commandArgs.push('--platform', args.platform);
+        }
+        if (args.output) {
+            commandArgs.push('--output', args.output);
         }
         if (args.userDataFolder) {
             commandArgs.push("--user-data-folder", args.userDataFolder);
@@ -17506,6 +17595,47 @@ function populateDefaults(envs) {
         }
     }
     return result;
+}
+
+
+/***/ }),
+
+/***/ 2754:
+/***/ ((__unused_webpack_module, __webpack_exports__, __nccwpck_require__) => {
+
+"use strict";
+__nccwpck_require__.r(__webpack_exports__);
+/* harmony export */ __nccwpck_require__.d(__webpack_exports__, {
+/* harmony export */   "isSkopeoInstalled": () => (/* binding */ isSkopeoInstalled),
+/* harmony export */   "copyImage": () => (/* binding */ copyImage)
+/* harmony export */ });
+var __awaiter = (undefined && undefined.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+function isSkopeoInstalled(exec) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const { exitCode } = yield exec('skopeo', ['--help'], { silent: true });
+        return exitCode === 0;
+    });
+}
+function copyImage(exec, all, source, dest) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const args = ['copy'];
+        if (all) {
+            args.push('--all');
+        }
+        args.push(source, dest);
+        const { exitCode } = yield exec('skopeo', args, {});
+        if (exitCode !== 0) {
+            throw new Error(`skopeo copy failed with ${exitCode}`);
+        }
+    });
 }
 
 

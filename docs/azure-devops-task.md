@@ -1,6 +1,6 @@
-# DevcontainersCi
+# Dev Container Build and Run Task
 
-DevcontainersCi is an Azure DevOps task aimed at making it easier to re-use a [Visual Studio Code dev container](https://code.visualstudio.com/) in an Azure DevOps pipeline.
+The Dev Container Build and Run Azure DevOps task is aimed at making it easier to re-use a [Dev Container](https://containers.dev) in an Azure DevOps pipeline. It supports using a Dev Container to run commands for CI, testing, and more along with pre-building Dev Container image. Dev Container image building supports [Dev Container Features](https://containers.dev/implementors/features/#devcontainer-json-properties) and automatically places Dev Container [metadata on an image](https://containers.dev/implementors/spec/#image-metadata) label for simplified use.
 
 ## Getting Started
 
@@ -77,8 +77,9 @@ In the example above, the devcontainer-build-run will perform the following step
 | pushOnFailedBuild         | false    | If `false` (default), only push if the build is successful. Set to true to push on failed builds                                                                                                                                                                 |
 | sourceBranchFilterForPush | false    | Allows you to limit which branch's builds are pushed to the registry (only specified branches are allowed to push). If empty, all branches are allowed                                                                                                           |
 | buildReasonsForPush       | false    | Allows you to limit the Build.Reason values that are allowed to push to the registry. Defaults to Manual, IndividualCI, BatchedCI. See https://docs.microsoft.com/en-us/azure/devops/pipelines/build/variables?view=azure-devops&viewFallbackFrom=vsts&tabs=yaml |
-| skipContainerUserIdUpdate | false    | For non-root dev containers (i.e. where `remoteUser` is specified), the action attempts to make the container user UID and GID match those of the host user. Set this to true to skip this step (defaults to false)                                              |
+| skipContainerUserIdUpdate | false    | For non-root Dev Containers (i.e. where `remoteUser` is specified), the action attempts to make the container user UID and GID match those of the host user. Set this to true to skip this step (defaults to false)                                              |
 | cacheFrom                 | false    | Specify additional images to use for build caching                                                                                                                                                                                                               |
+| platform                 | false    | Platforms for which the image should be built. If omitted, defaults to the platform of the GitHub Actions Runner. Multiple platforms should be comma separated.                                                                                                                                                                                                               |
 
 ## Outputs
 
@@ -130,3 +131,7 @@ If you want to pass additional environment variables to the dev container when i
 In this example, the `HELLO` environment variable is specified with the value `Hello` in the `env` input on the devcontainer-build-run step. The `WORLD` environment variable is specified without a value so will pick up the value that is assigned in the standard action's `env` configuration.
 
 The result from running the container is to output "Hello - World".
+
+## Multi-Platform Builds
+
+Builds for multiple platforms have special considerations, detailed at [mutli-platform-builds.md](multi-platform-builds.md).

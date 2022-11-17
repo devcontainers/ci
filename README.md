@@ -1,35 +1,53 @@
-# devcontainers/ci
+# Dev Container Build and Run (devcontainers/ci)
 
-devcontainers/ci contains a GitHub action and Azure DevOps task aimed at making it easier to re-use a [development container](https://github.com/devcontainers/spec) in a GitHub workflow or Azure DevOps pipeline.
+The Dev Container Build and Run GitHub Action is aimed at making it easier to re-use [Dev Containers](https://containers.dev) in a GitHub workflow. The Action supports using a Dev Container to run commands for CI, testing, and more, along with pre-building a Dev Container image. Dev Container image building supports [Dev Container Features](https://containers.dev/implementors/features/#devcontainer-json-properties) and automatically places Dev Container [metadata on an image](https://containers.dev/implementors/spec/#image-metadata) label for simplified use.
 
-This project builds on top of [@devcontainers/cli](https://www.npmjs.com/package/@devcontainers/cli)
+> **NOTE:** The Action is not currently capable of taking advantage of pre-built Codespaces. However, pre-built images are supported.
 
+A similar [Azure DevOps Task](./docs/azure-devops-task.md) is also available!
 
-## GitHub Action
+Note that this project builds on top of [@devcontainers/cli](https://www.npmjs.com/package/@devcontainers/cli) which can be used in other automation systems.
 
-The example below shows usage of the GitHub Action - see the [GitHub Action documentation](./docs/github-action.md) for more details:
+## Quick start
+Here are three examples of using the Action for common scenarios. See the [documentation](./docs/github-action.md) for more details and a list of available [inputs](./docs/github-action.md#inputs).
 
+**Pre-building an image:**
 
 ```yaml
-- name: Build and run dev container task
+- name: Pre-build dev container image
   uses: devcontainers/ci@v0.2
   with:
     imageName: ghcr.io/example/example-devcontainer
+    cacheFrom: ghcr.io/example/example-devcontainer
+    push: always
+```
+
+**Using a Dev Container for a CI build:**
+
+```yaml
+- name: Run make ci-build in dev container
+  uses: devcontainers/ci@v0.2
+  with:    
+    # [Optional] If you have a separate workflow like the one above
+    # to pre-build your container image, you can reference it here
+    # to speed up your application build workflows as well!
+    cacheFrom: ghcr.io/example/example-devcontainer
+
+    push: never
     runCmd: make ci-build
 ```
 
-## Azure DevOps Task
-
-The example below shows usage of the Azure DevOps Task - see the [Azure DevOps Task documentation](./docs/azure-devops-task.md) for more details:
+**Both at once:**
 
 ```yaml
-- task: DevcontainersCI@0
-  inputs:
-    imageName: 'yourregistry.azurecr.io/example-dev-container'
-    runCmd: 'make ci-build'
-    sourceBranchFilterForPush: refs/heads/main
+- name: Pre-build image and run make ci-build in dev container
+  uses: devcontainers/ci@v0.2
+  with:
+    imageName: ghcr.io/example/example-devcontainer
+    cacheFrom: ghcr.io/example/example-devcontainer
+    push: always
+    runCmd: make ci-build
 ```
-
 
 ## CHANGELOG
 
@@ -37,10 +55,8 @@ The example below shows usage of the Azure DevOps Task - see the [Azure DevOps T
 
 This version updates the implementation to use [@devcontainers/cli](https://www.npmjs.com/package/@devcontainers/cli).
 
-This brings many benefits around compatibility with VS Code Dev Containers. One key area is that [container-features](https://code.visualstudio.com/docs/remote/containers#_dev-container-features-preview) can now be used in CI.
-
-In theory, docker-compose based dev containers should also work however these are currently untested and image caching is blocked on [this issue](https://github.com/devcontainers/cli/issues/10)
+This brings many benefits around compatibility with Dev Containers. One key area is that [Dev Container Features](https://containers.dev/features) can now be used in CI along with recent enhancements like [image label support](https://containers.dev/implementors/reference/#labels).
 
 ### Version 0.1.x
 
-0.1.x versions were the initial version of the action/task and attempted to mimic the behaviour of dev containers with manual `docker` commands
+0.1.x versions were the initial version of the action/task and attempted to mimic the behaviour of Dev Containers with manual `docker` commands

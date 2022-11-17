@@ -10,6 +10,7 @@ import {
 } from '../../../common/src/dev-container-cli';
 
 import {isDockerBuildXInstalled, pushImage} from './docker';
+import {isSkopeoInstalled, copyImage} from './skopeo';
 import {exec} from './exec';
 
 export async function runMain(): Promise<void> {
@@ -38,6 +39,7 @@ export async function runMain(): Promise<void> {
 		const checkoutPath = task.getInput('checkoutPath') ?? '';
 		const imageName = task.getInput('imageName');
 		const imageTag = task.getInput('imageTag');
+		const platform = task.getInput('platform');
 		const subFolder = task.getInput('subFolder') ?? '.';
 		const runCommand = task.getInput('runCmd');
 		const envs = task.getInput('env')?.split('\n') ?? [];
@@ -45,6 +47,17 @@ export async function runMain(): Promise<void> {
 		const cacheFrom = task.getInput('cacheFrom')?.split('\n') ?? [];
 		const skipContainerUserIdUpdate =
 			(task.getInput('skipContainerUserIdUpdate') ?? 'false') === 'true';
+
+		if (platform) {
+			const skopeoInstalled = await isSkopeoInstalled();
+			if (!skopeoInstalled) {
+				console.log(
+					'skopeo not available and is required for multi-platform builds - make sure it is installed on your build agent',
+				);
+				return;
+			}
+		}
+		const buildxOutput = platform ? 'type=oci,dest=/tmp/output.tar' : undefined;
 
 		const log = (message: string): void => console.log(message);
 		const workspaceFolder = path.resolve(checkoutPath, subFolder);
@@ -67,7 +80,9 @@ export async function runMain(): Promise<void> {
 		const buildArgs: DevContainerCliBuildArgs = {
 			workspaceFolder,
 			imageName: fullImageName,
+			platform,
 			additionalCacheFroms: cacheFrom,
+			output: buildxOutput,
 		};
 
 		console.log('\n\n');
@@ -218,7 +233,16 @@ export async function runPost(): Promise<void> {
 		}
 		return;
 	}
-	const imageTag = task.getInput('imageTag');
-	console.log(`Pushing image ''${imageName}:${imageTag ?? 'latest'}...`);
-	await pushImage(imageName, imageTag);
+	const imageTag = task.getInput('imageTag') ?? 'latest';
+	const platform = task.getInput('platform');
+	if (platform) {
+		console.log(`Copying multiplatform image ''${imageName}:${imageTag}...`);
+		const imageSource = 'oci-archive:/tmp/output.tar';
+		const imageDest = `docker://${imageName}:${imageTag}`;
+
+		await copyImage(true, imageSource, imageDest);
+	} else {
+		console.log(`Pushing image ''${imageName}:${imageTag}...`);
+		await pushImage(imageName, imageTag);
+	}
 }

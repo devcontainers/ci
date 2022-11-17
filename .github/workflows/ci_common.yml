@@ -180,6 +180,7 @@ jobs:
       - test-compose-features
       - test-simple
       - test-no-run
+      - test-platform-with-runcmd
     runs-on: ubuntu-latest
     if: ${{ inputs.prHeadSha }}
     steps:
@@ -756,3 +757,52 @@ jobs:
         uses: ./
         with:
           subFolder: github-tests/Dockerfile/build-only
+
+  test-platform-with-runcmd:
+    name: Run GitHub platform and runCmd test
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          persist-credentials: false
+          # if the following value is missing (i.e. not triggered via comment workflow)
+          # then the default checkout will apply
+          ref: ${{ inputs.prRef }}
+
+      - name: Set up QEMU for multi-architecture builds
+        uses: docker/setup-qemu-action@v1
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v1 
+        if: ${{ needs.build.outputs.image_push_option == 'filter' }}
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run test
+        uses: ./
+        id: platform-with-runcmd
+        with:
+          subFolder: github-tests/Dockerfile/platform-with-runcmd
+          imageName: ghcr.io/devcontainers/ci/tests/platform-with-runcmd
+          platform: linux/amd64,linux/arm64
+          runCmd: echo $HOSTNAME && [[ $HOSTNAME == "my-host" ]]
+          push: ${{ needs.build.outputs.image_push_option }}
+          eventFilterForPush: |
+            push
+            pull_request
+      - name: Validate runCmdOutput output
+        run: |
+          echo "'runCmdOutput' value: $runCmdOutput"
+          if [["$runCmdOutput" = *my-host*]]; then
+            echo "'runCmdOutput' output of platform-with-runcmd step doesn't contain expected value 'my-host'"
+            exit 1
+          fi
+        env:
+          runCmdOutput: ${{ steps.platform-with-runcmd.outputs.runCmdOutput }}

@@ -47,13 +47,13 @@ function installCli(exec) {
         // if we have a local 'cli' folder, then use that as we're testing a private cli build
         let cliStat = null;
         try {
-            cliStat = yield fstat('./cli');
+            cliStat = yield fstat('./_devcontainer_cli');
         }
         catch (_a) {
         }
         if (cliStat && cliStat.isDirectory()) {
             console.log('** Installing local cli');
-            const { exitCode, stdout, stderr } = yield exec('bash', ['-c', 'cd cli && npm install && npm install -g'], {});
+            const { exitCode, stdout, stderr } = yield exec('bash', ['-c', 'cd _devcontainer_cli && npm install && npm install -g'], {});
             if (exitCode != 0) {
                 console.log(stdout);
                 console.error(stderr);
@@ -124,6 +124,12 @@ function devContainerBuild(args, log) {
         ];
         if (args.imageName) {
             commandArgs.push('--image-name', args.imageName);
+        }
+        if (args.platform) {
+            commandArgs.push('--platform', args.platform);
+        }
+        if (args.output) {
+            commandArgs.push('--output', args.output);
         }
         if (args.userDataFolder) {
             commandArgs.push("--user-data-folder", args.userDataFolder);
