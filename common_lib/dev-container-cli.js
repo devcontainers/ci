@@ -125,6 +125,12 @@ function devContainerBuild(args, log) {
         if (args.imageName) {
             commandArgs.push('--image-name', args.imageName);
         }
+        if (args.platform) {
+            commandArgs.push('--platform', args.platform);
+        }
+        if (args.output) {
+            commandArgs.push('--output', args.output);
+        }
         if (args.userDataFolder) {
             commandArgs.push("--user-data-folder", args.userDataFolder);
         }
