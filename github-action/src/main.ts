@@ -240,14 +240,14 @@ export async function runPost(): Promise<void> {
 	const platform = emptyStringAsUndefined(core.getInput('platform'));
 	if (platform) {
 		for (const tag of imageTagArray) {
-			core.info(`Copying multiplatform image ''${imageName}:${tag}...`);
-			const imageSource = 'oci-archive:/tmp/output.tar';
+			core.info(`Copying multiplatform image '${imageName}:${tag}'...`);
+			const imageSource = `oci-archive:/tmp/output.tar:${tag}`;
 			const imageDest = `docker://${imageName}:${tag}`;
 			await copyImage(true, imageSource, imageDest);
 		}
 	} else {
 		for (const tag of imageTagArray) {
-			core.info(`Pushing image ''${imageName}:${tag}...`);
+			core.info(`Pushing image '${imageName}:${tag}'...`);
 			await pushImage(imageName, tag);
 		}
 	}

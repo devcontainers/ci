@@ -231,15 +231,15 @@ function runPost() {
         const platform = emptyStringAsUndefined(core.getInput('platform'));
         if (platform) {
             for (const tag of imageTagArray) {
-                core.info(`Copying multiplatform image ''${imageName}:${tag}...`);
-                const imageSource = 'oci-archive:/tmp/output.tar';
+                core.info(`Copying multiplatform image '${imageName}:${tag}'...`);
+                const imageSource = `oci-archive:/tmp/output.tar:${tag}`;
                 const imageDest = `docker://${imageName}:${tag}`;
                 yield skopeo_1.copyImage(true, imageSource, imageDest);
             }
         }
         else {
             for (const tag of imageTagArray) {
-                core.info(`Pushing image ''${imageName}:${tag}...`);
+                core.info(`Pushing image '${imageName}:${tag}'...`);
                 yield docker_1.pushImage(imageName, tag);
             }
         }
