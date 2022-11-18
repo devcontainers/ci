@@ -232,16 +232,21 @@ function runPost() {
             return;
         }
         const imageTag = (_f = task.getInput('imageTag')) !== null && _f !== void 0 ? _f : 'latest';
+        const imageTagArray = imageTag.split(',');
         const platform = task.getInput('platform');
         if (platform) {
-            console.log(`Copying multiplatform image ''${imageName}:${imageTag}...`);
-            const imageSource = 'oci-archive:/tmp/output.tar';
-            const imageDest = `docker://${imageName}:${imageTag}`;
-            yield skopeo_1.copyImage(true, imageSource, imageDest);
+            for (const tag of imageTagArray) {
+                console.log(`Copying multiplatform image '${imageName}:${tag}'...`);
+                const imageSource = `oci-archive:/tmp/output.tar:${tag}`;
+                const imageDest = `docker://${imageName}:${tag}`;
+                yield skopeo_1.copyImage(true, imageSource, imageDest);
+            }
         }
         else {
-            console.log(`Pushing image ''${imageName}:${imageTag}...`);
-            yield docker_1.pushImage(imageName, imageTag);
+            for (const tag of imageTagArray) {
+                console.log(`Pushing image '${imageName}:${tag}'...`);
+                yield docker_1.pushImage(imageName, tag);
+            }
         }
     });
 }

@@ -243,6 +243,7 @@ export async function runPost(): Promise<void> {
 			core.info(`Copying multiplatform image '${imageName}:${tag}'...`);
 			const imageSource = `oci-archive:/tmp/output.tar:${tag}`;
 			const imageDest = `docker://${imageName}:${tag}`;
+
 			await copyImage(true, imageSource, imageDest);
 		}
 	} else {
