@@ -135,7 +135,7 @@ export interface DevContainerCliBuildResult
   extends DevContainerCliSuccessResult {}
 export interface DevContainerCliBuildArgs {
   workspaceFolder: string;
-  imageName?: string;
+  imageName?: string[];
   platform?: string;
   additionalCacheFroms?: string[];
   userDataFolder?: string;
@@ -151,7 +151,9 @@ async function devContainerBuild(
     args.workspaceFolder,
   ];
   if (args.imageName) {
-    commandArgs.push('--image-name', args.imageName);
+    for (const name in args.imageName) {
+      commandArgs.push('--image-name', name);
+    }
   }
   if (args.platform) {
     commandArgs.push('--platform', args.platform);

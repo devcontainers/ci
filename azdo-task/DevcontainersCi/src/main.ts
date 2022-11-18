@@ -61,16 +61,27 @@ export async function runMain(): Promise<void> {
 
 		const log = (message: string): void => console.log(message);
 		const workspaceFolder = path.resolve(checkoutPath, subFolder);
-		const fullImageName = imageName
-			? `${imageName}:${imageTag ?? 'latest'}`
-			: undefined;
-		if (fullImageName) {
-			if (!cacheFrom.includes(fullImageName)) {
-				// If the cacheFrom options don't include the fullImageName, add it here
-				// This ensures that when building a PR where the image specified in the action
-				// isn't included in devcontainer.json (or docker-compose.yml), the action still
-				// resolves a previous image for the tag as a layer cache (if pushed to a registry)
-				cacheFrom.splice(0, 0, fullImageName);
+
+		const resolvedImageTag = imageTag ?? 'latest';
+		const imageTagArray = resolvedImageTag.split(',');
+		const fullImageNameArray: string[] = [];
+		for (const tag of imageTagArray) {
+			fullImageNameArray.push(`${imageName}:${tag}`);
+		}
+		if (imageName) {
+			if (fullImageNameArray.length === 1) {
+				if (!cacheFrom.includes(fullImageNameArray[0])) {
+					// If the cacheFrom options don't include the fullImageName, add it here
+					// This ensures that when building a PR where the image specified in the action
+					// isn't included in devcontainer.json (or docker-compose.yml), the action still
+					// resolves a previous image for the tag as a layer cache (if pushed to a registry)
+					cacheFrom.splice(0, 0, fullImageNameArray[0]);
+				}
+			} else {
+				// Don't automatically add --cache-from if multiple image tags are specified
+				console.log(
+					'Not adding --cache-from automatically since multiple image tags were supplied',
+				);
 			}
 		} else {
 			console.log(
@@ -79,7 +90,7 @@ export async function runMain(): Promise<void> {
 		}
 		const buildArgs: DevContainerCliBuildArgs = {
 			workspaceFolder,
-			imageName: fullImageName,
+			imageName: fullImageNameArray,
 			platform,
 			additionalCacheFroms: cacheFrom,
 			output: buildxOutput,

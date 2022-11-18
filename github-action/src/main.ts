@@ -64,24 +64,30 @@ export async function runMain(): Promise<void> {
 		const log = (message: string): void => core.info(message);
 		const workspaceFolder = path.resolve(checkoutPath, subFolder);
 
-		const fullImageName = imageName
-			? `${imageName}:${imageTag ?? 'latest'}`
-			: undefined;
-		if (fullImageName) {
-			if (!cacheFrom.includes(fullImageName)) {
-				// If the cacheFrom options don't include the fullImageName, add it here
-				// This ensures that when building a PR where the image specified in the action
-				// isn't included in devcontainer.json (or docker-compose.yml), the action still
-				// resolves a previous image for the tag as a layer cache (if pushed to a registry)
-				if (!imageTag?.includes(',')) {
-					// Don't automatically add --cache-from if multiple image tags are specified
-					core.info(`Adding --cache-from ${fullImageName} to build args`);
-					cacheFrom.splice(0, 0, fullImageName);
-				} else {
+		const resolvedImageTag = imageTag ?? 'latest';
+		const imageTagArray = resolvedImageTag.split(',');
+		const fullImageNameArray: string[] = [];
+		for (const tag of imageTagArray) {
+			fullImageNameArray.push(`${imageName}:${tag}`);
+		}
+		if (imageName) {
+			if (fullImageNameArray.length === 1) {
+				if (!cacheFrom.includes(fullImageNameArray[0])) {
+					// If the cacheFrom options don't include the fullImageName, add it here
+					// This ensures that when building a PR where the image specified in the action
+					// isn't included in devcontainer.json (or docker-compose.yml), the action still
+					// resolves a previous image for the tag as a layer cache (if pushed to a registry)
+
 					core.info(
-						'Not adding --cache-from automatically since multiple image tags were supplied',
+						`Adding --cache-from ${fullImageNameArray[0]} to build args`,
 					);
+					cacheFrom.splice(0, 0, fullImageNameArray[0]);
 				}
+			} else {
+				// Don't automatically add --cache-from if multiple image tags are specified
+				core.info(
+					'Not adding --cache-from automatically since multiple image tags were supplied',
+				);
 			}
 		} else {
 			if (imageTag) {
@@ -93,7 +99,7 @@ export async function runMain(): Promise<void> {
 		const buildResult = await core.group('🏗️ build container', async () => {
 			const args: DevContainerCliBuildArgs = {
 				workspaceFolder,
-				imageName: fullImageName,
+				imageName: fullImageNameArray,
 				platform,
 				additionalCacheFroms: cacheFrom,
 				userDataFolder,

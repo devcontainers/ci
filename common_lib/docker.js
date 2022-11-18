@@ -74,12 +74,8 @@ function buildImageBase(exec, imageName, imageTag, folder, devcontainerConfig, c
         const configContext = (_a = config.getContext(devcontainerConfig)) !== null && _a !== void 0 ? _a : '';
         const contextPath = path_1.default.join(folder, '.devcontainer', configContext);
         const args = ['buildx', 'build'];
-        imageTag = imageTag !== null && imageTag !== void 0 ? imageTag : 'latest';
-        const imageTagArray = imageTag.split(',');
-        for (const tag of imageTagArray) {
-            args.push('--tag');
-            args.push(`${imageName}:${tag}`);
-        }
+        args.push('--tag');
+        args.push(`${imageName}:${imageTag !== null && imageTag !== void 0 ? imageTag : 'latest'}`);
         args.push('--cache-from');
         args.push(`type=registry,ref=${imageTag !== null && imageTag !== void 0 ? imageTag : 'latest'}`);
         const configCacheFrom = (_b = devcontainerConfig.build) === null || _b === void 0 ? void 0 : _b.cacheFrom;
