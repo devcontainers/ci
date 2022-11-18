@@ -73,8 +73,15 @@ export async function runMain(): Promise<void> {
 				// This ensures that when building a PR where the image specified in the action
 				// isn't included in devcontainer.json (or docker-compose.yml), the action still
 				// resolves a previous image for the tag as a layer cache (if pushed to a registry)
-				core.info(`Adding --cache-from ${fullImageName} to build args`);
-				cacheFrom.splice(0, 0, fullImageName);
+				if (!imageTag?.includes(',')) {
+					// Don't automatically add --cache-from if multiple image tags are specified
+					core.info(`Adding --cache-from ${fullImageName} to build args`);
+					cacheFrom.splice(0, 0, fullImageName);
+				}
+			} else {
+				core.info(
+					'Not adding --cache-from automatically since multiple image tags were supplied',
+				);
 			}
 		} else {
 			if (imageTag) {
