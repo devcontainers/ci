@@ -95,9 +95,9 @@ function runMain() {
                         core.info(`Adding --cache-from ${fullImageName} to build args`);
                         cacheFrom.splice(0, 0, fullImageName);
                     }
-                }
-                else {
-                    core.info('Not adding --cache-from automatically since multiple image tags were supplied');
+                    else {
+                        core.info('Not adding --cache-from automatically since multiple image tags were supplied');
+                    }
                 }
             }
             else {

@@ -77,11 +77,11 @@ export async function runMain(): Promise<void> {
 					// Don't automatically add --cache-from if multiple image tags are specified
 					core.info(`Adding --cache-from ${fullImageName} to build args`);
 					cacheFrom.splice(0, 0, fullImageName);
+				} else {
+					core.info(
+						'Not adding --cache-from automatically since multiple image tags were supplied',
+					);
 				}
-			} else {
-				core.info(
-					'Not adding --cache-from automatically since multiple image tags were supplied',
-				);
 			}
 		} else {
 			if (imageTag) {
