@@ -17098,10 +17098,7 @@ function devContainerBuild(args, log) {
             args.workspaceFolder,
         ];
         if (args.imageName) {
-            args.imageName.forEach(iName => {
-                commandArgs.push('--image-name', iName);
-                console.log(`Adding image name ${iName}`);
-            });
+            args.imageName.forEach(iName => commandArgs.push('--image-name', iName));
         }
         if (args.platform) {
             commandArgs.push('--platform', args.platform);

@@ -1855,7 +1855,6 @@ function runMain() {
             const fullImageNameArray = [];
             for (const tag of imageTagArray) {
                 fullImageNameArray.push(`${imageName}:${tag}`);
-                core.info(`Adding image name ${imageName}:${tag}`);
             }
             if (imageName) {
                 if (fullImageNameArray.length === 1) {
@@ -6223,10 +6222,7 @@ function devContainerBuild(args, log) {
             args.workspaceFolder,
         ];
         if (args.imageName) {
-            args.imageName.forEach(iName => {
-                commandArgs.push('--image-name', iName);
-                console.log(`Adding image name ${iName}`);
-            });
+            args.imageName.forEach(iName => commandArgs.push('--image-name', iName));
         }
         if (args.platform) {
             commandArgs.push('--platform', args.platform);

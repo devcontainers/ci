@@ -69,7 +69,6 @@ export async function runMain(): Promise<void> {
 		const fullImageNameArray: string[] = [];
 		for (const tag of imageTagArray) {
 			fullImageNameArray.push(`${imageName}:${tag}`);
-			core.info(`Adding image name ${imageName}:${tag}`);
 		}
 		if (imageName) {
 			if (fullImageNameArray.length === 1) {
