@@ -150,6 +150,7 @@ jobs:
             IS_CI=1
             IS_PR
             BRANCH
+            GITHUB_OUTPUT
 
       - uses: actions/upload-artifact@v2
         name: Create dev AzDO VSIX artifact
