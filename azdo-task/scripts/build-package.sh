@@ -54,8 +54,8 @@ echo "VERSION_MAJOR=${VERSION_MAJOR}"
 echo "VERSION_MINOR=${VERSION_MINOR}"
 echo "VERSION_PATCH=${VERSION_PATCH}"
 
-echo "::set-output name=version::$VERSION_MAJOR.$VERSION_MINOR.$VERSION_PATCH"
-echo "::set-output name=version_short::$VERSION_MAJOR.$VERSION_MINOR"
+echo "version=$VERSION_MAJOR.$VERSION_MINOR.$VERSION_PATCH >> $GITHUB_OUTPUT"
+echo "version_short=$VERSION_MAJOR.$VERSION_MINOR >> $GITHUB_OUTPUT"
 
 if [[ -n $set_patch_version ]]; then
     echo "--set-patch-version specified. Setting extension version to $VERSION_MAJOR.$VERSION_MINOR.$VERSION_PATCH"
