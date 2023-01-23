@@ -194,7 +194,7 @@ export async function runPost(): Promise<void> {
 			!refFilterForPush.some(s => s === ref)
 		) {
 			core.info(
-				`Immage push skipped because GITHUB_REF (${ref}) is not in refFilterForPush`,
+				`Image push skipped because GITHUB_REF (${ref}) is not in refFilterForPush`,
 			);
 			return;
 		}

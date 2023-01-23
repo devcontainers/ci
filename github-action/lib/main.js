@@ -196,7 +196,7 @@ function runPost() {
             const ref = process.env.GITHUB_REF;
             if (refFilterForPush.length !== 0 && // empty filter allows all
                 !refFilterForPush.some(s => s === ref)) {
-                core.info(`Immage push skipped because GITHUB_REF (${ref}) is not in refFilterForPush`);
+                core.info(`Image push skipped because GITHUB_REF (${ref}) is not in refFilterForPush`);
                 return;
             }
             const eventName = process.env.GITHUB_EVENT_NAME;
