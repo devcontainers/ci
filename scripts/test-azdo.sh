@@ -7,10 +7,6 @@ if [[ -z "$AZDO_TOKEN" ]]; then
 	echo "AZDO_TOKEN must be specified"
 	exit 1
 fi
-if [[ -z "$MARKETPLACE_TOKEN" ]]; then
-	echo "MARKETPLACE_TOKEN must be specified"
-	exit 1
-fi
 
 cd "$script_dir/.."
 vsix_file=$(ls output/devcontainers-dev.*.vsix)
@@ -18,7 +14,7 @@ echo "Using VSIX_FILE=$vsix_file"
 
 # Publish as non-public and as devcontainers-dev
 echo "Publishing private extension version..."
-tfx extension publish  --token "$MARKETPLACE_TOKEN" --vsix "$vsix_file" --override "{\"public\": false, \"publisher\": \"devcontainers-dev\"}" --share-with monacotools
+tfx extension publish  --token "$AZDO_TOKEN" --vsix "$vsix_file" --override "{\"public\": false, \"publisher\": \"devcontainers-dev\"}" --share-with monacotools
 
 echo "Installing private extension"
 tfx extension install  --token "$AZDO_TOKEN" --vsix "$vsix_file" --service-url "$AZDO_ORG"
