@@ -77,4 +77,3 @@ jobs:
       release: false
     secrets:
       AZDO_TOKEN: ${{ secrets.AZDO_TOKEN }}
-      MARKETPLACE_TOKEN: ${{ secrets.MARKETPLACE_TOKEN }}
