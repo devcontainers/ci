@@ -145,38 +145,39 @@ jobs:
       inputs:
         subFolder: github-tests/Dockerfile/build-only
 
-  - job: test_platform_with_runcmd
-    displayName: Test with platform and runCmd
-    steps:
-    - script: |
-        docker login -u $ACR_USERNAME -p $ACR_TOKEN $(ACR_NAME).azurecr.io
-      displayName: 'Log in to Azure Container Registry'
-      env:
-        ACR_NAME: $(ACR_NAME)
-        ACR_TOKEN: $(ACR_TOKEN)
-        ACR_USERNAME: $(ACR_USERNAME)
+  # Temporarily commented out: https://github.com/devcontainers/ci/issues/198
+  # - job: test_platform_with_runcmd
+  #   displayName: Test with platform and runCmd
+  #   steps:
+  #   - script: |
+  #       docker login -u $ACR_USERNAME -p $ACR_TOKEN $(ACR_NAME).azurecr.io
+  #     displayName: 'Log in to Azure Container Registry'
+  #     env:
+  #       ACR_NAME: $(ACR_NAME)
+  #       ACR_TOKEN: $(ACR_TOKEN)
+  #       ACR_USERNAME: $(ACR_USERNAME)
 
-    - script: |
-        printenv | sort
-      env:
-        IMAGE_TAG: $(IMAGE_TAG)
+  #   - script: |
+  #       printenv | sort
+  #     env:
+  #       IMAGE_TAG: $(IMAGE_TAG)
 
-    - script: docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
-      displayName: Set up QEMU
+  #   - script: docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
+  #     displayName: Set up QEMU
 
-    - script: docker buildx create --use
-      displayName: Set up docker buildx
+  #   - script: docker buildx create --use
+  #     displayName: Set up docker buildx
 
-    - task: DevcontainersCi@0
-      inputs:
-        imageName: '$(ACR_NAME).azurecr.io/devcontainers-ci/azdo-devcontainer-build-run/test/platform-with-runcmd'
-        subFolder: github-tests/Dockerfile/platform-with-runcmd
-        platform: linux/amd64,linux/arm64
-        runCmd: echo $HOSTNAME && [[ $HOSTNAME == "my-host" ]]
+  #   - task: DevcontainersCi@0
+  #     inputs:
+  #       imageName: '$(ACR_NAME).azurecr.io/devcontainers-ci/azdo-devcontainer-build-run/test/platform-with-runcmd'
+  #       subFolder: github-tests/Dockerfile/platform-with-runcmd
+  #       platform: linux/amd64,linux/arm64
+  #       runCmd: echo $HOSTNAME && [[ $HOSTNAME == "my-host" ]]
 
-    - script: |
-        echo "'runCmdOutput' value: $runCmdOutput"
-        if [["$runCmdOutput" = *my-host*]]; then
-          echo "'runCmdOutput' output of test_simple job doesn't contain expected value 'my-host'"
-          exit 1
-        fi
+  #   - script: |
+  #       echo "'runCmdOutput' value: $runCmdOutput"
+  #       if [["$runCmdOutput" = *my-host*]]; then
+  #         echo "'runCmdOutput' output of test_simple job doesn't contain expected value 'my-host'"
+  #         exit 1
+  #       fi
