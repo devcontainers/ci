@@ -162,8 +162,9 @@ jobs:
           path: ./output/devcontainers.ci-${{ steps.build.outputs.version }}.vsix
           if-no-files-found: error 
 
-  pr-checks:
-    name: Mark PR checks as complete
+  test-succeeded:
+    # simple no-op job to use as step for checks for PR checks
+    name: All succeeded
     needs: # TODO - check what jobs need adding here
       - build
       - test-azdo
@@ -178,6 +179,17 @@ jobs:
       - test-simple
       - test-no-run
       - test-platform-with-runcmd
+    runs-on: ubuntu-latest
+    steps:
+      - name: Simple step
+        run: |
+          echo Done!
+
+  pr-checks:
+    name: Mark PR checks as complete
+    needs: # TODO - check what jobs need adding here
+      - build
+      - test-succeeded
     runs-on: ubuntu-latest
     if: ${{ inputs.prHeadSha }}
     steps:
@@ -195,44 +207,12 @@ jobs:
           status: "completed"
           conclusion: "success"
 
-  pr-succeeded:
-    # simple no-op job to use as step for checks for PR checks
-    name: All succeeded
-    needs: # TODO - check what jobs need adding here
-      - build
-      - test-azdo
-      - test-gh-run-args
-      - test-gh-build-args
-      - test-gh-dockerfile-context
-      - test-gh-feature-docker-from-docker
-      - test-gh-docker-from-docker-non-root
-      - test-gh-docker-from-docker-root
-      - test-gh-skip-user-update
-      - test-compose-features
-      - test-simple
-      - test-no-run
-    runs-on: ubuntu-latest
-    steps:
-      - name: Simple step
-        run: |
-          echo Done!
-
   release:
     name: Create release
     runs-on: ubuntu-latest
     needs: 
       - build
-      - test-azdo
-      - test-gh-run-args
-      - test-gh-build-args
-      - test-gh-dockerfile-context
-      - test-gh-feature-docker-from-docker
-      - test-gh-docker-from-docker-non-root
-      - test-gh-docker-from-docker-root
-      - test-gh-skip-user-update
-      - test-compose-features
-      - test-simple
-      - test-no-run
+      - test-succeeded
     if: ${{ inputs.release == true }}
     env:
       VERSION: ${{ needs.build.outputs.version }}
@@ -331,7 +311,7 @@ jobs:
   # Jobs to test
   #
   # When adding a new test:
-  # - add to the 'needs' section for the 'pr-succeeded', 'pr-checks' and 'releases' jobs
+  # - add to the 'needs' section for the 'test-succeeded'
   # - add any new images to the image_names in clean_tags.sh
   # - review the Azure DevOps pipeline and consider adding there for verification
   #
