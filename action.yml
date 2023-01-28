@@ -20,7 +20,7 @@ inputs:
   subFolder:
     required: false
     description: Specify a child folder (containing a .devcontainer) instead of using the repository root
-    default: 
+    default:
   checkoutPath:
     required: false
     description: Specify path to checked out folder if not using default (or for testing with nektos/act)
@@ -48,8 +48,13 @@ inputs:
     required: false
     description: Some steps for building the dev container (e.g. container-features) require generating additional build files. To aid docker build cache re-use, you can use this property to set the path that these files will be generated under and use the actions/cache action to cache that folder across runs
   cacheFrom:
-    required: False
+    required: false
     description: Specify additional images to use for build caching
+  noCache:
+    type: boolean
+    required: false
+    default: false
+    description: Builds the image with `--no-cache` (takes precedence over `cacheFrom`)
 outputs:
   runCmdOutput:
     description: The output of the command specified in the runCmd input

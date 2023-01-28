@@ -43,6 +43,7 @@ export async function runMain(): Promise<void> {
 		const inputEnvs: string[] = core.getMultilineInput('env');
 		const inputEnvsWithDefaults = populateDefaults(inputEnvs);
 		const cacheFrom: string[] = core.getMultilineInput('cacheFrom');
+		const noCache: boolean = core.getBooleanInput('noCache');
 		const skipContainerUserIdUpdate = core.getBooleanInput(
 			'skipContainerUserIdUpdate',
 		);
@@ -59,8 +60,6 @@ export async function runMain(): Promise<void> {
 		}
 		const buildxOutput = platform ? 'type=oci,dest=/tmp/output.tar' : undefined;
 
-		// TODO - nocache
-
 		const log = (message: string): void => core.info(message);
 		const workspaceFolder = path.resolve(checkoutPath, subFolder);
 
@@ -68,7 +67,7 @@ export async function runMain(): Promise<void> {
 			? `${imageName}:${imageTag ?? 'latest'}`
 			: undefined;
 		if (fullImageName) {
-			if (!cacheFrom.includes(fullImageName)) {
+			if (!noCache && !cacheFrom.includes(fullImageName)) {
 				// If the cacheFrom options don't include the fullImageName, add it here
 				// This ensures that when building a PR where the image specified in the action
 				// isn't included in devcontainer.json (or docker-compose.yml), the action still
@@ -91,6 +90,7 @@ export async function runMain(): Promise<void> {
 				additionalCacheFroms: cacheFrom,
 				userDataFolder,
 				output: buildxOutput,
+        noCache,
 			};
 			const result = await devcontainer.build(args, log);
 
