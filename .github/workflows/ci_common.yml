@@ -63,7 +63,7 @@ jobs:
       build_number: ${{ steps.build_number.outputs.build_number }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           # if the following value is missing (i.e. not triggered via comment workflow)
           # then the default checkout will apply
@@ -239,7 +239,7 @@ jobs:
       VERSION_SHORT: ${{ needs.build.outputs.version_short }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           # if the following value is missing (i.e. not triggered via comment workflow)
           # then the default checkout will apply
@@ -343,7 +343,7 @@ jobs:
     if: ${{ needs.build.outputs.image_push_option == 'filter' }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           persist-credentials: false
           # if the following value is missing (i.e. not triggered via comment workflow)
@@ -414,7 +414,7 @@ jobs:
     needs: build
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           persist-credentials: false
           # if the following value is missing (i.e. not triggered via comment workflow)
@@ -443,7 +443,7 @@ jobs:
     needs: build
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           persist-credentials: false
           # if the following value is missing (i.e. not triggered via comment workflow)
@@ -479,7 +479,7 @@ jobs:
     needs: build
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           persist-credentials: false
           # if the following value is missing (i.e. not triggered via comment workflow)
@@ -515,7 +515,7 @@ jobs:
     needs: build
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           persist-credentials: false
           # if the following value is missing (i.e. not triggered via comment workflow)
@@ -551,7 +551,7 @@ jobs:
     needs: build
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           persist-credentials: false
           # if the following value is missing (i.e. not triggered via comment workflow)
@@ -587,7 +587,7 @@ jobs:
     needs: build
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           persist-credentials: false
           # if the following value is missing (i.e. not triggered via comment workflow)
@@ -623,7 +623,7 @@ jobs:
     needs: build
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           persist-credentials: false
           # if the following value is missing (i.e. not triggered via comment workflow)
@@ -659,7 +659,7 @@ jobs:
     needs: build
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           persist-credentials: false
           # if the following value is missing (i.e. not triggered via comment workflow)
@@ -703,7 +703,7 @@ jobs:
     needs: build
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           persist-credentials: false
           # if the following value is missing (i.e. not triggered via comment workflow)
@@ -739,7 +739,7 @@ jobs:
     needs: build
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           persist-credentials: false
           # if the following value is missing (i.e. not triggered via comment workflow)
@@ -757,7 +757,7 @@ jobs:
     needs: build
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           persist-credentials: false
           # if the following value is missing (i.e. not triggered via comment workflow)
