@@ -211,6 +211,7 @@ jobs:
       - test-compose-features
       - test-simple
       - test-no-run
+      - test-platform-with-runcmd
     runs-on: ubuntu-latest
     steps:
       - name: Simple step
@@ -233,6 +234,7 @@ jobs:
       - test-compose-features
       - test-simple
       - test-no-run
+      - test-platform-with-runcmd
     if: ${{ inputs.release == true }}
     env:
       VERSION: ${{ needs.build.outputs.version }}
