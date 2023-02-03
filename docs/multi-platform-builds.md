@@ -27,7 +27,7 @@ jobs:
       - name: Set up QEMU for multi-architecture builds
         uses: docker/setup-qemu-action@v1
       - name: Setup Docker buildx for multi-architecture builds
-        uses: docker/setup-buildx-action@v1
+        uses: docker/setup-buildx-action@v2
         with:
           use: true
       - name: Login to GitHub Container Registry
