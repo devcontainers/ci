@@ -31,3 +31,11 @@ The intention is for the GitHub action and Azure DevOps task to maintain feature
 Additionally, it is desirable to add new tests to cover any new functionality.
 
 When a PR is created, some tests will be automatically triggered against the PR. The full suite of tests requires secrets and needs to be triggered by a maintainer.
+
+## Miscellaneous
+
+This project has adopted the [Microsoft Open Source Code of Conduct](https://opensource.microsoft.com/codeofconduct/).
+For more information see the [Code of Conduct FAQ](https://opensource.microsoft.com/codeofconduct/faq/) or
+contact [opencode@microsoft.com](mailto:opencode@microsoft.com) with any additional questions or comments.
+
+This project is under an [MIT license](LICENSE.txt).
