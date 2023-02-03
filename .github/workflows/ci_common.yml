@@ -98,7 +98,7 @@ jobs:
         id: build_number
         # only run this if we are going to run the AzDO publishing
         if: ${{ steps.set_image_push_option.outputs.image_push_option == 'filter' }}
-        uses: einaregilsson/build-number@v3 
+        uses: onyxmueller/build-tag-number@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
