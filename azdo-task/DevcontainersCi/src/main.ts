@@ -84,7 +84,7 @@ export async function runMain(): Promise<void> {
 			platform,
 			additionalCacheFroms: cacheFrom,
 			output: buildxOutput,
-      noCache,
+			noCache,
 		};
 
 		console.log('\n\n');

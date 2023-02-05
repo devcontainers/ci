@@ -90,7 +90,7 @@ export async function runMain(): Promise<void> {
 				additionalCacheFroms: cacheFrom,
 				userDataFolder,
 				output: buildxOutput,
-        noCache,
+				noCache,
 			};
 			const result = await devcontainer.build(args, log);
 
