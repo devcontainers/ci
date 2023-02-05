@@ -103,6 +103,12 @@
       "type": "multiLine",
       "label": "Specify additional images to use for build caching",
       "required": false
+    },
+    {
+      "name": "noCache",
+      "type": "boolean",
+      "label": "Builds the image with `--no-cache` (takes precedence over `cacheFrom`)",
+      "required": false
     }
   ],
   "outputVariables": [{

@@ -45,6 +45,7 @@ export async function runMain(): Promise<void> {
 		const envs = task.getInput('env')?.split('\n') ?? [];
 		const inputEnvsWithDefaults = populateDefaults(envs);
 		const cacheFrom = task.getInput('cacheFrom')?.split('\n') ?? [];
+		const noCache = task.getBooleanInput('noCache');
 		const skipContainerUserIdUpdate =
 			(task.getInput('skipContainerUserIdUpdate') ?? 'false') === 'true';
 
@@ -65,7 +66,7 @@ export async function runMain(): Promise<void> {
 			? `${imageName}:${imageTag ?? 'latest'}`
 			: undefined;
 		if (fullImageName) {
-			if (!cacheFrom.includes(fullImageName)) {
+			if (!noCache && !cacheFrom.includes(fullImageName)) {
 				// If the cacheFrom options don't include the fullImageName, add it here
 				// This ensures that when building a PR where the image specified in the action
 				// isn't included in devcontainer.json (or docker-compose.yml), the action still
@@ -83,6 +84,7 @@ export async function runMain(): Promise<void> {
 			platform,
 			additionalCacheFroms: cacheFrom,
 			output: buildxOutput,
+      noCache,
 		};
 
 		console.log('\n\n');
