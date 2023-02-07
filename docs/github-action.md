@@ -23,7 +23,7 @@ jobs:
     steps:
 
       - name: Checkout (GitHub)
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Build and run dev container task
         uses: devcontainers/ci@v0.2
@@ -52,10 +52,10 @@ jobs:
     steps:
 
       - name: Checkout (GitHub)
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Login to GitHub Container Registry
-        uses: docker/login-action@v1 
+        uses: docker/login-action@v2 
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}

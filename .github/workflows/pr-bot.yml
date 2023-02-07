@@ -30,7 +30,7 @@ jobs:
     steps:
       # Ensure we have the script file for the github-script action to use
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           persist-credentials: false
 
@@ -77,4 +77,3 @@ jobs:
       release: false
     secrets:
       AZDO_TOKEN: ${{ secrets.AZDO_TOKEN }}
-      MARKETPLACE_TOKEN: ${{ secrets.MARKETPLACE_TOKEN }}
