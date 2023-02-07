@@ -81,17 +81,26 @@ function runMain() {
             // TODO - nocache
             const log = (message) => core.info(message);
             const workspaceFolder = path_1.default.resolve(checkoutPath, subFolder);
-            const fullImageName = imageName
-                ? `${imageName}:${imageTag !== null && imageTag !== void 0 ? imageTag : 'latest'}`
-                : undefined;
-            if (fullImageName) {
-                if (!cacheFrom.includes(fullImageName)) {
-                    // If the cacheFrom options don't include the fullImageName, add it here
-                    // This ensures that when building a PR where the image specified in the action
-                    // isn't included in devcontainer.json (or docker-compose.yml), the action still
-                    // resolves a previous image for the tag as a layer cache (if pushed to a registry)
-                    core.info(`Adding --cache-from ${fullImageName} to build args`);
-                    cacheFrom.splice(0, 0, fullImageName);
+            const resolvedImageTag = imageTag !== null && imageTag !== void 0 ? imageTag : 'latest';
+            const imageTagArray = resolvedImageTag.split(',');
+            const fullImageNameArray = [];
+            for (const tag of imageTagArray) {
+                fullImageNameArray.push(`${imageName}:${tag}`);
+            }
+            if (imageName) {
+                if (fullImageNameArray.length === 1) {
+                    if (!cacheFrom.includes(fullImageNameArray[0])) {
+                        // If the cacheFrom options don't include the fullImageName, add it here
+                        // This ensures that when building a PR where the image specified in the action
+                        // isn't included in devcontainer.json (or docker-compose.yml), the action still
+                        // resolves a previous image for the tag as a layer cache (if pushed to a registry)
+                        core.info(`Adding --cache-from ${fullImageNameArray[0]} to build args`);
+                        cacheFrom.splice(0, 0, fullImageNameArray[0]);
+                    }
+                }
+                else {
+                    // Don't automatically add --cache-from if multiple image tags are specified
+                    core.info('Not adding --cache-from automatically since multiple image tags were supplied');
                 }
             }
             else {
@@ -102,7 +111,7 @@ function runMain() {
             const buildResult = yield core.group('🏗️ build container', () => __awaiter(this, void 0, void 0, function* () {
                 const args = {
                     workspaceFolder,
-                    imageName: fullImageName,
+                    imageName: fullImageNameArray,
                     platform,
                     additionalCacheFroms: cacheFrom,
                     userDataFolder,
@@ -211,6 +220,7 @@ function runPost() {
             return;
         }
         const imageTag = (_a = emptyStringAsUndefined(core.getInput('imageTag'))) !== null && _a !== void 0 ? _a : 'latest';
+        const imageTagArray = imageTag.split(',');
         if (!imageName) {
             if (pushOption) {
                 // pushOption was set (and not to "never") - give an error that imageName is required
@@ -220,14 +230,18 @@ function runPost() {
         }
         const platform = emptyStringAsUndefined(core.getInput('platform'));
         if (platform) {
-            core.info(`Copying multiplatform image ''${imageName}:${imageTag}...`);
-            const imageSource = 'oci-archive:/tmp/output.tar';
-            const imageDest = `docker://${imageName}:${imageTag}`;
-            yield skopeo_1.copyImage(true, imageSource, imageDest);
+            for (const tag of imageTagArray) {
+                core.info(`Copying multiplatform image '${imageName}:${tag}'...`);
+                const imageSource = `oci-archive:/tmp/output.tar:${tag}`;
+                const imageDest = `docker://${imageName}:${tag}`;
+                yield skopeo_1.copyImage(true, imageSource, imageDest);
+            }
         }
         else {
-            core.info(`Pushing image ''${imageName}:${imageTag}...`);
-            yield docker_1.pushImage(imageName, imageTag);
+            for (const tag of imageTagArray) {
+                core.info(`Pushing image '${imageName}:${tag}'...`);
+                yield docker_1.pushImage(imageName, tag);
+            }
         }
     });
 }

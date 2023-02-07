@@ -14,7 +14,7 @@ export interface DevContainerCliBuildResult extends DevContainerCliSuccessResult
 }
 export interface DevContainerCliBuildArgs {
     workspaceFolder: string;
-    imageName?: string;
+    imageName?: string[];
     platform?: string;
     additionalCacheFroms?: string[];
     userDataFolder?: string;

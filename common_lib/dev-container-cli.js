@@ -123,7 +123,7 @@ function devContainerBuild(args, log) {
             args.workspaceFolder,
         ];
         if (args.imageName) {
-            commandArgs.push('--image-name', args.imageName);
+            args.imageName.forEach(iName => commandArgs.push('--image-name', iName));
         }
         if (args.platform) {
             commandArgs.push('--platform', args.platform);

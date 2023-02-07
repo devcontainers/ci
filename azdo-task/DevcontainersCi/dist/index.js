@@ -268,16 +268,25 @@ function runMain() {
             const buildxOutput = platform ? 'type=oci,dest=/tmp/output.tar' : undefined;
             const log = (message) => console.log(message);
             const workspaceFolder = path_1.default.resolve(checkoutPath, subFolder);
-            const fullImageName = imageName
-                ? `${imageName}:${imageTag !== null && imageTag !== void 0 ? imageTag : 'latest'}`
-                : undefined;
-            if (fullImageName) {
-                if (!cacheFrom.includes(fullImageName)) {
-                    // If the cacheFrom options don't include the fullImageName, add it here
-                    // This ensures that when building a PR where the image specified in the action
-                    // isn't included in devcontainer.json (or docker-compose.yml), the action still
-                    // resolves a previous image for the tag as a layer cache (if pushed to a registry)
-                    cacheFrom.splice(0, 0, fullImageName);
+            const resolvedImageTag = imageTag !== null && imageTag !== void 0 ? imageTag : 'latest';
+            const imageTagArray = resolvedImageTag.split(',');
+            const fullImageNameArray = [];
+            for (const tag of imageTagArray) {
+                fullImageNameArray.push(`${imageName}:${tag}`);
+            }
+            if (imageName) {
+                if (fullImageNameArray.length === 1) {
+                    if (!cacheFrom.includes(fullImageNameArray[0])) {
+                        // If the cacheFrom options don't include the fullImageName, add it here
+                        // This ensures that when building a PR where the image specified in the action
+                        // isn't included in devcontainer.json (or docker-compose.yml), the action still
+                        // resolves a previous image for the tag as a layer cache (if pushed to a registry)
+                        cacheFrom.splice(0, 0, fullImageNameArray[0]);
+                    }
+                }
+                else {
+                    // Don't automatically add --cache-from if multiple image tags are specified
+                    console.log('Not adding --cache-from automatically since multiple image tags were supplied');
                 }
             }
             else {
@@ -285,7 +294,7 @@ function runMain() {
             }
             const buildArgs = {
                 workspaceFolder,
-                imageName: fullImageName,
+                imageName: fullImageNameArray,
                 platform,
                 additionalCacheFroms: cacheFrom,
                 output: buildxOutput,
@@ -412,16 +421,21 @@ function runPost() {
             return;
         }
         const imageTag = (_f = task.getInput('imageTag')) !== null && _f !== void 0 ? _f : 'latest';
+        const imageTagArray = imageTag.split(',');
         const platform = task.getInput('platform');
         if (platform) {
-            console.log(`Copying multiplatform image ''${imageName}:${imageTag}...`);
-            const imageSource = 'oci-archive:/tmp/output.tar';
-            const imageDest = `docker://${imageName}:${imageTag}`;
-            yield skopeo_1.copyImage(true, imageSource, imageDest);
+            for (const tag of imageTagArray) {
+                console.log(`Copying multiplatform image '${imageName}:${tag}'...`);
+                const imageSource = `oci-archive:/tmp/output.tar:${tag}`;
+                const imageDest = `docker://${imageName}:${tag}`;
+                yield skopeo_1.copyImage(true, imageSource, imageDest);
+            }
         }
         else {
-            console.log(`Pushing image ''${imageName}:${imageTag}...`);
-            yield docker_1.pushImage(imageName, imageTag);
+            for (const tag of imageTagArray) {
+                console.log(`Pushing image '${imageName}:${tag}'...`);
+                yield docker_1.pushImage(imageName, tag);
+            }
         }
     });
 }
@@ -17089,7 +17103,7 @@ function devContainerBuild(args, log) {
             args.workspaceFolder,
         ];
         if (args.imageName) {
-            commandArgs.push('--image-name', args.imageName);
+            args.imageName.forEach(iName => commandArgs.push('--image-name', iName));
         }
         if (args.platform) {
             commandArgs.push('--platform', args.platform);

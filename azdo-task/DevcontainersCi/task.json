@@ -31,7 +31,7 @@
     {
       "name": "imageTag",
       "type": "string",
-      "label": "Image tag (defaults to latest)",
+      "label": "One or more comma-separated image tags (defaults to latest)",
       "required": false
     },
     {
