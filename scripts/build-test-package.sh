@@ -8,6 +8,7 @@ sudo chown -R $(whoami) ~ # TODO - remove this
 figlet common
 cd "$script_dir/../common"
 npm install
+npm run build
 npm run test
 
 figlet GH Action

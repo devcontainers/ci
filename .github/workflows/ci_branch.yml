@@ -25,5 +25,5 @@ jobs:
       prNumber: ${{ github.event.inputs.prNumber }}
       # despite the runFullTests input being a boolean, we seem to get a string below!
       runFullTests: ${{ github.event.inputs.runFullTests == 'true' }}
-    secrets:
-      AZDO_TOKEN: ${{ secrets.AZDO_TOKEN }}
+    # secrets:
+    #   AZDO_TOKEN: ${{ secrets.AZDO_TOKEN }}

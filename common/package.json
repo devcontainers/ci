@@ -4,7 +4,9 @@
   "private": true,
   "description": "common ",
   "scripts": {
-    "test": "jest"
+    "build": "tsc --build",
+    "test": "jest",
+    "tsc_version": "tsc --version"
   },
   "dependencies": {
     "jsonc-parser": "^3.0.0"
