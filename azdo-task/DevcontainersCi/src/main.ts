@@ -45,7 +45,7 @@ export async function runMain(): Promise<void> {
 		const envs = task.getInput('env')?.split('\n') ?? [];
 		const inputEnvsWithDefaults = populateDefaults(envs);
 		const cacheFrom = task.getInput('cacheFrom')?.split('\n') ?? [];
-		const noCache = task.getBooleanInput('noCache');
+		const noCache = (task.getInput('noCache') ?? 'false') === 'true';
 		const skipContainerUserIdUpdate =
 			(task.getInput('skipContainerUserIdUpdate') ?? 'false') === 'true';
 
