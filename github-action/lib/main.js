@@ -68,6 +68,7 @@ function runMain() {
             const inputEnvs = core.getMultilineInput('env');
             const inputEnvsWithDefaults = envvars_1.populateDefaults(inputEnvs);
             const cacheFrom = core.getMultilineInput('cacheFrom');
+            const noCache = core.getBooleanInput('noCache');
             const skipContainerUserIdUpdate = core.getBooleanInput('skipContainerUserIdUpdate');
             const userDataFolder = core.getInput('userDataFolder');
             if (platform) {
@@ -78,14 +79,13 @@ function runMain() {
                 }
             }
             const buildxOutput = platform ? 'type=oci,dest=/tmp/output.tar' : undefined;
-            // TODO - nocache
             const log = (message) => core.info(message);
             const workspaceFolder = path_1.default.resolve(checkoutPath, subFolder);
             const fullImageName = imageName
                 ? `${imageName}:${imageTag !== null && imageTag !== void 0 ? imageTag : 'latest'}`
                 : undefined;
             if (fullImageName) {
-                if (!cacheFrom.includes(fullImageName)) {
+                if (!noCache && !cacheFrom.includes(fullImageName)) {
                     // If the cacheFrom options don't include the fullImageName, add it here
                     // This ensures that when building a PR where the image specified in the action
                     // isn't included in devcontainer.json (or docker-compose.yml), the action still
@@ -107,6 +107,7 @@ function runMain() {
                     additionalCacheFroms: cacheFrom,
                     userDataFolder,
                     output: buildxOutput,
+                    noCache,
                 };
                 const result = yield dev_container_cli_1.devcontainer.build(args, log);
                 if (result.outcome !== 'success') {

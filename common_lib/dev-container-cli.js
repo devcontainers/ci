@@ -134,7 +134,10 @@ function devContainerBuild(args, log) {
         if (args.userDataFolder) {
             commandArgs.push("--user-data-folder", args.userDataFolder);
         }
-        if (args.additionalCacheFroms) {
+        if (args.noCache) {
+            commandArgs.push("--no-cache");
+        }
+        else if (args.additionalCacheFroms) {
             args.additionalCacheFroms.forEach(cacheFrom => commandArgs.push('--cache-from', cacheFrom));
         }
         return yield runSpecCli({
