@@ -56,8 +56,9 @@ jobs:
     runs-on: ubuntu-latest
     name: build, test, package
     outputs:
-      version_short: ${{ steps.build.outputs.version_short }}
       version: ${{ steps.build.outputs.version }}
+      version_short: ${{ steps.build.outputs.version_short }}
+      version_major: ${{ steps.build.outputs.version_major }}
       image_tag: ${{ steps.set_image_tag.outputs.image_tag }}
       image_push_option: ${{ steps.set_image_push_option.outputs.image_push_option }}
       build_number: ${{ steps.build_number.outputs.build_number }}
