@@ -49,6 +49,30 @@ jobs:
         imageTag: $(IMAGE_TAG)
         sourceBranchFilterForPush: ''
 
+  - job: test_env_vars_on_post_create
+    displayName: Test env-vars-on-post-create
+    steps:
+    - script: |
+        docker login -u $ACR_USERNAME -p $ACR_TOKEN $(ACR_NAME).azurecr.io
+      displayName: 'Log in to Azure Container Registry'
+      env:
+        ACR_NAME: $(ACR_NAME)
+        ACR_TOKEN: $(ACR_TOKEN)
+        ACR_USERNAME: $(ACR_USERNAME)
+
+    - task: DevcontainersCi@0
+      inputs:
+        imageName: '$(ACR_NAME).azurecr.io/devcontainers-ci/azdo-devcontainer-build-run/test/run-args'
+        subFolder: github-tests/Dockerfile/run-args
+        runCmd: |
+          cat marker.txt
+          cat marker.txt | grep 'post-create: TEST_ENV_VALUE=testing123'
+        env: |
+            TEST_ENV_VALUE=testing123
+        imageTag: $(IMAGE_TAG)
+        sourceBranchFilterForPush: ''
+
+
   - job: test_simple
     displayName: Test simple
     steps:

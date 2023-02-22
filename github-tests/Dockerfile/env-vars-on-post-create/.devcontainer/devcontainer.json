@@ -1,0 +1,34 @@
+// For format details, see https://aka.ms/vscode-remote/devcontainer.json or this file's README at:
+// https://github.com/microsoft/vscode-dev-containers/tree/v0.117.1/containers/go
+{
+	"name": "env-vars-on-post-create",
+	"dockerFile": "Dockerfile",
+	"build": {
+		"cacheFrom": "ghcr.io/devcontainers/ci/tests/run-args:latest"
+	},
+
+
+	"runArgs": [
+		"--hostname", "my-host"
+	],
+
+	"mounts": [
+		// Keep command history 
+		"source=build-args-bashhistory,target=/home/vscode/commandhistory",
+
+	],
+	"remoteEnv": {
+		"TEST_ENV_VALUE": "${localEnv:TEST_ENV_VALUE}"
+	},
+
+	// Add the IDs of extensions you want installed when the container is created.
+	// "extensions": [],
+
+	// Use 'forwardPorts' to make a list of ports inside the container available locally.
+	// "forwardPorts": [],
+
+	// Use 'postCreateCommand' to run commands after the container is created.
+	"postCreateCommand": "./post-create.sh",
+
+	"remoteUser": "vscode"
+}
