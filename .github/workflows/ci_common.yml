@@ -164,12 +164,6 @@ jobs:
             IS_PR
             BRANCH
 
-      - uses: JasonEtco/build-and-tag-action@v2
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-        with:
-          tag_name: ${{ steps.build.outputs.version }}
-
       - uses: actions/upload-artifact@v3
         name: Create dev AzDO VSIX artifact
         with:
