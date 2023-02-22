@@ -45,10 +45,10 @@ on:
         type: string
         required: false
         default: devcontainers.ci
-    # secrets:
-    #   AZDO_TOKEN:
-    #     description: ""
-    #     required: true
+    secrets:
+      AZDO_TOKEN:
+        description: ""
+        required: true
 
 jobs:
 
