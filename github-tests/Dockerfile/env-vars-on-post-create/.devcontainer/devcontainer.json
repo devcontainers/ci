@@ -4,19 +4,8 @@
 	"name": "env-vars-on-post-create",
 	"dockerFile": "Dockerfile",
 	"build": {
-		"cacheFrom": "ghcr.io/devcontainers/ci/tests/run-args:latest"
+		"cacheFrom": "ghcr.io/devcontainers/ci/tests/env-vars-on-post-create:latest"
 	},
-
-
-	"runArgs": [
-		"--hostname", "my-host"
-	],
-
-	"mounts": [
-		// Keep command history 
-		"source=build-args-bashhistory,target=/home/vscode/commandhistory",
-
-	],
 	"remoteEnv": {
 		"TEST_ENV_VALUE": "${localEnv:TEST_ENV_VALUE}"
 	},
