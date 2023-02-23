@@ -18,6 +18,8 @@ find -maxdepth 1 \
 	-not -name '.' \
 	-not -name '..' \
 	-not -name 'dist' \
+	-not -name 'run-main.js' \
+	-not -name 'run-post.js' \
 	| xargs rm -rf )
 
 
