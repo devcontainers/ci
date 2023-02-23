@@ -56,8 +56,9 @@ jobs:
     runs-on: ubuntu-latest
     name: build, test, package
     outputs:
-      version_short: ${{ steps.build.outputs.version_short }}
       version: ${{ steps.build.outputs.version }}
+      version_short: ${{ steps.build.outputs.version_short }}
+      version_major: ${{ steps.build.outputs.version_major }}
       image_tag: ${{ steps.set_image_tag.outputs.image_tag }}
       image_push_option: ${{ steps.set_image_push_option.outputs.image_push_option }}
       build_number: ${{ steps.build_number.outputs.build_number }}
@@ -123,6 +124,21 @@ jobs:
             }
             core.error('Failed to set image_tag');
             console.log(context);
+
+
+      # Published action contains compiled JS, but we need to compile it here
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 16
+      - name: Compile GH action
+        run: |
+          node --version
+          npm --version
+          echo "** Installing and building common..."
+          (cd common && npm install && npm run build)
+          (cd common && npm run tsc_version)
+          echo "** Installing and building github-action..."
+          (cd github-action/ && npm install && npm run build && npm run package)
 
       - name: Build in dev container
         uses: ./
@@ -266,40 +282,14 @@ jobs:
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Create Release
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # Published action contains compiled JS, but we need to compile it here
+      - uses: actions/setup-node@v3
         with:
-          tag_name: v${{ env.VERSION  }}
-          release_name: Release v${{ env.VERSION }}
-          draft: false
-          prerelease: true
-
-      - name: Create Major/Minor tag
-        id: create_tag_short_verison
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          VERSION_SHORT: v${{ env.VERSION_SHORT }}
+          node-version: 16
+      - name: Compile GH action
         run: |
-          echo "VERSION_SHORT: $VERSION_SHORT"
-          # sudo chown -R $(whoami) .
-          git config user.name "CI build"
-          git config user.email stuart@leeks.net
-          git tag -fa $VERSION_SHORT -m $VERSION_SHORT
-          git push -f origin $VERSION_SHORT
-
-      - name: Upload Release Asset
-        id: upload-release-asset 
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps 
-          asset_path: ./output/devcontainers.ci-${{ needs.build.outputs.version }}.vsix
-          asset_name: devcontainers.ci-${{ needs.build.outputs.version }}.vsix
-          asset_content_type: application/zip
+          (cd common && npm install && npm run build)
+          (cd github-action/ && npm install && npm run build && npm run package)
 
       - name: Publish AzDO Task
         uses: ./
@@ -328,6 +318,18 @@ jobs:
             AZDO_ORG
             AZDO_PROJECT
             AZDO_BUILD
+
+      - name: Create GitHub Action Release
+        env:
+          TAG_NAME: v0.1
+          RELEASE_NAME: v0.1.${{ github.run_number  }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git config user.name "CI build"
+          git config user.email automated-build@example.com
+          
+          ./scripts/gh-release.sh
+
 
   #
   # Jobs to test
@@ -379,6 +381,15 @@ jobs:
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      # Published action contains compiled JS, but we need to compile it here
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 16
+      - name: Compile GH action
+        run: |
+          (cd common && npm install && npm run build)
+          (cd github-action/ && npm install && npm run build && npm run package)
+
       - name: Run AzDO test pipeline
         uses: ./
         env:
@@ -423,6 +434,15 @@ jobs:
           # then the default checkout will apply
           ref: ${{ inputs.prRef }}
 
+      # Published action contains compiled JS, but we need to compile it here
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 16
+      - name: Compile GH action
+        run: |
+          (cd common && npm install && npm run build)
+          (cd github-action/ && npm install && npm run build && npm run package)
+
       - name: Run test
         uses: ./
         id: simpletest
@@ -463,6 +483,15 @@ jobs:
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      # Published action contains compiled JS, but we need to compile it here
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 16
+      - name: Compile GH action
+        run: |
+          (cd common && npm install && npm run build)
+          (cd github-action/ && npm install && npm run build && npm run package)
+
       - name: Run test
         uses: ./
         with:
@@ -498,6 +527,15 @@ jobs:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Published action contains compiled JS, but we need to compile it here
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 16
+      - name: Compile GH action
+        run: |
+          (cd common && npm install && npm run build)
+          (cd github-action/ && npm install && npm run build && npm run package)
 
       - name: Run test
         uses: ./
@@ -535,6 +573,15 @@ jobs:
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      # Published action contains compiled JS, but we need to compile it here
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 16
+      - name: Compile GH action
+        run: |
+          (cd common && npm install && npm run build)
+          (cd github-action/ && npm install && npm run build && npm run package)
+
       - name: Run test
         uses: ./
         with:
@@ -570,6 +617,15 @@ jobs:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Published action contains compiled JS, but we need to compile it here
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 16
+      - name: Compile GH action
+        run: |
+          (cd common && npm install && npm run build)
+          (cd github-action/ && npm install && npm run build && npm run package)
 
       - name: Run test
         uses: ./
@@ -607,6 +663,15 @@ jobs:
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      # Published action contains compiled JS, but we need to compile it here
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 16
+      - name: Compile GH action
+        run: |
+          (cd common && npm install && npm run build)
+          (cd github-action/ && npm install && npm run build && npm run package)
+
       - name: Run test
         uses: ./
         with:
@@ -643,6 +708,15 @@ jobs:
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      # Published action contains compiled JS, but we need to compile it here
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 16
+      - name: Compile GH action
+        run: |
+          (cd common && npm install && npm run build)
+          (cd github-action/ && npm install && npm run build && npm run package)
+
       - name: Run test
         uses: ./
         with:
@@ -678,6 +752,15 @@ jobs:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Published action contains compiled JS, but we need to compile it here
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 16
+      - name: Compile GH action
+        run: |
+          (cd common && npm install && npm run build)
+          (cd github-action/ && npm install && npm run build && npm run package)
 
       - name: Run test
         uses: ./
@@ -723,6 +806,15 @@ jobs:
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      # Published action contains compiled JS, but we need to compile it here
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 16
+      - name: Compile GH action
+        run: |
+          (cd common && npm install && npm run build)
+          (cd github-action/ && npm install && npm run build && npm run package)
+
       - name: Run test
         uses: ./
         with:
@@ -747,6 +839,15 @@ jobs:
           # if the following value is missing (i.e. not triggered via comment workflow)
           # then the default checkout will apply
           ref: ${{ inputs.prRef }}
+
+      # Published action contains compiled JS, but we need to compile it here
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 16
+      - name: Compile GH action
+        run: |
+          (cd common && npm install && npm run build)
+          (cd github-action/ && npm install && npm run build && npm run package)
 
       - name: Run test
         uses: ./
@@ -779,6 +880,15 @@ jobs:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Published action contains compiled JS, but we need to compile it here
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 16
+      - name: Compile GH action
+        run: |
+          (cd common && npm install && npm run build)
+          (cd github-action/ && npm install && npm run build && npm run package)
 
       - name: Run test
         uses: ./
@@ -825,6 +935,15 @@ jobs:
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      # Published action contains compiled JS, but we need to compile it here
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 16
+      - name: Compile GH action
+        run: |
+          (cd common && npm install && npm run build)
+          (cd github-action/ && npm install && npm run build && npm run package)
+
       - name: Build and push with multiple tags and single platform
         uses: ./
         id: multiple-tags-single-platform
@@ -853,6 +972,15 @@ jobs:
           sudo apt-key add Release.key
           sudo apt-get update
           sudo apt-get install skopeo
+
+      # Published action contains compiled JS, but we need to compile it here
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 16
+      - name: Compile GH action
+        run: |
+          (cd common && npm install && npm run build)
+          (cd github-action/ && npm install && npm run build && npm run package)
 
       - name: Build and push with multiple tags and multiple platforms
         uses: ./

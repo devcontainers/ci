@@ -106,3 +106,7 @@ lib/**/*
 output
 
 .taskkey
+
+common_lib
+lib
+dist
