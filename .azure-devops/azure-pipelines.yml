@@ -61,14 +61,17 @@ jobs:
         ACR_USERNAME: $(ACR_USERNAME)
 
     - task: DevcontainersCi@0
+      env: # TEST_ENV_VALUE1 is set via devcontainer.json using a localEnv reference
+        TEST_ENV_VALUE1: SetViaDevcontainerJsonLocalEnv
       inputs:
         imageName: '$(ACR_NAME).azurecr.io/devcontainers-ci/azdo-devcontainer-build-run/test/run-args'
         subFolder: github-tests/Dockerfile/run-args
         runCmd: |
           cat marker.txt
-          cat marker.txt | grep 'post-create: TEST_ENV_VALUE=testing123'
-        env: |
-            TEST_ENV_VALUE=testing123
+          cat marker.txt | grep 'post-create: TEST_ENV_VALUE1=SetViaDevcontainerJsonLocalEnv'
+          cat marker.txt | grep 'post-create: TEST_ENV_VALUE2=AdditionalEnvVar'
+        env: | # TEST_ENV_VALUE2 is an additional env var to pass to the container
+            TEST_ENV_VALUE2=AdditionalEnvVar
         imageTag: $(IMAGE_TAG)
         sourceBranchFilterForPush: ''
 
