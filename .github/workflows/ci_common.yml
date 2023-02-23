@@ -321,8 +321,8 @@ jobs:
 
       - name: Create GitHub Action Release
         env:
-          TAG_NAME: v0.1
-          RELEASE_NAME: v0.1.${{ github.run_number  }}
+          TAG_NAME: ${{ needs.build.outputs.version_short }}
+          RELEASE_NAME: ${{ needs.build.outputs.version }}
           GH_TOKEN: ${{ github.token }}
         run: |
           git config user.name "CI build"
