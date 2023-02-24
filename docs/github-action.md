@@ -198,6 +198,38 @@ The result from running the container is to output "Hello - World".
 
 The environment variables specified in the workflow step are passed along when the run-command is executed. Therefore, they replace environment variables with the same name that are set either directly in the Dockerfile or the `devcontainer.json` under the [`containerEnv`](https://code.visualstudio.com/remote/advancedcontainers/environment-variables#_option-1-add-individual-variables) key.
 
+### remoteEnv
+
+If you have environment variables set in the `remoteEnv` section of your `devcontainer.json` file using `localEnv` references, you need to pass the environment variables in a specific way.
+
+Since `localEnv` references are resolved by the `devcontainer` CLI, we need to ensure that we set the values in the correct context for `localEnv`. To do this, the values should be set using the `env` property on the action, not using the `env` nested under the `with` block.
+
+For example, if you have the following section in your `devcontainer.json`:
+
+```json
+{
+    "remoteEnv": {
+        "HELLO": "${localEnv:HELLO}"
+    }
+}
+```
+
+You should set the `HELLO` environment variable using the `env` property on the action, not using the `env` nested under the `with` block.
+
+```yaml
+      - name: Build and run dev container task
+        uses: devcontainers/ci@v0.3
+        env:
+          # Set HELLO here so that it is resolved via the localEnv context
+          HELLO: hello
+        with:
+          imageName: ghcr.io/example/example-devcontainer
+          runCmd: echo "$HELLO"
+          # Don't use the env block here to set the HELLO environment variable
+          # as it will be overridden by the value from localEnv context
+          # when the CLI starts the container
+```
+
 ## Multi-Platform Builds
 
 Builds for multiple platforms have special considerations, detailed at [mutli-platform-builds.md](multi-platform-builds.md).
