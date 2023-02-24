@@ -128,9 +128,63 @@ If you want to pass additional environment variables to the dev container when i
       WORLD
 ```
 
-In this example, the `HELLO` environment variable is specified with the value `Hello` in the `env` input on the devcontainer-build-run step. The `WORLD` environment variable is specified without a value so will pick up the value that is assigned in the standard action's `env` configuration.
+In this example, the `HELLO` environment variable is specified with the value `Hello` in the `env` input on the devcontainer-build-run step. The `WORLD` environment variable is specified without a value so will pick up the value that is assigned in the standard task's `env` configuration.
 
 The result from running the container is to output "Hello - World".
+
+## Environment Variables
+
+If you want to pass additional environment variables to the dev container when it is run, you can use the `env` input as shown below.
+
+
+```yaml
+- task: DevcontainersCi@0
+  env:
+    WORLD: World
+  inputs:
+    imageName: 'yourregistry.azurecr.io/example-dev-container'
+    runCmd: echo "$HELLO - $WORLD"
+    env: |
+      HELLO=Hello
+      WORLD
+```
+
+In this example, the `HELLO` environment variable is specified with the value `Hello` in the `env` input on the devcontainer-build-run step. The `WORLD` environment variable is specified without a value so will pick up the value that is assigned in the standard action's `env` configuration (it could also be picked up from the job environment variables - see the [Azure DevOps Piplines Environment Variables docs](https://learn.microsoft.com/en-us/azure/devops/pipelines/process/variables?view=azure-devops&tabs=yaml%2Cbatch#variable-scopes) for more information).
+
+The result from running the container is to output "Hello - World".
+
+The environment variables specified in the workflow step are passed along when the run-command is executed. Therefore, they replace environment variables with the same name that are set either directly in the Dockerfile or the `devcontainer.json` under the [`containerEnv`](https://code.visualstudio.com/remote/advancedcontainers/environment-variables#_option-1-add-individual-variables) key.
+
+### remoteEnv
+
+If you have environment variables set in the `remoteEnv` section of your `devcontainer.json` file using `localEnv` references, you need to pass the environment variables in a specific way.
+
+Since `localEnv` references are resolved by the `devcontainer` CLI, we need to ensure that we set the values in the correct context for `localEnv`. To do this, the values should be set using the `env` property on the task, not using the `env` nested under the `with` block.
+
+For example, if you have the following section in your `devcontainer.json`:
+
+```json
+{
+    "remoteEnv": {
+        "HELLO": "${localEnv:HELLO}"
+    }
+}
+```
+
+You should set the `HELLO` environment variable using the `env` property on the task, not using the `env` nested under the `with` block.
+
+```yaml
+- task: DevcontainersCi@0
+  env:
+    # Set HELLO here so that it is resolved via the localEnv context
+    HELLO: hello
+  inputs:
+    imageName: 'yourregistry.azurecr.io/example-dev-container'
+    runCmd: echo "$HELLO"
+    # Don't use the env block here to set the HELLO environment variable
+    # as it will be overridden by the value from localEnv context
+    # when the CLI starts the container
+```
 
 ## Multi-Platform Builds
 

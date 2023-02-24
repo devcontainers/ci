@@ -120,6 +120,7 @@ export async function runMain(): Promise<void> {
 				workspaceFolder,
 				additionalCacheFroms: cacheFrom,
 				skipContainerUserIdUpdate,
+				env: inputEnvsWithDefaults,
 			};
 			const upResult = await devcontainer.up(upArgs, log);
 			if (upResult.outcome !== 'success') {
