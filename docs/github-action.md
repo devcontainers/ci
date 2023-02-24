@@ -26,7 +26,7 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Build and run dev container task
-        uses: devcontainers/ci@v0.2
+        uses: devcontainers/ci@v0.3
         with:
           # Change this to be your CI task/script
           runCmd: yarn test
@@ -62,7 +62,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and run Dev Container task
-        uses: devcontainers/ci@v0.2
+        uses: devcontainers/ci@v0.3
         with:
           # Change this to point to your image name
           imageName: ghcr.io/example/example-devcontainer
@@ -88,7 +88,7 @@ The [`devcontainers/ci` action](https://github.com/marketplace/actions/devcontai
 
 ```yaml
 - name: Pre-build dev container image
-  uses: devcontainers/ci@v0.2
+  uses: devcontainers/ci@v0.3
   with:
     imageName: ghcr.io/example/example-devcontainer
     cacheFrom: ghcr.io/example/example-devcontainer
@@ -99,7 +99,7 @@ The [`devcontainers/ci` action](https://github.com/marketplace/actions/devcontai
 
 ```yaml
 - name: Run make ci-build in dev container
-  uses: devcontainers/ci@v0.2
+  uses: devcontainers/ci@v0.3
   with:    
     # [Optional] If you have a separate workflow like the one above
     # to pre-build your container image, you can reference it here
@@ -114,7 +114,7 @@ The [`devcontainers/ci` action](https://github.com/marketplace/actions/devcontai
 
 ```yaml
 - name: Pre-build image and run make ci-build in dev container
-  uses: devcontainers/ci@v0.2
+  uses: devcontainers/ci@v0.3
   with:
     imageName: ghcr.io/example/example-devcontainer
     cacheFrom: ghcr.io/example/example-devcontainer
@@ -166,7 +166,7 @@ To build and run the dev container from `folderB` you can specify the `subFolder
 
 ```yaml
       - name: Build and run dev container task
-        uses: devcontainers/ci@v0.2
+        uses: devcontainers/ci@v0.3
         with:
           subFolder: folderB
           imageName: ghcr.io/example/example-devcontainer
@@ -180,7 +180,7 @@ If you want to pass additional environment variables to the dev container when i
 
 ```yaml
       - name: Build and run dev container task
-        uses: devcontainers/ci@v0.2
+        uses: devcontainers/ci@v0.3
         env:
           WORLD: World
         with:

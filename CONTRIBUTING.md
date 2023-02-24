@@ -22,9 +22,7 @@ The main folders in the repo are:
 
 ## Workflow
 
-The code for both the GitHub Action and Azure DevOps Pipeline Task is written in TypeScript. Since the GitHub action is pulled from the project repo when executed, any PRs should also include the output of the build process.
-
-To run the build step locally, run `./scripts/build.sh` from the root of the repo.
+The code for both the GitHub Action and Azure DevOps Pipeline Task is written in TypeScript. To ensure that the code compiles locally, run `./scripts/build-local.sh` from the root of the repo.
 
 The intention is for the GitHub action and Azure DevOps task to maintain feature parity as far as possible. As a general rule, and changes should be implemented in both the GitHub action and the Azure DevOps task.
 
