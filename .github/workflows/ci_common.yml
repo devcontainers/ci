@@ -524,6 +524,15 @@ jobs:
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      # Published action contains compiled JS, but we need to compile it here
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 16
+      - name: Compile GH action
+        run: |
+          (cd common && npm install && npm run build)
+          (cd github-action/ && npm install && npm run build && npm run package)
+
       - name: Run test
         uses: ./
         env: # TEST_ENV_VALUE1 is set via devcontainer.json using a localEnv reference
