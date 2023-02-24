@@ -64,8 +64,8 @@ jobs:
       env: # TEST_ENV_VALUE1 is set via devcontainer.json using a localEnv reference
         TEST_ENV_VALUE1: SetViaDevcontainerJsonLocalEnv
       inputs:
-        imageName: '$(ACR_NAME).azurecr.io/devcontainers-ci/azdo-devcontainer-build-run/test/run-args'
-        subFolder: github-tests/Dockerfile/run-args
+        imageName: '$(ACR_NAME).azurecr.io/devcontainers-ci/azdo-devcontainer-build-run/test/env-vars-on-post-create'
+        subFolder: github-tests/Dockerfile/env-vars-on-post-create
         runCmd: |
           cat marker.txt
           cat marker.txt | grep 'post-create: TEST_ENV_VALUE1=SetViaDevcontainerJsonLocalEnv'
