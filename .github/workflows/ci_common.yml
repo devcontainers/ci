@@ -125,7 +125,6 @@ jobs:
             core.error('Failed to set image_tag');
             console.log(context);
 
-
       # Published action contains compiled JS, but we need to compile it here
       - uses: actions/setup-node@v3
         with:
@@ -163,6 +162,16 @@ jobs:
             IS_CI=1
             IS_PR
             BRANCH
+
+      - name: Show version info
+        env:
+          VERSION: ${{ steps.build.outputs.version }}
+          VERSION_SHORT: ${{ steps.build.outputs.version_short }}
+          VERSION_MAJOR: ${{ steps.build.outputs.version_major }}
+        run: |
+          echo "VERSION=${VERSION}"
+          echo "VERSION_SHORT=${VERSION_SHORT}"
+          echo "VERSION_MAJOR=${VERSION_MAJOR}"
 
       - uses: actions/upload-artifact@v3
         name: Create dev AzDO VSIX artifact
@@ -255,6 +264,7 @@ jobs:
     env:
       VERSION: ${{ needs.build.outputs.version }}
       VERSION_SHORT: ${{ needs.build.outputs.version_short }}
+      VERSION_MAJOR: ${{ needs.build.outputs.version_major }}
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -262,6 +272,12 @@ jobs:
           # if the following value is missing (i.e. not triggered via comment workflow)
           # then the default checkout will apply
           ref: ${{ inputs.prRef }}
+
+      - name: Show version info
+        run: |
+          echo "VERSION=${VERSION}"
+          echo "VERSION_SHORT=${VERSION_SHORT}"
+          echo "VERSION_MAJOR=${VERSION_MAJOR}"
 
       - name: Download release VSIX
         uses: actions/download-artifact@v2
