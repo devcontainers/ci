@@ -47,6 +47,7 @@ export async function runMain(): Promise<void> {
 			'skipContainerUserIdUpdate',
 		);
 		const userDataFolder: string = core.getInput('userDataFolder');
+		const mount: string[] = core.getInput('mount');
 
 		if (platform) {
 			const skopeoInstalled = await isSkopeoInstalled();
@@ -127,6 +128,7 @@ export async function runMain(): Promise<void> {
 					skipContainerUserIdUpdate,
 					env: inputEnvsWithDefaults,
 					userDataFolder,
+					additionalMounts: mount,
 				};
 				const result = await devcontainer.up(args, log);
 				if (result.outcome !== 'success') {
