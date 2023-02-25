@@ -114,15 +114,15 @@ async function runSpecCli<T>(options: {
   log: (data: string) => void;
   env?: NodeJS.ProcessEnv;
 }) {
-	let stdout = '';
-	const spawnOptions: SpawnOptions = {
-		log: data => (stdout += data),
-		err: data => options.log(data),
-		env: options.env ? {...process.env, ...options.env} : process.env,
-	};
-	const command = getSpecCliInfo().command;
-	console.log(`About to run ${command} ${options.args.join(' ')}`); // TODO - take an output arg to allow GH to use core.info
-	await spawn(command, options.args, spawnOptions);
+  let stdout = '';
+  const spawnOptions: SpawnOptions = {
+    log: data => (stdout += data),
+    err: data => options.log(data),
+    env: options.env ? {...process.env, ...options.env} : process.env,
+  };
+  const command = getSpecCliInfo().command;
+  console.log(`About to run ${command} ${options.args.join(' ')}`); // TODO - take an output arg to allow GH to use core.info
+  await spawn(command, options.args, spawnOptions);
 
   return parseCliOutput<T>(stdout);
 }
@@ -152,7 +152,7 @@ async function devContainerBuild(
     args.workspaceFolder,
   ];
   if (args.imageName) {
-    args.imageName.forEach(iName => 
+    args.imageName.forEach(iName =>
       commandArgs.push('--image-name', iName),
     );
   }
@@ -188,19 +188,17 @@ export interface DevContainerCliUpArgs {
   workspaceFolder: string;
   additionalCacheFroms?: string[];
   skipContainerUserIdUpdate?: boolean;
-  env?: string[];
   userDataFolder?: string;
+  additionalMounts?: string[];
 }
 async function devContainerUp(
   args: DevContainerCliUpArgs,
   log: (data: string) => void,
 ): Promise<DevContainerCliUpResult | DevContainerCliError> {
-  const remoteEnvArgs = getRemoteEnvArray(args.env);
   const commandArgs: string[] = [
     'up',
     '--workspace-folder',
     args.workspaceFolder,
-    ...remoteEnvArgs,
   ];
   if (args.additionalCacheFroms) {
     args.additionalCacheFroms.forEach(cacheFrom =>
@@ -212,6 +210,11 @@ async function devContainerUp(
   }
   if (args.skipContainerUserIdUpdate) {
     commandArgs.push('--update-remote-user-uid-default', 'off');
+  }
+  if (args.additionalMounts) {
+    args.additionalMounts.forEach(mount =>
+      commandArgs.push('--mount', mount),
+    );
   }
   return await runSpecCli<DevContainerCliUpResult>({
     args: commandArgs,
