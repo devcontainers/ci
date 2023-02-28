@@ -40,30 +40,6 @@ RUN echo "export HISTFILE=/home/$USERNAME/commandhistory/.bash_history" >> "/hom
 # Set env for tracking that we're running in a devcontainer
 ENV DEVCONTAINER=true
 
-# node
-COPY scripts/node.sh /tmp/
-RUN /bin/bash /tmp/node.sh 16.x
-
-# docker-client
-COPY scripts/docker-client.sh /tmp/
-RUN /bin/bash /tmp/docker-client.sh
-
-#Add user to docker group
-RUN sudo groupadd docker && sudo usermod -aG docker $USERNAME && newgrp docker
-
-# act
-COPY scripts/act.sh /tmp/
-RUN /bin/bash /tmp/act.sh 0.2.21
-
-# Pin to 0.12.0: https://github.com/microsoft/tfs-cli/issues/427
-RUN sudo npm install -g tfx-cli@0.12.0 
-
-# azure-cli-no-mount
-COPY scripts/azure-cli.sh /tmp/
-RUN /bin/bash /tmp/azure-cli.sh
-
-RUN az extension add --name azure-devops
-
 # __DEVCONTAINER_SNIPPET_INSERT__ (control where snippets get inserted using the devcontainer CLI)
 
 # Switch back to dialog for any ad-hoc use of apt-get

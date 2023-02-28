@@ -15,7 +15,7 @@ Here are three examples of using the Action for common scenarios. See the [docum
 
 ```yaml
 - name: Pre-build dev container image
-  uses: devcontainers/ci@v0.2
+  uses: devcontainers/ci@v0.3
   with:
     imageName: ghcr.io/example/example-devcontainer
     cacheFrom: ghcr.io/example/example-devcontainer
@@ -26,7 +26,7 @@ Here are three examples of using the Action for common scenarios. See the [docum
 
 ```yaml
 - name: Run make ci-build in dev container
-  uses: devcontainers/ci@v0.2
+  uses: devcontainers/ci@v0.3
   with:    
     # [Optional] If you have a separate workflow like the one above
     # to pre-build your container image, you can reference it here
@@ -41,7 +41,7 @@ Here are three examples of using the Action for common scenarios. See the [docum
 
 ```yaml
 - name: Pre-build image and run make ci-build in dev container
-  uses: devcontainers/ci@v0.2
+  uses: devcontainers/ci@v0.3
   with:
     imageName: ghcr.io/example/example-devcontainer
     cacheFrom: ghcr.io/example/example-devcontainer
@@ -50,6 +50,11 @@ Here are three examples of using the Action for common scenarios. See the [docum
 ```
 
 ## CHANGELOG
+
+### Version 0.3.0 (24th February 2023)
+
+This version updates the release mechanism for the GitHub action so that only the compiled JavaScript is included in the release.
+The primary motivation is to simplify the process for contributing to the action, but a side-benefit should be a reduced download size when using the action.
 
 ### Version 0.2.0
 

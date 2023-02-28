@@ -49,6 +49,33 @@ jobs:
         imageTag: $(IMAGE_TAG)
         sourceBranchFilterForPush: ''
 
+  - job: test_env_vars_on_post_create
+    displayName: Test env-vars-on-post-create
+    steps:
+    - script: |
+        docker login -u $ACR_USERNAME -p $ACR_TOKEN $(ACR_NAME).azurecr.io
+      displayName: 'Log in to Azure Container Registry'
+      env:
+        ACR_NAME: $(ACR_NAME)
+        ACR_TOKEN: $(ACR_TOKEN)
+        ACR_USERNAME: $(ACR_USERNAME)
+
+    - task: DevcontainersCi@0
+      env: # TEST_ENV_VALUE1 is set via devcontainer.json using a localEnv reference
+        TEST_ENV_VALUE1: SetViaDevcontainerJsonLocalEnv
+      inputs:
+        imageName: '$(ACR_NAME).azurecr.io/devcontainers-ci/azdo-devcontainer-build-run/test/env-vars-on-post-create'
+        subFolder: github-tests/Dockerfile/env-vars-on-post-create
+        runCmd: |
+          cat marker.txt
+          cat marker.txt | grep 'post-create: TEST_ENV_VALUE1=SetViaDevcontainerJsonLocalEnv'
+          cat marker.txt | grep 'post-create: TEST_ENV_VALUE2=AdditionalEnvVar'
+        env: | # TEST_ENV_VALUE2 is an additional env var to pass to the container
+            TEST_ENV_VALUE2=AdditionalEnvVar
+        imageTag: $(IMAGE_TAG)
+        sourceBranchFilterForPush: ''
+
+
   - job: test_simple
     displayName: Test simple
     steps:

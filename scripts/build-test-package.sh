@@ -8,6 +8,7 @@ sudo chown -R $(whoami) ~ # TODO - remove this
 figlet common
 cd "$script_dir/../common"
 npm install
+npm run build
 npm run test
 
 figlet GH Action
@@ -29,8 +30,10 @@ else
     echo "Creating VSIX (BUILD_NUMBER=${BUILD_NUMBER})"
     ./scripts/build-package.sh --set-patch-version $BUILD_NUMBER
 
+    echo "Copying VSIX files to output folder"
     mkdir -p "$script_dir/../output"
     cp *.vsix "$script_dir/../output/"
+    ls -l "$script_dir/../output/"
 fi
 
 if [[ -z $IS_CI ]]; then

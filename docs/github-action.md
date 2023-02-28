@@ -23,10 +23,10 @@ jobs:
     steps:
 
       - name: Checkout (GitHub)
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Build and run dev container task
-        uses: devcontainers/ci@v0.2
+        uses: devcontainers/ci@v0.3
         with:
           # Change this to be your CI task/script
           runCmd: yarn test
@@ -52,17 +52,17 @@ jobs:
     steps:
 
       - name: Checkout (GitHub)
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Login to GitHub Container Registry
-        uses: docker/login-action@v1 
+        uses: docker/login-action@v2 
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and run Dev Container task
-        uses: devcontainers/ci@v0.2
+        uses: devcontainers/ci@v0.3
         with:
           # Change this to point to your image name
           imageName: ghcr.io/example/example-devcontainer
@@ -88,7 +88,7 @@ The [`devcontainers/ci` action](https://github.com/marketplace/actions/devcontai
 
 ```yaml
 - name: Pre-build dev container image
-  uses: devcontainers/ci@v0.2
+  uses: devcontainers/ci@v0.3
   with:
     imageName: ghcr.io/example/example-devcontainer
     cacheFrom: ghcr.io/example/example-devcontainer
@@ -99,7 +99,7 @@ The [`devcontainers/ci` action](https://github.com/marketplace/actions/devcontai
 
 ```yaml
 - name: Run make ci-build in dev container
-  uses: devcontainers/ci@v0.2
+  uses: devcontainers/ci@v0.3
   with:    
     # [Optional] If you have a separate workflow like the one above
     # to pre-build your container image, you can reference it here
@@ -114,7 +114,7 @@ The [`devcontainers/ci` action](https://github.com/marketplace/actions/devcontai
 
 ```yaml
 - name: Pre-build image and run make ci-build in dev container
-  uses: devcontainers/ci@v0.2
+  uses: devcontainers/ci@v0.3
   with:
     imageName: ghcr.io/example/example-devcontainer
     cacheFrom: ghcr.io/example/example-devcontainer
@@ -128,7 +128,7 @@ The [`devcontainers/ci` action](https://github.com/marketplace/actions/devcontai
 | Name                      | Required | Description                                                                                                                                                                                                                                    |
 | ------------------------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | imageName                 | true     | Image name to use when building the dev container image (including registry)                                                                                                                                                                   |
-| imageTag                  | false    | Image tag to use when building/pushing the dev container image (defaults to `latest`)                                                                                                                                                          |
+| imageTag                  | false    | One or more comma-separated image tags (defaults to `latest`)                                                                                                                                                          |
 | subFolder                 | false    | Use this to specify the repo-relative path to the folder containing the dev container (i.e. the folder that contains the `.devcontainer` folder). Defaults to repo root                                                                        |
 | runCmd                    | true     | The command to run after building the dev container image                                                                                                                                                                                      |
 | env                       | false    | Specify environment variables to pass to the dev container when run                                                                                                                                                                            |
@@ -166,7 +166,7 @@ To build and run the dev container from `folderB` you can specify the `subFolder
 
 ```yaml
       - name: Build and run dev container task
-        uses: devcontainers/ci@v0.2
+        uses: devcontainers/ci@v0.3
         with:
           subFolder: folderB
           imageName: ghcr.io/example/example-devcontainer
@@ -180,7 +180,7 @@ If you want to pass additional environment variables to the dev container when i
 
 ```yaml
       - name: Build and run dev container task
-        uses: devcontainers/ci@v0.2
+        uses: devcontainers/ci@v0.3
         env:
           WORLD: World
         with:
@@ -197,6 +197,38 @@ In this example, the `HELLO` environment variable is specified with the value `H
 The result from running the container is to output "Hello - World".
 
 The environment variables specified in the workflow step are passed along when the run-command is executed. Therefore, they replace environment variables with the same name that are set either directly in the Dockerfile or the `devcontainer.json` under the [`containerEnv`](https://code.visualstudio.com/remote/advancedcontainers/environment-variables#_option-1-add-individual-variables) key.
+
+### remoteEnv
+
+If you have environment variables set in the `remoteEnv` section of your `devcontainer.json` file using `localEnv` references, you need to pass the environment variables in a specific way.
+
+Since `localEnv` references are resolved by the `devcontainer` CLI, we need to ensure that we set the values in the correct context for `localEnv`. To do this, the values should be set using the `env` property on the action, not using the `env` nested under the `with` block.
+
+For example, if you have the following section in your `devcontainer.json`:
+
+```json
+{
+    "remoteEnv": {
+        "HELLO": "${localEnv:HELLO}"
+    }
+}
+```
+
+You should set the `HELLO` environment variable using the `env` property on the action, not using the `env` nested under the `with` block.
+
+```yaml
+      - name: Build and run dev container task
+        uses: devcontainers/ci@v0.3
+        env:
+          # Set HELLO here so that it is resolved via the localEnv context
+          HELLO: hello
+        with:
+          imageName: ghcr.io/example/example-devcontainer
+          runCmd: echo "$HELLO"
+          # Don't use the env block here to set the HELLO environment variable
+          # as it will be overridden by the value from localEnv context
+          # when the CLI starts the container
+```
 
 ## Multi-Platform Builds
 

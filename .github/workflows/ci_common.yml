@@ -56,21 +56,22 @@ jobs:
     runs-on: ubuntu-latest
     name: build, test, package
     outputs:
-      version_short: ${{ steps.build.outputs.version_short }}
       version: ${{ steps.build.outputs.version }}
+      version_short: ${{ steps.build.outputs.version_short }}
+      version_major: ${{ steps.build.outputs.version_major }}
       image_tag: ${{ steps.set_image_tag.outputs.image_tag }}
       image_push_option: ${{ steps.set_image_push_option.outputs.image_push_option }}
       build_number: ${{ steps.build_number.outputs.build_number }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           # if the following value is missing (i.e. not triggered via comment workflow)
           # then the default checkout will apply
           ref: ${{ inputs.prRef }}
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v1
+        uses: docker/setup-buildx-action@v2
 
       - id: set_image_push_option
         name: Set image push option
@@ -86,7 +87,7 @@ jobs:
         
       - name: Login to GitHub Container Registry
         if: ${{ steps.set_image_push_option.outputs.image_push_option == 'filter' }}
-        uses: docker/login-action@v1 
+        uses: docker/login-action@v2 
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
@@ -98,7 +99,7 @@ jobs:
         id: build_number
         # only run this if we are going to run the AzDO publishing
         if: ${{ steps.set_image_push_option.outputs.image_push_option == 'filter' }}
-        uses: einaregilsson/build-number@v3 
+        uses: onyxmueller/build-tag-number@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
@@ -124,6 +125,20 @@ jobs:
             core.error('Failed to set image_tag');
             console.log(context);
 
+      # Published action contains compiled JS, but we need to compile it here
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 16
+      - name: Compile GH action
+        run: |
+          node --version
+          npm --version
+          echo "** Installing and building common..."
+          (cd common && npm install && npm run build)
+          (cd common && npm run tsc_version)
+          echo "** Installing and building github-action..."
+          (cd github-action/ && npm install && npm run build && npm run package)
+
       - name: Build in dev container
         uses: ./
         id: build
@@ -148,22 +163,33 @@ jobs:
             IS_PR
             BRANCH
 
-      - uses: actions/upload-artifact@v2
+      - name: Show version info
+        env:
+          VERSION: ${{ steps.build.outputs.version }}
+          VERSION_SHORT: ${{ steps.build.outputs.version_short }}
+          VERSION_MAJOR: ${{ steps.build.outputs.version_major }}
+        run: |
+          echo "VERSION=${VERSION}"
+          echo "VERSION_SHORT=${VERSION_SHORT}"
+          echo "VERSION_MAJOR=${VERSION_MAJOR}"
+
+      - uses: actions/upload-artifact@v3
         name: Create dev AzDO VSIX artifact
         with:
           name: azdo-task-dev
           path: ./output/devcontainers-dev.ci-${{ steps.build.outputs.version }}.vsix
           if-no-files-found: error 
 
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v3
         name: Create release AzDO VSIX artifact
         with:
           name: azdo-task
           path: ./output/devcontainers.ci-${{ steps.build.outputs.version }}.vsix
           if-no-files-found: error 
 
-  pr-checks:
-    name: Mark PR checks as complete
+  checks-succeeded:
+    # simple no-op job to use as step for check status
+    name: All succeeded
     needs: # TODO - check what jobs need adding here
       - build
       - test-azdo
@@ -178,6 +204,19 @@ jobs:
       - test-simple
       - test-no-run
       - test-platform-with-runcmd
+      - test-env-vars-on-post-create
+      - test-multiple-tags-job2
+    runs-on: ubuntu-latest
+    steps:
+      - name: Simple step
+        run: |
+          echo Done!
+
+
+  pr-checks:
+    name: Mark PR checks as complete
+    needs: # TODO - check what jobs need adding here
+      - checks-succeeded
     runs-on: ubuntu-latest
     if: ${{ inputs.prHeadSha }}
     steps:
@@ -195,55 +234,30 @@ jobs:
           status: "completed"
           conclusion: "success"
 
-  pr-succeeded:
-    # simple no-op job to use as step for checks for PR checks
-    name: All succeeded
-    needs: # TODO - check what jobs need adding here
-      - build
-      - test-azdo
-      - test-gh-run-args
-      - test-gh-build-args
-      - test-gh-dockerfile-context
-      - test-gh-feature-docker-from-docker
-      - test-gh-docker-from-docker-non-root
-      - test-gh-docker-from-docker-root
-      - test-gh-skip-user-update
-      - test-compose-features
-      - test-simple
-      - test-no-run
-    runs-on: ubuntu-latest
-    steps:
-      - name: Simple step
-        run: |
-          echo Done!
-
   release:
     name: Create release
     runs-on: ubuntu-latest
     needs: 
       - build
-      - test-azdo
-      - test-gh-run-args
-      - test-gh-build-args
-      - test-gh-dockerfile-context
-      - test-gh-feature-docker-from-docker
-      - test-gh-docker-from-docker-non-root
-      - test-gh-docker-from-docker-root
-      - test-gh-skip-user-update
-      - test-compose-features
-      - test-simple
-      - test-no-run
+      - checks-succeeded
     if: ${{ inputs.release == true }}
     env:
       VERSION: ${{ needs.build.outputs.version }}
       VERSION_SHORT: ${{ needs.build.outputs.version_short }}
+      VERSION_MAJOR: ${{ needs.build.outputs.version_major }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           # if the following value is missing (i.e. not triggered via comment workflow)
           # then the default checkout will apply
           ref: ${{ inputs.prRef }}
+
+      - name: Show version info
+        run: |
+          echo "VERSION=${VERSION}"
+          echo "VERSION_SHORT=${VERSION_SHORT}"
+          echo "VERSION_MAJOR=${VERSION_MAJOR}"
 
       - name: Download release VSIX
         uses: actions/download-artifact@v2
@@ -257,47 +271,21 @@ jobs:
           echo "VERSION_SHORT: $VERSION_SHORT"
 
       - name: Login to GitHub Container Registry
-        uses: docker/login-action@v1 
+        uses: docker/login-action@v2 
         if: github.ref == 'refs/heads/main' # only need this for push (on `main`)
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Create Release
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # Published action contains compiled JS, but we need to compile it here
+      - uses: actions/setup-node@v3
         with:
-          tag_name: v${{ env.VERSION  }}
-          release_name: Release v${{ env.VERSION }}
-          draft: false
-          prerelease: true
-
-      - name: Create Major/Minor tag
-        id: create_tag_short_verison
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          VERSION_SHORT: v${{ env.VERSION_SHORT }}
+          node-version: 16
+      - name: Compile GH action
         run: |
-          echo "VERSION_SHORT: $VERSION_SHORT"
-          # sudo chown -R $(whoami) .
-          git config user.name "CI build"
-          git config user.email stuart@leeks.net
-          git tag -fa $VERSION_SHORT -m $VERSION_SHORT
-          git push -f origin $VERSION_SHORT
-
-      - name: Upload Release Asset
-        id: upload-release-asset 
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps 
-          asset_path: ./output/devcontainers.ci-${{ needs.build.outputs.version }}.vsix
-          asset_name: devcontainers.ci-${{ needs.build.outputs.version }}.vsix
-          asset_content_type: application/zip
+          (cd common && npm install && npm run build)
+          (cd github-action/ && npm install && npm run build && npm run package)
 
       - name: Publish AzDO Task
         uses: ./
@@ -327,11 +315,23 @@ jobs:
             AZDO_PROJECT
             AZDO_BUILD
 
+      - name: Create GitHub Action Release
+        env:
+          TAG_NAME: v${{ needs.build.outputs.version_short }}
+          RELEASE_NAME: v${{ needs.build.outputs.version }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git config user.name "CI build"
+          git config user.email automated-build@example.com
+          
+          ./scripts/gh-release.sh
+
+
   #
   # Jobs to test
   #
   # When adding a new test:
-  # - add to the 'needs' section for the 'pr-succeeded', 'pr-checks' and 'releases' jobs
+  # - add to the 'needs' section for the 'checks-succeeded' job
   # - add any new images to the image_names in clean_tags.sh
   # - review the Azure DevOps pipeline and consider adding there for verification
   #
@@ -343,7 +343,7 @@ jobs:
     if: ${{ needs.build.outputs.image_push_option == 'filter' }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           persist-credentials: false
           # if the following value is missing (i.e. not triggered via comment workflow)
@@ -370,12 +370,21 @@ jobs:
           path: output
 
       - name: Login to GitHub Container Registry
-        uses: docker/login-action@v1 
+        uses: docker/login-action@v2 
         if: github.ref == 'refs/heads/main' # only need this for push (on `main`)
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Published action contains compiled JS, but we need to compile it here
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 16
+      - name: Compile GH action
+        run: |
+          (cd common && npm install && npm run build)
+          (cd github-action/ && npm install && npm run build && npm run package)
 
       - name: Run AzDO test pipeline
         uses: ./
@@ -414,12 +423,21 @@ jobs:
     needs: build
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           persist-credentials: false
           # if the following value is missing (i.e. not triggered via comment workflow)
           # then the default checkout will apply
           ref: ${{ inputs.prRef }}
+
+      # Published action contains compiled JS, but we need to compile it here
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 16
+      - name: Compile GH action
+        run: |
+          (cd common && npm install && npm run build)
+          (cd github-action/ && npm install && npm run build && npm run package)
 
       - name: Run test
         uses: ./
@@ -443,7 +461,7 @@ jobs:
     needs: build
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           persist-credentials: false
           # if the following value is missing (i.e. not triggered via comment workflow)
@@ -451,15 +469,24 @@ jobs:
           ref: ${{ inputs.prRef }}
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v1
+        uses: docker/setup-buildx-action@v2
 
       - name: Login to GitHub Container Registry
         if: ${{ needs.build.outputs.image_push_option == 'filter' }}
-        uses: docker/login-action@v1 
+        uses: docker/login-action@v2 
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Published action contains compiled JS, but we need to compile it here
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 16
+      - name: Compile GH action
+        run: |
+          (cd common && npm install && npm run build)
+          (cd github-action/ && npm install && npm run build && npm run package)
 
       - name: Run test
         uses: ./
@@ -473,13 +500,13 @@ jobs:
             push
             pull_request
 
-  test-gh-build-args:
-    name: Run GitHub build-args test
+  test-env-vars-on-post-create:
+    name: Run GitHub env-vars-on-post-create test
     runs-on: ubuntu-latest
     needs: build
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           persist-credentials: false
           # if the following value is missing (i.e. not triggered via comment workflow)
@@ -487,15 +514,76 @@ jobs:
           ref: ${{ inputs.prRef }}
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v1
+        uses: docker/setup-buildx-action@v2
 
       - name: Login to GitHub Container Registry
-        uses: docker/login-action@v1
+        if: ${{ needs.build.outputs.image_push_option == 'filter' }}
+        uses: docker/login-action@v2 
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Published action contains compiled JS, but we need to compile it here
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 16
+      - name: Compile GH action
+        run: |
+          (cd common && npm install && npm run build)
+          (cd github-action/ && npm install && npm run build && npm run package)
+
+      - name: Run test
+        uses: ./
+        env: # TEST_ENV_VALUE1 is set via devcontainer.json using a localEnv reference
+          TEST_ENV_VALUE1: SetViaDevcontainerJsonLocalEnv
+        with:
+          subFolder: github-tests/Dockerfile/env-vars-on-post-create
+          imageName: ghcr.io/devcontainers/ci/tests/env-vars-on-post-create
+          env: | # TEST_ENV_VALUE2 is an additional env var to pass to the container
+            TEST_ENV_VALUE2=AdditionalEnvVar
+          runCmd: |
+            cat marker.txt
+            cat marker.txt | grep 'post-create: TEST_ENV_VALUE1=SetViaDevcontainerJsonLocalEnv'
+            cat marker.txt | grep 'post-create: TEST_ENV_VALUE2=AdditionalEnvVar'
+          imageTag: ${{ needs.build.outputs.image_tag }}
+          push: ${{ needs.build.outputs.image_push_option }}
+          eventFilterForPush: |
+            push
+            pull_request
+
+  test-gh-build-args:
+    name: Run GitHub build-args test
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          persist-credentials: false
+          # if the following value is missing (i.e. not triggered via comment workflow)
+          # then the default checkout will apply
+          ref: ${{ inputs.prRef }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v2
         if: ${{ needs.build.outputs.image_push_option == 'filter' }}
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Published action contains compiled JS, but we need to compile it here
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 16
+      - name: Compile GH action
+        run: |
+          (cd common && npm install && npm run build)
+          (cd github-action/ && npm install && npm run build && npm run package)
 
       - name: Run test
         uses: ./
@@ -515,7 +603,7 @@ jobs:
     needs: build
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           persist-credentials: false
           # if the following value is missing (i.e. not triggered via comment workflow)
@@ -523,15 +611,24 @@ jobs:
           ref: ${{ inputs.prRef }}
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v1
+        uses: docker/setup-buildx-action@v2
 
       - name: Login to GitHub Container Registry
-        uses: docker/login-action@v1
+        uses: docker/login-action@v2
         if: ${{ needs.build.outputs.image_push_option == 'filter' }}
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Published action contains compiled JS, but we need to compile it here
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 16
+      - name: Compile GH action
+        run: |
+          (cd common && npm install && npm run build)
+          (cd github-action/ && npm install && npm run build && npm run package)
 
       - name: Run test
         uses: ./
@@ -551,7 +648,7 @@ jobs:
     needs: build
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           persist-credentials: false
           # if the following value is missing (i.e. not triggered via comment workflow)
@@ -559,15 +656,24 @@ jobs:
           ref: ${{ inputs.prRef }}
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v1
+        uses: docker/setup-buildx-action@v2
 
       - name: Login to GitHub Container Registry
-        uses: docker/login-action@v1
+        uses: docker/login-action@v2
         if: ${{ needs.build.outputs.image_push_option == 'filter' }}
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Published action contains compiled JS, but we need to compile it here
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 16
+      - name: Compile GH action
+        run: |
+          (cd common && npm install && npm run build)
+          (cd github-action/ && npm install && npm run build && npm run package)
 
       - name: Run test
         uses: ./
@@ -587,7 +693,7 @@ jobs:
     needs: build
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           persist-credentials: false
           # if the following value is missing (i.e. not triggered via comment workflow)
@@ -595,15 +701,24 @@ jobs:
           ref: ${{ inputs.prRef }}
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v1
+        uses: docker/setup-buildx-action@v2
 
       - name: Login to GitHub Container Registry
-        uses: docker/login-action@v1
+        uses: docker/login-action@v2
         if: ${{ needs.build.outputs.image_push_option == 'filter' }}
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Published action contains compiled JS, but we need to compile it here
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 16
+      - name: Compile GH action
+        run: |
+          (cd common && npm install && npm run build)
+          (cd github-action/ && npm install && npm run build && npm run package)
 
       - name: Run test
         uses: ./
@@ -623,7 +738,7 @@ jobs:
     needs: build
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           persist-credentials: false
           # if the following value is missing (i.e. not triggered via comment workflow)
@@ -631,15 +746,24 @@ jobs:
           ref: ${{ inputs.prRef }}
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v1
+        uses: docker/setup-buildx-action@v2
 
       - name: Login to GitHub Container Registry
-        uses: docker/login-action@v1
+        uses: docker/login-action@v2
         if: ${{ needs.build.outputs.image_push_option == 'filter' }}
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Published action contains compiled JS, but we need to compile it here
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 16
+      - name: Compile GH action
+        run: |
+          (cd common && npm install && npm run build)
+          (cd github-action/ && npm install && npm run build && npm run package)
 
       - name: Run test
         uses: ./
@@ -659,7 +783,7 @@ jobs:
     needs: build
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           persist-credentials: false
           # if the following value is missing (i.e. not triggered via comment workflow)
@@ -667,15 +791,24 @@ jobs:
           ref: ${{ inputs.prRef }}
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v1
+        uses: docker/setup-buildx-action@v2
 
       - name: Login to GitHub Container Registry
-        uses: docker/login-action@v1 
+        uses: docker/login-action@v2 
         if: ${{ needs.build.outputs.image_push_option == 'filter' }}
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Published action contains compiled JS, but we need to compile it here
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 16
+      - name: Compile GH action
+        run: |
+          (cd common && npm install && npm run build)
+          (cd github-action/ && npm install && npm run build && npm run package)
 
       - name: Run test
         uses: ./
@@ -703,7 +836,7 @@ jobs:
     needs: build
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           persist-credentials: false
           # if the following value is missing (i.e. not triggered via comment workflow)
@@ -711,15 +844,24 @@ jobs:
           ref: ${{ inputs.prRef }}
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v1
+        uses: docker/setup-buildx-action@v2
 
       - name: Login to GitHub Container Registry
-        uses: docker/login-action@v1
+        uses: docker/login-action@v2
         if: ${{ needs.build.outputs.image_push_option == 'filter' }}
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Published action contains compiled JS, but we need to compile it here
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 16
+      - name: Compile GH action
+        run: |
+          (cd common && npm install && npm run build)
+          (cd github-action/ && npm install && npm run build && npm run package)
 
       - name: Run test
         uses: ./
@@ -739,12 +881,21 @@ jobs:
     needs: build
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           persist-credentials: false
           # if the following value is missing (i.e. not triggered via comment workflow)
           # then the default checkout will apply
           ref: ${{ inputs.prRef }}
+
+      # Published action contains compiled JS, but we need to compile it here
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 16
+      - name: Compile GH action
+        run: |
+          (cd common && npm install && npm run build)
+          (cd github-action/ && npm install && npm run build && npm run package)
 
       - name: Run test
         uses: ./
@@ -757,7 +908,7 @@ jobs:
     needs: build
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           persist-credentials: false
           # if the following value is missing (i.e. not triggered via comment workflow)
@@ -768,15 +919,24 @@ jobs:
         uses: docker/setup-qemu-action@v1
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v1
+        uses: docker/setup-buildx-action@v2
 
       - name: Login to GitHub Container Registry
-        uses: docker/login-action@v1 
+        uses: docker/login-action@v2 
         if: ${{ needs.build.outputs.image_push_option == 'filter' }}
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Published action contains compiled JS, but we need to compile it here
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 16
+      - name: Compile GH action
+        run: |
+          (cd common && npm install && npm run build)
+          (cd github-action/ && npm install && npm run build && npm run package)
 
       - name: Run test
         uses: ./
@@ -786,7 +946,8 @@ jobs:
           imageName: ghcr.io/devcontainers/ci/tests/platform-with-runcmd
           platform: linux/amd64,linux/arm64
           runCmd: echo $HOSTNAME && [[ $HOSTNAME == "my-host" ]]
-          push: ${{ needs.build.outputs.image_push_option }}
+          push: never  # Temporarily suppress push: https://github.com/devcontainers/ci/issues/198
+          # push: ${{ needs.build.outputs.image_push_option }}
           eventFilterForPush: |
             push
             pull_request
@@ -799,3 +960,110 @@ jobs:
           fi
         env:
           runCmdOutput: ${{ steps.platform-with-runcmd.outputs.runCmdOutput }}
+
+  test-multiple-tags-job1:
+    # This is split into multiple parts because pushing the image happens during the post-job phase
+    # and thus testing if the tags exist can't happen as part of job 1
+    name: Test multiple tags job 1
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          persist-credentials: false
+          # if the following value is missing (i.e. not triggered via comment workflow)
+          # then the default checkout will apply
+          ref: ${{ inputs.prRef }}
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v1 
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Published action contains compiled JS, but we need to compile it here
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 16
+      - name: Compile GH action
+        run: |
+          (cd common && npm install && npm run build)
+          (cd github-action/ && npm install && npm run build && npm run package)
+
+      - name: Build and push with multiple tags and single platform
+        uses: ./
+        id: multiple-tags-single-platform
+        with:
+          subFolder: github-tests/Dockerfile/build-only
+          imageName: ghcr.io/devcontainers/ci/tests/multiple-tags-single-platform
+          imageTag: tag1-${{ github.run_id }},tag2-${{ github.run_id }}
+          push: always
+
+      - name: Set up QEMU for multi-architecture builds
+        uses: docker/setup-qemu-action@v1
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+
+      - name: Install updated Skopeo
+        # This can be omitted once runner images have a version of Skopeo > 1.4.1
+        # See https://github.com/containers/skopeo/issues/1874
+        run: |
+          sudo apt purge buildah golang-github-containers-common podman skopeo
+          sudo apt autoremove --purge
+          REPO_URL="https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/unstable"
+          source /etc/os-release
+          sudo sh -c "echo 'deb ${REPO_URL}/x${NAME}_${VERSION_ID}/ /' > /etc/apt/sources.list.d/devel:kubic:libcontainers:unstable.list"
+          sudo wget -qnv https://download.opensuse.org/repositories/devel:kubic:libcontainers:stable/x${NAME}_${VERSION_ID}/Release.key -O Release.key
+          sudo apt-key add Release.key
+          sudo apt-get update
+          sudo apt-get install skopeo
+
+      # Published action contains compiled JS, but we need to compile it here
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 16
+      - name: Compile GH action
+        run: |
+          (cd common && npm install && npm run build)
+          (cd github-action/ && npm install && npm run build && npm run package)
+
+      - name: Build and push with multiple tags and multiple platforms
+        uses: ./
+        id: multiple-tags-multiple-platforms
+        with:
+          subFolder: github-tests/Dockerfile/platform-with-runcmd
+          imageName: ghcr.io/devcontainers/ci/tests/multiple-tags-multiple-platforms
+          imageTag: tag1-${{ github.run_id }},tag2-${{ github.run_id }}
+          platform: linux/amd64,linux/arm64
+          push: always
+
+  test-multiple-tags-job2:
+    name: Test multiple tags job 2
+    runs-on: ubuntu-latest
+    needs: [build, test-multiple-tags-job1]
+    steps:
+      - name: Validate multiple tags single platform
+        run: |
+          set -e
+          echo "Querying GitHub API for versions of package devcontainers-ci/tests/multiple-tags-single-platform..."
+          versions=$(curl -s -H "Accept: application/vnd.github+json" -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" -H "X-GitHub-Api-Version: 2022-11-28" https://api.github.com/users/devcontainers/packages/container/ci%2Ftests%2Fmultiple-tags-single-platform/versions)
+          echo "Checking tag1-${{ github.run_id }} exists... "
+          echo "$versions" | grep -q "tag1-${{ github.run_id }}"
+          echo "Tag exists."
+          echo "Checking tag2-${{ github.run_id }} exists... "
+          echo "$versions" | grep -q "tag1-${{ github.run_id }}"
+          echo "Tag exists."
+      - name: Validate multiple tags multiple platforms
+        run: |
+          set -e
+          echo "Querying GitHub API for versions of package devcontainers-ci/tests/multiple-tags-multiple-platforms..."
+          versions=$(curl -s -H "Accept: application/vnd.github+json" -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" -H "X-GitHub-Api-Version: 2022-11-28" https://api.github.com/users/devcontainers/packages/container/ci%2Ftests%2Fmultiple-tags-multiple-platforms/versions)
+          echo "Checking tag1-${{ github.run_id }} exists... "
+          echo "$versions" | grep -q "tag1-${{ github.run_id }}"
+          echo "Tag exists."
+          echo "Checking tag2-${{ github.run_id }} exists... "
+          echo "$versions" | grep -q "tag1-${{ github.run_id }}"
+          echo "Tag exists."
