@@ -185,6 +185,7 @@ export interface DevContainerCliUpArgs {
   workspaceFolder: string;
   additionalCacheFroms?: string[];
   skipContainerUserIdUpdate?: boolean;
+  env?: string[];
   userDataFolder?: string;
   additionalMounts?: string[];
 }
@@ -192,10 +193,12 @@ async function devContainerUp(
   args: DevContainerCliUpArgs,
   log: (data: string) => void,
 ): Promise<DevContainerCliUpResult | DevContainerCliError> {
+  const remoteEnvArgs = getRemoteEnvArray(args.env);
   const commandArgs: string[] = [
     'up',
     '--workspace-folder',
     args.workspaceFolder,
+    ...remoteEnvArgs,
   ];
   if (args.additionalCacheFroms) {
     args.additionalCacheFroms.forEach(cacheFrom =>
