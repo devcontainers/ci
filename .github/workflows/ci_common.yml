@@ -960,7 +960,7 @@ jobs:
           imageName: ghcr.io/devcontainers/ci/tests/platform-with-runcmd
           platform: linux/amd64,linux/arm64
           runCmd: echo $HOSTNAME && [[ $HOSTNAME == "my-host" ]]
-          push: always ## TODO - revert once tested: ${{ needs.build.outputs.image_push_option }}
+          push: ${{ needs.build.outputs.image_push_option }}
           eventFilterForPush: |
             push
             pull_request
