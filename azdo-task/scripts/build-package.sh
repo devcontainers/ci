@@ -75,6 +75,6 @@ npm prune --production
 figlet Package extension
 cd "$script_dir/../"
 echo "Build devcontainers extension vsix..."
-tfx extension create --manifests vss-extension.json --override "{\"public\": true}"
+tfx extension create --manifests vss-extension.json --override "{\"public\": true, \"version\": \"$VERSION_MAJOR.$VERSION_MINOR.$VERSION_PATCH\"}"
 echo "Build devcontainers-dev extension vsix..."
-tfx extension create --manifests vss-extension.json --override "{\"public\": false, \"publisher\": \"devcontainers-dev\"}"
+tfx extension create --manifests vss-extension.json --override "{\"public\": false, \"version\": \"$VERSION_MAJOR.$VERSION_MINOR.$VERSION_PATCH\", \"publisher\": \"devcontainers-dev\"}"
