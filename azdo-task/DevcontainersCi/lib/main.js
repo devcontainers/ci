@@ -41,7 +41,7 @@ const docker_1 = require("./docker");
 const skopeo_1 = require("./skopeo");
 const exec_1 = require("./exec");
 function runMain() {
-    var _a, _b, _c, _d, _e, _f, _g, _h;
+    var _a, _b, _c, _d, _e, _f, _g;
     return __awaiter(this, void 0, void 0, function* () {
         try {
             task.setTaskVariable('hasRunMain', 'true');
@@ -68,8 +68,7 @@ function runMain() {
             const envs = (_d = (_c = task.getInput('env')) === null || _c === void 0 ? void 0 : _c.split('\n')) !== null && _d !== void 0 ? _d : [];
             const inputEnvsWithDefaults = envvars_1.populateDefaults(envs);
             const cacheFrom = (_f = (_e = task.getInput('cacheFrom')) === null || _e === void 0 ? void 0 : _e.split('\n')) !== null && _f !== void 0 ? _f : [];
-            const noCache = ((_g = task.getInput('noCache')) !== null && _g !== void 0 ? _g : 'false') === 'true';
-            const skipContainerUserIdUpdate = ((_h = task.getInput('skipContainerUserIdUpdate')) !== null && _h !== void 0 ? _h : 'false') === 'true';
+            const skipContainerUserIdUpdate = ((_g = task.getInput('skipContainerUserIdUpdate')) !== null && _g !== void 0 ? _g : 'false') === 'true';
             if (platform) {
                 const skopeoInstalled = yield skopeo_1.isSkopeoInstalled();
                 if (!skopeoInstalled) {
@@ -84,7 +83,7 @@ function runMain() {
                 ? `${imageName}:${imageTag !== null && imageTag !== void 0 ? imageTag : 'latest'}`
                 : undefined;
             if (fullImageName) {
-                if (!noCache && !cacheFrom.includes(fullImageName)) {
+                if (!cacheFrom.includes(fullImageName)) {
                     // If the cacheFrom options don't include the fullImageName, add it here
                     // This ensures that when building a PR where the image specified in the action
                     // isn't included in devcontainer.json (or docker-compose.yml), the action still
@@ -101,7 +100,6 @@ function runMain() {
                 platform,
                 additionalCacheFroms: cacheFrom,
                 output: buildxOutput,
-                noCache,
             };
             console.log('\n\n');
             console.log('***');
