@@ -51,6 +51,10 @@ describe('load', () => {
 	"runArgs" : [
 		"test1",
 		"test2"
+	],
+	"mounts" : [
+		"/mnt/test/1",
+		"/mnt/test/2"
 	]
 }`;
 	const devcontainerConfig = loadFromString(json);
@@ -75,5 +79,8 @@ describe('load', () => {
 	});
 	test('runArgs to be correct', () => {
 		expect(devcontainerConfig.runArgs).toStrictEqual(['test1', 'test2']);
+	});
+	test('mounts to be correct', () => {
+		expect(devcontainerConfig.mounts).toStrictEqual(['/mnt/test/1', '/mnt/test/2']);
 	});
 });
