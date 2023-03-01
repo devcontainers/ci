@@ -10,6 +10,16 @@ ENV DEBIAN_FRONTEND=noninteractive
 # Set env for tracking that we're running in a devcontainer
 ENV DEVCONTAINER=true
 
+USER root
+
+# Configure apt, install packages and general tools
+RUN sudo apt-get update \
+    && sudo apt-get -y install --no-install-recommends apt-utils dialog nano bash-completion sudo bsdmainutils \
+    #
+    # Verify git, process tools, lsb-release (common in install instructions for CLIs) installed
+    && sudo apt-get -y install git iproute2 procps lsb-release figlet build-essential
+
+
 # This Dockerfile adds a non-root user with sudo access. Use the "remoteUser"
 # property in devcontainer.json to use it. On Linux, the container user's GID/UIDs
 # will be updated to match your local UID/GID (when using the dockerFile property).
@@ -23,12 +33,6 @@ RUN \
     mkdir -p ~/.local/bin \
     && echo "export PATH=\$PATH:~/.local/bin" >> ~/.bashrc
 
-# Configure apt, install packages and general tools
-RUN sudo apt-get update \
-    && sudo apt-get -y install --no-install-recommends apt-utils dialog nano bash-completion sudo bsdmainutils \
-    #
-    # Verify git, process tools, lsb-release (common in install instructions for CLIs) installed
-    && sudo apt-get -y install git iproute2 procps lsb-release figlet build-essential
 
 # Save command line history
 RUN echo "export HISTFILE=/home/$USERNAME/commandhistory/.bash_history" >> "/home/$USERNAME/.bashrc" \

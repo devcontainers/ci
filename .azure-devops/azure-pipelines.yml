@@ -172,39 +172,51 @@ jobs:
       inputs:
         subFolder: github-tests/Dockerfile/build-only
 
-  # Temporarily commented out: https://github.com/devcontainers/ci/issues/198
-  # - job: test_platform_with_runcmd
-  #   displayName: Test with platform and runCmd
-  #   steps:
-  #   - script: |
-  #       docker login -u $ACR_USERNAME -p $ACR_TOKEN $(ACR_NAME).azurecr.io
-  #     displayName: 'Log in to Azure Container Registry'
-  #     env:
-  #       ACR_NAME: $(ACR_NAME)
-  #       ACR_TOKEN: $(ACR_TOKEN)
-  #       ACR_USERNAME: $(ACR_USERNAME)
+  - job: test_platform_with_runcmd
+    displayName: Test with platform and runCmd
+    steps:
+    - script: |
+        docker login -u $ACR_USERNAME -p $ACR_TOKEN $(ACR_NAME).azurecr.io
+      displayName: 'Log in to Azure Container Registry'
+      env:
+        ACR_NAME: $(ACR_NAME)
+        ACR_TOKEN: $(ACR_TOKEN)
+        ACR_USERNAME: $(ACR_USERNAME)
 
-  #   - script: |
-  #       printenv | sort
-  #     env:
-  #       IMAGE_TAG: $(IMAGE_TAG)
+    - script: |
+        printenv | sort
+      env:
+        IMAGE_TAG: $(IMAGE_TAG)
 
-  #   - script: docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
-  #     displayName: Set up QEMU
+    - script: |
+        sudo apt purge buildah golang-github-containers-common podman skopeo
+        sudo apt autoremove --purge
+        REPO_URL="https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/unstable"
+        source /etc/os-release
+        sudo sh -c "echo 'deb ${REPO_URL}/x${NAME}_${VERSION_ID}/ /' > /etc/apt/sources.list.d/devel:kubic:libcontainers:unstable.list"
+        sudo wget -qnv https://download.opensuse.org/repositories/devel:kubic:libcontainers:stable/x${NAME}_${VERSION_ID}/Release.key -O Release.key
+        sudo apt-key add Release.key
+        sudo apt-get update
+        sudo apt-get install skopeo
+      displayName: Update skopeo
 
-  #   - script: docker buildx create --use
-  #     displayName: Set up docker buildx
 
-  #   - task: DevcontainersCi@0
-  #     inputs:
-  #       imageName: '$(ACR_NAME).azurecr.io/devcontainers-ci/azdo-devcontainer-build-run/test/platform-with-runcmd'
-  #       subFolder: github-tests/Dockerfile/platform-with-runcmd
-  #       platform: linux/amd64,linux/arm64
-  #       runCmd: echo $HOSTNAME && [[ $HOSTNAME == "my-host" ]]
+    - script: docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
+      displayName: Set up QEMU
 
-  #   - script: |
-  #       echo "'runCmdOutput' value: $runCmdOutput"
-  #       if [["$runCmdOutput" = *my-host*]]; then
-  #         echo "'runCmdOutput' output of test_simple job doesn't contain expected value 'my-host'"
-  #         exit 1
-  #       fi
+    - script: docker buildx create --use
+      displayName: Set up docker buildx
+
+    - task: DevcontainersCi@0
+      inputs:
+        imageName: '$(ACR_NAME).azurecr.io/devcontainers-ci/azdo-devcontainer-build-run/test/platform-with-runcmd'
+        subFolder: github-tests/Dockerfile/platform-with-runcmd
+        platform: linux/amd64,linux/arm64
+        runCmd: echo $HOSTNAME && [[ $HOSTNAME == "my-host" ]]
+
+    - script: |
+        echo "'runCmdOutput' value: $runCmdOutput"
+        if [["$runCmdOutput" = *my-host*]]; then
+          echo "'runCmdOutput' output of test_simple job doesn't contain expected value 'my-host'"
+          exit 1
+        fi
