@@ -205,7 +205,6 @@ jobs:
       - test-platform-with-runcmd
       - test-env-vars-on-post-create
       - test-multiple-tags-job2
-      - test-github-output-job1
       - test-github-output-job2
     runs-on: ubuntu-latest
     steps:
