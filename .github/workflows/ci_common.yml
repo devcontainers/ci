@@ -1082,7 +1082,7 @@ jobs:
 
   test-github-output-job1:
     runs-on: ubuntu-latest
-    # Map a step output to a job output
+    needs: build
     outputs:
       output1: ${{ steps.github-output.outputs.test }}
       output2: ${{ steps.github-output.outputs.test2 }}
@@ -1097,9 +1097,12 @@ jobs:
 
   test-github-output-job2:
     runs-on: ubuntu-latest
-    needs: test-github-output-job1
+    needs: [build, test-github-output-job1]
     steps:
       - env:
           OUTPUT1: ${{needs.test-github-output-job1.outputs.output1}}
           OUTPUT2: ${{needs.test-github-output-job1.outputs.output2}}
-        run: echo "$OUTPUT1 $OUTPUT2"
+        run: |
+          set -e
+          echo "$OUTPUT1" | grep -q "hello"
+          echo "$OUTPUT2" | grep -q "world"
