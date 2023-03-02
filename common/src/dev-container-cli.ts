@@ -140,6 +140,7 @@ export interface DevContainerCliBuildArgs {
   additionalCacheFroms?: string[];
   userDataFolder?: string;
   output?: string,
+  noCache?: boolean,
 }
 async function devContainerBuild(
   args: DevContainerCliBuildArgs,
@@ -164,7 +165,9 @@ async function devContainerBuild(
   if (args.userDataFolder) {
     commandArgs.push("--user-data-folder", args.userDataFolder);
   }
-  if (args.additionalCacheFroms) {
+  if (args.noCache) {
+    commandArgs.push("--no-cache");
+  } else if (args.additionalCacheFroms) {
     args.additionalCacheFroms.forEach(cacheFrom =>
       commandArgs.push('--cache-from', cacheFrom),
     );
