@@ -62,32 +62,7 @@ jobs:
       image_push_option: ${{ steps.set_image_push_option.outputs.image_push_option }}
       build_number: ${{ steps.build_number.outputs.build_number }}
     steps:
-      - name: Checkout name: Test multiple mounts job 1
-    runs-on: ubuntu-latest
-    needs: [build, test-multiple-tags-job1]
-    steps:
-      - name: Validate multiple tags single platform
-        run: |
-          set -e
-          echo "Querying GitHub API for versions of package devcontainers-ci/tests/multiple-tags-single-platform..."
-          versions=$(curl -s -H "Accept: application/vnd.github+json" -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" -H "X-GitHub-Api-Version: 2022-11-28" https://api.github.com/users/devcontainers/packages/container/ci%2Ftests%2Fmultiple-tags-single-platform/versions)
-          echo "Checking tag1-${{ github.run_id }} exists... "
-          echo "$versions" | grep -q "tag1-${{ github.run_id }}"
-          echo "Tag exists."
-          echo "Checking tag2-${{ github.run_id }} exists... "
-          echo "$versions" | grep -q "tag1-${{ github.run_id }}"
-          echo "Tag exists."
-      - name: Validate multiple tags multiple platforms
-        run: |
-          set -e
-          echo "Querying GitHub API for versions of package devcontainers-ci/tests/multiple-tags-multiple-platforms..."
-          versions=$(curl -s -H "Accept: application/vnd.github+json" -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" -H "X-GitHub-Api-Version: 2022-11-28" https://api.github.com/users/devcontainers/packages/container/ci%2Ftests%2Fmultiple-tags-multiple-platforms/versions)
-          echo "Checking tag1-${{ github.run_id }} exists... "
-          echo "$versions" | grep -q "tag1-${{ github.run_id }}"
-          echo "Tag exists."
-          echo "Checking tag2-${{ github.run_id }} exists... "
-          echo "$versions" | grep -q "tag1-${{ github.run_id }}"
-          echo "Tag exists."
+      - name: Checkout
         uses: actions/checkout@v3
         with:
           # if the following value is missing (i.e. not triggered via comment workflow)
@@ -468,7 +443,43 @@ jobs:
           runCmd: echo $HOSTNAME && [[ $HOSTNAME == "my-host" ]]
       - name: Validate runCmdOutput output
         run: |
-          echo "'runCmdOutput' value: $runCmdOutput"with:
+          echo "'runCmdOutput' value: $runCmdOutput"
+          if [["$runCmdOutput" = *my-host*]]; then
+            echo "'runCmdOutput' output of simpletest step doesn't contain expected value 'my-host'"
+            exit 1
+          fi
+        env:
+          runCmdOutput: ${{ steps.simpletest.outputs.runCmdOutput }}
+
+  test-gh-run-args:
+    name: Run GitHub run-args test
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          persist-credentials: false
+          # if the following value is missing (i.e. not triggered via comment workflow)
+          # then the default checkout will apply
+          ref: ${{ inputs.prRef }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Login to GitHub Container Registry
+        if: ${{ needs.build.outputs.image_push_option == 'filter' }}
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Published action contains compiled JS, but we need to compile it here
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 16
+      - name: Compile GH action
         run: |
           (cd common && npm install && npm run build)
           (cd github-action/ && npm install && npm run build && npm run package)
