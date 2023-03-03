@@ -13,8 +13,13 @@ import {isDockerBuildXInstalled, pushImage} from './docker';
 import {isSkopeoInstalled, copyImage} from './skopeo';
 import {populateDefaults} from '../../common/src/envvars';
 
+// List the env vars that point to paths to mount in the dev container
+// See https://docs.github.com/en/actions/learn-github-actions/variables
 const githubEnvs = {
 	GITHUB_OUTPUT: '/mnt/github/output',
+	GITHUB_ENV: '/mnt/github/env',
+	GITHUB_PATH: '/mnt/github/path',
+	GITHUB_STEP_SUMMARY: '/mnt/github/step-summary',
 };
 
 export async function runMain(): Promise<void> {

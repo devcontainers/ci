@@ -1130,9 +1130,18 @@ jobs:
           runCmd: |
             echo "test=hello" >> "$GITHUB_OUTPUT"
             echo "test2=world" >> "$GITHUB_OUTPUT"
+            echo "TEST_ENV=env_value" >> "$GITHUB_ENV"
+            echo "/mnt/test/path" >> "$GITHUB_PATH"
 
       - name: Validate output
         run: |
           set -e
+          echo "Test outputs..."
           test "${{ steps.github-output.outputs.test }}" == "hello"
           test "${{ steps.github-output.outputs.test2 }}" == "world"
+          
+          echo "Test Env"
+          test "${TEST_ENV}" == "env_value"
+
+          echo "Test Path"
+          echo "${PATH}" | grep -q "/mnt/test/path"
