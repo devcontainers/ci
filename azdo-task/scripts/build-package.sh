@@ -49,16 +49,14 @@ fi
 VERSION_MAJOR=$(cat DevcontainersCi/task.json   |jq .version.Major)
 VERSION_MINOR=$(cat DevcontainersCi/task.json   |jq .version.Minor)
 VERSION_PATCH=$(cat DevcontainersCi/task.json   |jq .version.Patch)
-GITHUB_OUTPUT=/mnt/github/output
-
 
 echo "VERSION_MAJOR=${VERSION_MAJOR}"
 echo "VERSION_MINOR=${VERSION_MINOR}"
 echo "VERSION_PATCH=${VERSION_PATCH}"
 
-echo "version=$VERSION_MAJOR.$VERSION_MINOR.$VERSION_PATCH" >> "$GITHUB_OUTPUT"
-echo "version_short=$VERSION_MAJOR.$VERSION_MINOR" >> "$GITHUB_OUTPUT"
-echo "version_major=$VERSION_MAJOR" >> "$GITHUB_OUTPUT"
+echo "version=$VERSION_MAJOR.$VERSION_MINOR.$VERSION_PATCH >> $GITHUB_OUTPUT"
+echo "version_short=$VERSION_MAJOR.$VERSION_MINOR >> $GITHUB_OUTPUT"
+echo "version_major=$VERSION_MAJOR >> $GITHUB_OUTPUT"
 
 if [[ -n $set_patch_version ]]; then
     echo "--set-patch-version specified. Setting extension version to $VERSION_MAJOR.$VERSION_MINOR.$VERSION_PATCH"
