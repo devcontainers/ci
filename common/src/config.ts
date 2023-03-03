@@ -17,7 +17,7 @@ export interface DevContainerConfig {
 		cacheFrom?: string | string[];
 	};
 	runArgs?: string[];
-	mounts?: string | string[];
+	mounts?: string[];
 }
 
 export async function loadFromFile(
