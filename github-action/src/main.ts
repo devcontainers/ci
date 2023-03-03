@@ -13,6 +13,10 @@ import {isDockerBuildXInstalled, pushImage} from './docker';
 import {isSkopeoInstalled, copyImage} from './skopeo';
 import {populateDefaults} from '../../common/src/envvars';
 
+const githubEnvs = {
+	GITHUB_OUTPUT: '/mnt/github/output',
+};
+
 export async function runMain(): Promise<void> {
 	try {
 		core.info('Starting...');
@@ -118,6 +122,15 @@ export async function runMain(): Promise<void> {
 		});
 		if (buildResult.outcome !== 'success') {
 			return;
+		}
+
+		for (const [key, value] of Object.entries(githubEnvs)) {
+			if (process.env[key]) {
+				// Add additional bind mount
+				mounts.push(`type=bind,source=${process.env[key]},target=${value}`);
+				// Set env var to mounted path in container
+				inputEnvsWithDefaults.push(`${key}=${value}`);
+			}
 		}
 
 		if (runCommand) {
