@@ -205,7 +205,7 @@ jobs:
       - test-platform-with-runcmd
       - test-env-vars-on-post-create
       - test-multiple-tags-job2
-      - test-github-output-job2
+      - test-github-output
     runs-on: ubuntu-latest
     steps:
       - name: Simple step
@@ -1079,29 +1079,60 @@ jobs:
           echo "$versions" | grep -q "tag1-${{ github.run_id }}"
           echo "Tag exists."
 
-  test-github-output-job1:
+  test-github-output:
     runs-on: ubuntu-latest
     needs: build
-    outputs:
-      output1: ${{ steps.github-output.outputs.test }}
-      output2: ${{ steps.github-output.outputs.test2 }}
     steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          persist-credentials: false
+          # if the following value is missing (i.e. not triggered via comment workflow)
+          # then the default checkout will apply
+          ref: ${{ inputs.prRef }}
+
+      - name: Set up QEMU for multi-architecture builds
+        uses: docker/setup-qemu-action@v1
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v2
+        if: ${{ needs.build.outputs.image_push_option == 'filter' }}
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+
+      # Published action contains compiled JS, but we need to compile it here
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 16
+      - name: Compile GH action
+        run: |
+          (cd common && npm install && npm run build)
+          (cd github-action/ && npm install && npm run build && npm run package)
+
+
       - id: github-output
+        name: Build and run test with GITHUB_OUTPUT
         uses: ./
         with:
+          subFolder: github-tests/Dockerfile/outputs
+          imageName: ghcr.io/devcontainers/ci/tests/outputs
+          imageTag: ${{ needs.build.outputs.image_tag }}
+          push: ${{ needs.build.outputs.image_push_option }}
+          eventFilterForPush: |
+            push
+            pull_request
           runCmd: |
-            - echo 
-            - "test=hello" >> "$GITHUB_OUTPUT"
-            - "test2=world" >> "$GITHUB_OUTPUT"
+            echo "test=hello" >> "$GITHUB_OUTPUT"
+            echo "test2=world" >> "$GITHUB_OUTPUT"
 
-  test-github-output-job2:
-    runs-on: ubuntu-latest
-    needs: [build, test-github-output-job1]
-    steps:
-      - env:
-          OUTPUT1: ${{needs.test-github-output-job1.outputs.output1}}
-          OUTPUT2: ${{needs.test-github-output-job1.outputs.output2}}
+      - name: Validate output
         run: |
           set -e
-          echo "$OUTPUT1" | grep -q "hello"
-          echo "$OUTPUT2" | grep -q "world"
+          test "${{ steps.github-output.outputs.test }}" == "hello"
+          test "${{ steps.github-output.outputs.test2 }}" == "world"
