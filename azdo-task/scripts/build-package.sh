@@ -49,6 +49,8 @@ fi
 VERSION_MAJOR=$(cat DevcontainersCi/task.json   |jq .version.Major)
 VERSION_MINOR=$(cat DevcontainersCi/task.json   |jq .version.Minor)
 VERSION_PATCH=$(cat DevcontainersCi/task.json   |jq .version.Patch)
+GITHUB_OUTPUT=/mnt/github/output
+
 
 echo "VERSION_MAJOR=${VERSION_MAJOR}"
 echo "VERSION_MINOR=${VERSION_MINOR}"
