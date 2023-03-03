@@ -48,7 +48,7 @@ export async function runMain(): Promise<void> {
 			'skipContainerUserIdUpdate',
 		);
 		const userDataFolder: string = core.getInput('userDataFolder');
-		const mounts: string[] = core.getMultilineInput('mounts');
+		const mounts: string[] = core.getMultilineInput('mounts').split(',');
 
 		if (platform) {
 			const skopeoInstalled = await isSkopeoInstalled();
