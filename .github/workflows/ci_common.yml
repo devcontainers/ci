@@ -259,7 +259,7 @@ jobs:
           echo "VERSION_MAJOR=${VERSION_MAJOR}"
 
       - name: Download release VSIX
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: azdo-task
           path: output
@@ -357,12 +357,12 @@ jobs:
           echo "VERSION_SHORT: $VERSION_SHORT"
 
       - name: Download workflow artifacts
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           path: output
 
       - name: Download release VSIX
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: azdo-task-dev
           path: output
@@ -980,7 +980,7 @@ jobs:
     if: ${{ needs.build.outputs.image_push_option == 'filter' }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           persist-credentials: false
           # if the following value is missing (i.e. not triggered via comment workflow)
@@ -1013,7 +1013,7 @@ jobs:
           push: always
 
       - name: Set up QEMU for multi-architecture builds
-        uses: docker/setup-qemu-action@v1
+        uses: docker/setup-qemu-action@v2
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2

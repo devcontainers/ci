@@ -25,7 +25,7 @@ jobs:
       - name: Checkout (GitHub)
         uses: actions/checkout@v3
       - name: Set up QEMU for multi-architecture builds
-        uses: docker/setup-qemu-action@v1
+        uses: docker/setup-qemu-action@v2
       - name: Setup Docker buildx for multi-architecture builds
         uses: docker/setup-buildx-action@v2
         with:
