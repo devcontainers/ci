@@ -913,7 +913,7 @@ jobs:
           ref: ${{ inputs.prRef }}
 
       - name: Set up QEMU for multi-architecture builds
-        uses: docker/setup-qemu-action@v1
+        uses: docker/setup-qemu-action@v2
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
@@ -1090,9 +1090,6 @@ jobs:
           # if the following value is missing (i.e. not triggered via comment workflow)
           # then the default checkout will apply
           ref: ${{ inputs.prRef }}
-
-      - name: Set up QEMU for multi-architecture builds
-        uses: docker/setup-qemu-action@v1
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
