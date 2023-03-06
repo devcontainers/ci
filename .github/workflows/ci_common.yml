@@ -2,8 +2,8 @@
 # This workflow contains the core logic to build, test and release the GitHub Action and Azure DevOps Task
 # It is called via workflow_call from the pr-bot
 #
-name: 'build-test'
-on: 
+name: "build-test"
+on:
   workflow_call:
     inputs:
       prNumber:
@@ -51,7 +51,6 @@ on:
         required: true
 
 jobs:
-
   build: # run build using the github action!
     runs-on: ubuntu-latest
     name: build, test, package
@@ -84,10 +83,10 @@ jobs:
             const pushOption = ${{ inputs.runFullTests }} ? 'filter' : 'never';
             console.log(`Setting image_push_option=${pushOption}`);
             core.setOutput("image_push_option", pushOption);
-        
+
       - name: Login to GitHub Container Registry
         if: ${{ steps.set_image_push_option.outputs.image_push_option == 'filter' }}
-        uses: docker/login-action@v2 
+        uses: docker/login-action@v2
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
@@ -149,7 +148,7 @@ jobs:
           BRANCH: ${{ github.ref }}
         with:
           imageName: ghcr.io/devcontainers/ci-devcontainer
-          imageTag: ${{ steps.set_image_tag.outputs.image_tag }} 
+          imageTag: ${{ steps.set_image_tag.outputs.image_tag }}
           runCmd: |
             echo "Starting"
             ./scripts/build-test-package.sh
@@ -178,14 +177,14 @@ jobs:
         with:
           name: azdo-task-dev
           path: ./output/devcontainers-dev.ci-${{ steps.build.outputs.version }}.vsix
-          if-no-files-found: error 
+          if-no-files-found: error
 
       - uses: actions/upload-artifact@v3
         name: Create release AzDO VSIX artifact
         with:
           name: azdo-task
           path: ./output/devcontainers.ci-${{ steps.build.outputs.version }}.vsix
-          if-no-files-found: error 
+          if-no-files-found: error
 
   checks-succeeded:
     # simple no-op job to use as step for check status
@@ -206,12 +205,12 @@ jobs:
       - test-platform-with-runcmd
       - test-env-vars-on-post-create
       - test-multiple-tags-job2
+      - test-github-output
     runs-on: ubuntu-latest
     steps:
       - name: Simple step
         run: |
           echo Done!
-
 
   pr-checks:
     name: Mark PR checks as complete
@@ -237,7 +236,7 @@ jobs:
   release:
     name: Create release
     runs-on: ubuntu-latest
-    needs: 
+    needs:
       - build
       - checks-succeeded
     if: ${{ inputs.release == true }}
@@ -260,7 +259,7 @@ jobs:
           echo "VERSION_MAJOR=${VERSION_MAJOR}"
 
       - name: Download release VSIX
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: azdo-task
           path: output
@@ -271,7 +270,7 @@ jobs:
           echo "VERSION_SHORT: $VERSION_SHORT"
 
       - name: Login to GitHub Container Registry
-        uses: docker/login-action@v2 
+        uses: docker/login-action@v2
         if: github.ref == 'refs/heads/main' # only need this for push (on `main`)
         with:
           registry: ghcr.io
@@ -323,9 +322,8 @@ jobs:
         run: |
           git config user.name "CI build"
           git config user.email automated-build@example.com
-          
-          ./scripts/gh-release.sh
 
+          ./scripts/gh-release.sh
 
   #
   # Jobs to test
@@ -359,18 +357,18 @@ jobs:
           echo "VERSION_SHORT: $VERSION_SHORT"
 
       - name: Download workflow artifacts
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           path: output
 
       - name: Download release VSIX
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: azdo-task-dev
           path: output
 
       - name: Login to GitHub Container Registry
-        uses: docker/login-action@v2 
+        uses: docker/login-action@v2
         if: github.ref == 'refs/heads/main' # only need this for push (on `main`)
         with:
           registry: ghcr.io
@@ -415,7 +413,6 @@ jobs:
             AZDO_ORG
             AZDO_PROJECT
             AZDO_BUILD
-
 
   test-simple:
     name: Run simple test
@@ -473,7 +470,7 @@ jobs:
 
       - name: Login to GitHub Container Registry
         if: ${{ needs.build.outputs.image_push_option == 'filter' }}
-        uses: docker/login-action@v2 
+        uses: docker/login-action@v2
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
@@ -518,7 +515,7 @@ jobs:
 
       - name: Login to GitHub Container Registry
         if: ${{ needs.build.outputs.image_push_option == 'filter' }}
-        uses: docker/login-action@v2 
+        uses: docker/login-action@v2
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
@@ -540,7 +537,8 @@ jobs:
         with:
           subFolder: github-tests/Dockerfile/env-vars-on-post-create
           imageName: ghcr.io/devcontainers/ci/tests/env-vars-on-post-create
-          env: | # TEST_ENV_VALUE2 is an additional env var to pass to the container
+          env:
+            | # TEST_ENV_VALUE2 is an additional env var to pass to the container
             TEST_ENV_VALUE2=AdditionalEnvVar
           runCmd: |
             cat marker.txt
@@ -794,7 +792,7 @@ jobs:
         uses: docker/setup-buildx-action@v2
 
       - name: Login to GitHub Container Registry
-        uses: docker/login-action@v2 
+        uses: docker/login-action@v2
         if: ${{ needs.build.outputs.image_push_option == 'filter' }}
         with:
           registry: ghcr.io
@@ -828,7 +826,6 @@ jobs:
           eventFilterForPush: |
             push
             pull_request
-
 
   test-compose-features:
     name: Run GitHub docker-compose with features test
@@ -916,7 +913,7 @@ jobs:
           ref: ${{ inputs.prRef }}
 
       - name: Set up QEMU for multi-architecture builds
-        uses: docker/setup-qemu-action@v1
+        uses: docker/setup-qemu-action@v2
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
@@ -936,7 +933,7 @@ jobs:
           sudo apt-get install skopeo
 
       - name: Login to GitHub Container Registry
-        uses: docker/login-action@v2 
+        uses: docker/login-action@v2
         if: ${{ needs.build.outputs.image_push_option == 'filter' }}
         with:
           registry: ghcr.io
@@ -983,7 +980,7 @@ jobs:
     if: ${{ needs.build.outputs.image_push_option == 'filter' }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           persist-credentials: false
           # if the following value is missing (i.e. not triggered via comment workflow)
@@ -991,7 +988,7 @@ jobs:
           ref: ${{ inputs.prRef }}
 
       - name: Login to GitHub Container Registry
-        uses: docker/login-action@v1 
+        uses: docker/login-action@v2
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
@@ -1016,10 +1013,10 @@ jobs:
           push: always
 
       - name: Set up QEMU for multi-architecture builds
-        uses: docker/setup-qemu-action@v1
+        uses: docker/setup-qemu-action@v2
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v1
+        uses: docker/setup-buildx-action@v2
 
       - name: Install updated Skopeo
         # This can be omitted once runner images have a version of Skopeo > 1.4.1
@@ -1081,3 +1078,67 @@ jobs:
           echo "Checking tag2-${{ github.run_id }} exists... "
           echo "$versions" | grep -q "tag1-${{ github.run_id }}"
           echo "Tag exists."
+
+  test-github-output:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          persist-credentials: false
+          # if the following value is missing (i.e. not triggered via comment workflow)
+          # then the default checkout will apply
+          ref: ${{ inputs.prRef }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v2
+        if: ${{ needs.build.outputs.image_push_option == 'filter' }}
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+
+      # Published action contains compiled JS, but we need to compile it here
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 16
+      - name: Compile GH action
+        run: |
+          (cd common && npm install && npm run build)
+          (cd github-action/ && npm install && npm run build && npm run package)
+
+
+      - id: github-output
+        name: Build and run test with GITHUB_OUTPUT
+        uses: ./
+        with:
+          subFolder: github-tests/Dockerfile/outputs
+          imageName: ghcr.io/devcontainers/ci/tests/outputs
+          imageTag: ${{ needs.build.outputs.image_tag }}
+          push: ${{ needs.build.outputs.image_push_option }}
+          eventFilterForPush: |
+            push
+            pull_request
+          runCmd: |
+            echo "test=hello" >> "$GITHUB_OUTPUT"
+            echo "test2=world" >> "$GITHUB_OUTPUT"
+            echo "TEST_ENV=env_value" >> "$GITHUB_ENV"
+            echo "/mnt/test/path" >> "$GITHUB_PATH"
+
+      - name: Validate output
+        run: |
+          set -e
+          echo "Test outputs..."
+          test "${{ steps.github-output.outputs.test }}" == "hello"
+          test "${{ steps.github-output.outputs.test2 }}" == "world"
+          
+          echo "Test Env"
+          test "${TEST_ENV}" == "env_value"
+
+          echo "Test Path"
+          echo "${PATH}" | grep -q "/mnt/test/path"

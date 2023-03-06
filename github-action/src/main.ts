@@ -13,6 +13,15 @@ import {isDockerBuildXInstalled, pushImage} from './docker';
 import {isSkopeoInstalled, copyImage} from './skopeo';
 import {populateDefaults} from '../../common/src/envvars';
 
+// List the env vars that point to paths to mount in the dev container
+// See https://docs.github.com/en/actions/learn-github-actions/variables
+const githubEnvs = {
+	GITHUB_OUTPUT: '/mnt/github/output',
+	GITHUB_ENV: '/mnt/github/env',
+	GITHUB_PATH: '/mnt/github/path',
+	GITHUB_STEP_SUMMARY: '/mnt/github/step-summary',
+};
+
 export async function runMain(): Promise<void> {
 	try {
 		core.info('Starting...');
@@ -48,6 +57,7 @@ export async function runMain(): Promise<void> {
 			'skipContainerUserIdUpdate',
 		);
 		const userDataFolder: string = core.getInput('userDataFolder');
+		const mounts: string[] = core.getMultilineInput('mounts');
 
 		if (platform) {
 			const skopeoInstalled = await isSkopeoInstalled();
@@ -119,6 +129,15 @@ export async function runMain(): Promise<void> {
 			return;
 		}
 
+		for (const [key, value] of Object.entries(githubEnvs)) {
+			if (process.env[key]) {
+				// Add additional bind mount
+				mounts.push(`type=bind,source=${process.env[key]},target=${value}`);
+				// Set env var to mounted path in container
+				inputEnvsWithDefaults.push(`${key}=${value}`);
+			}
+		}
+
 		if (runCommand) {
 			const upResult = await core.group('🏃 start container', async () => {
 				const args: DevContainerCliUpArgs = {
@@ -127,6 +146,7 @@ export async function runMain(): Promise<void> {
 					skipContainerUserIdUpdate,
 					env: inputEnvsWithDefaults,
 					userDataFolder,
+					additionalMounts: mounts,
 				};
 				const result = await devcontainer.up(args, log);
 				if (result.outcome !== 'success') {
