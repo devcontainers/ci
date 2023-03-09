@@ -55,8 +55,7 @@ RUN sudo groupadd docker && sudo usermod -aG docker $USERNAME && newgrp docker
 COPY scripts/act.sh /tmp/
 RUN /bin/bash /tmp/act.sh 0.2.21
 
-# Pin to 0.12.0: https://github.com/microsoft/tfs-cli/issues/427
-RUN sudo npm install -g tfx-cli@0.12.0 
+RUN sudo npm install -g tfx-cli
 
 # azure-cli-no-mount
 COPY scripts/azure-cli.sh /tmp/
