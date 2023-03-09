@@ -152,13 +152,14 @@ export async function runMain(): Promise<void> {
 				}
 			};
 			const execResult = await devcontainer.exec(execArgs, execLog);
-			if (execResult.outcome !== 'success') {
+			if (execResult !== 0) {
 				console.log(
-					`### ERROR: Dev container exec: ${execResult.message} (exit code: ${execResult.code})\n${execResult.description}`,
+					`### ERROR: Dev container exec failed (exit code: ${execResult})`,
 				);
-				task.setResult(TaskResult.Failed, execResult.message);
-			}
-			if (execResult.outcome !== 'success') {
+				task.setResult(
+					TaskResult.Failed,
+					`Dev container exec failed (exit code: ${execResult})`,
+				);
 				return;
 			}
 			if (execLogString.length >= 25000) {
