@@ -177,12 +177,11 @@ export async function runMain(): Promise<void> {
 							execLogString += message;
 						}
 					};
-					const result = await devcontainer.exec(args, execLog);
-					if (result.outcome !== 'success') {
-						core.error(
-							`Dev container exec: ${result.message} (exit code: ${result.code})\n${result.description}`,
-						);
-						core.setFailed(result.message);
+					const exitCode = await devcontainer.exec(args, execLog);
+					if (exitCode !== 0) {
+						const errorMessage = `Dev container exec failed: (exit code: ${exitCode})`;
+						core.error(errorMessage);
+						core.setFailed(errorMessage);
 					}
 					core.setOutput('runCmdOutput', execLogString);
 					if (Buffer.byteLength(execLogString, 'utf-8') > 1000000) {
@@ -190,10 +189,10 @@ export async function runMain(): Promise<void> {
 						execLogString += 'TRUNCATED TO 1 MB MAX OUTPUT SIZE';
 					}
 					core.setOutput('runCmdOutput', execLogString);
-					return result;
+					return exitCode;
 				},
 			);
-			if (execResult.outcome !== 'success') {
+			if (execResult !== 0) {
 				return;
 			}
 		} else {

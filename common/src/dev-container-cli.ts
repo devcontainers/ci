@@ -109,11 +109,12 @@ function parseCliOutput<T>(value: string): T | DevContainerCliError {
   }
 }
 
-async function runSpecCli<T>(options: {
+async function runSpecCliJsonCommand<T>(options: {
   args: string[];
   log: (data: string) => void;
   env?: NodeJS.ProcessEnv;
 }) {
+  // For JSON commands, pass stderr on to logging but capture stdout and parse the JSON response
   let stdout = '';
   const spawnOptions: SpawnOptions = {
     log: data => (stdout += data),
@@ -125,6 +126,22 @@ async function runSpecCli<T>(options: {
   await spawn(command, options.args, spawnOptions);
 
   return parseCliOutput<T>(stdout);
+}
+async function runSpecCliNonJsonCommand(options: {
+  args: string[];
+  log: (data: string) => void;
+  env?: NodeJS.ProcessEnv;
+}) {
+  // For non-JSON commands, pass both stdout and stderr on to logging
+  const spawnOptions: SpawnOptions = {
+    log: data => options.log(data),
+    err: data => options.log(data),
+    env: options.env ? {...process.env, ...options.env} : process.env,
+  };
+  const command = getSpecCliInfo().command;
+  console.log(`About to run ${command} ${options.args.join(' ')}`); // TODO - take an output arg to allow GH to use core.info
+  const result = await spawn(command, options.args, spawnOptions);
+  return result.code
 }
 
 export interface DevContainerCliSuccessResult {
@@ -172,7 +189,7 @@ async function devContainerBuild(
       commandArgs.push('--cache-from', cacheFrom),
     );
   }
-  return await runSpecCli<DevContainerCliBuildResult>({
+  return await runSpecCliJsonCommand<DevContainerCliBuildResult>({
     args: commandArgs,
     log,
     env: {DOCKER_BUILDKIT: '1', COMPOSE_DOCKER_CLI_BUILD: '1'},
@@ -219,15 +236,13 @@ async function devContainerUp(
       commandArgs.push('--mount', mount),
     );
   }
-  return await runSpecCli<DevContainerCliUpResult>({
+  return await runSpecCliJsonCommand<DevContainerCliUpResult>({
     args: commandArgs,
     log,
     env: {DOCKER_BUILDKIT: '1', COMPOSE_DOCKER_CLI_BUILD: '1'},
   });
 }
 
-export interface DevContainerCliExecResult
-  extends DevContainerCliSuccessResult {}
 export interface DevContainerCliExecArgs {
   workspaceFolder: string;
   command: string[];
@@ -237,14 +252,14 @@ export interface DevContainerCliExecArgs {
 async function devContainerExec(
   args: DevContainerCliExecArgs,
   log: (data: string) => void,
-): Promise<DevContainerCliExecResult | DevContainerCliError> {
+): Promise<number | null> {
   // const remoteEnvArgs = args.env ? args.env.flatMap(e=> ["--remote-env", e]): []; // TODO - test flatMap again
   const remoteEnvArgs = getRemoteEnvArray(args.env);
   const commandArgs = ["exec", "--workspace-folder", args.workspaceFolder, ...remoteEnvArgs, ...args.command];
   if (args.userDataFolder) {
     commandArgs.push("--user-data-folder", args.userDataFolder);
   }
-  return await runSpecCli<DevContainerCliExecResult>({
+  return await runSpecCliNonJsonCommand({
     args: commandArgs,
     log,
     env: {DOCKER_BUILDKIT: '1', COMPOSE_DOCKER_CLI_BUILD: '1'},
