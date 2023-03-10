@@ -224,7 +224,7 @@ jobs:
       # If prHeadSha is specified then explicity mark the checks for that SHA
       - name: Report check status
         if: ${{ inputs.prHeadSha }}
-        uses: LouisBrunner/checks-action@v1.1.1
+        uses: LouisBrunner/checks-action@v1.6.0
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           # the name must be identical to the one received by the real job
