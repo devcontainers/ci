@@ -5,7 +5,7 @@ import {env} from 'process';
 import {promisify} from 'util';
 import {ExecFunction} from './exec';
 
-const cliVersion = "latest"; // Use 'latest' to get latest CLI version, or pin to specific version e.g. '0.14.1' if required
+const cliVersion = "0"; // Use 'latest' to get latest CLI version, or pin to specific version e.g. '0.14.1' if required
 
 export interface DevContainerCliError {
   outcome: 'error';
