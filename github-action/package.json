@@ -102,5 +102,10 @@
       "es6": true,
       "jest/globals": true
     }
-  }
+  },
+  "eslintIgnore": [
+    "dist/",
+    "lib/",
+    "node_modules/"
+  ]
 }
