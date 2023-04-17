@@ -107,5 +107,15 @@
     "dist/",
     "lib/",
     "node_modules/"
-  ]
+  ],
+  "prettier": {
+    "printWidth": 80,
+    "tabWidth": 2,
+    "useTabs": true,
+    "semi": true,
+    "singleQuote": true,
+    "trailingComma": "all",
+    "bracketSpacing": false,
+    "arrowParens": "avoid"
+  }
 }
