@@ -18,5 +18,21 @@
     "jest": "^26.6.3",
     "jest-circus": "^27.0.4",
     "ts-jest": "^26.5.6"
+  },
+  "jest": {
+    "clearMocks": true,
+    "moduleFileExtensions": [
+      "js",
+      "ts"
+    ],
+    "testEnvironment": "node",
+    "testMatch": [
+      "**/*.test.ts"
+    ],
+    "testRunner": "jest-circus/runner",
+    "transform": {
+      "^.+\\.ts$": "ts-jest"
+    },
+    "verbose": true
   }
 }
