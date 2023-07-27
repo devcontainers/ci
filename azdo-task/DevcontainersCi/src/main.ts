@@ -23,10 +23,11 @@ export async function runMain(): Promise<void> {
 			);
 			return;
 		}
-		const devContainerCliInstalled = await devcontainer.isCliInstalled(exec);
+		const specifiedDevContainerCliVersion = task.getInput('cliVersion')
+		const devContainerCliInstalled = await devcontainer.isCliInstalled(exec, specifiedDevContainerCliVersion);
 		if (!devContainerCliInstalled) {
 			console.log('Installing @devcontainers/cli...');
-			const success = await devcontainer.installCli(exec);
+			const success = await devcontainer.installCli(exec, specifiedDevContainerCliVersion);
 			if (!success) {
 				task.setResult(
 					task.TaskResult.Failed,
