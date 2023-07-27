@@ -23,7 +23,7 @@ export async function runMain(): Promise<void> {
 			);
 			return;
 		}
-		const specifiedDevContainerCliVersion = task.getInput('cliVersion')
+		const specifiedDevContainerCliVersion = task.getInput('cliVersion') ?? 'latest';
 		const devContainerCliInstalled = await devcontainer.isCliInstalled(exec, specifiedDevContainerCliVersion);
 		if (!devContainerCliInstalled) {
 			console.log('Installing @devcontainers/cli...');

@@ -33,10 +33,17 @@ export async function runMain(): Promise<void> {
 			);
 			return;
 		}
-		const devContainerCliInstalled = await devcontainer.isCliInstalled(exec);
+		const specifiedDevContainerCliVersion = core.getInput('cliVersion') ?? 'latest';
+		const devContainerCliInstalled = await devcontainer.isCliInstalled(
+			exec,
+			specifiedDevContainerCliVersion,
+		);
 		if (!devContainerCliInstalled) {
 			core.info('Installing @devcontainers/cli...');
-			const success = await devcontainer.installCli(exec);
+			const success = await devcontainer.installCli(
+				exec,
+				specifiedDevContainerCliVersion,
+			);
 			if (!success) {
 				core.setFailed('@devcontainers/cli install failed!');
 				return;
