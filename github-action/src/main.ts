@@ -33,7 +33,8 @@ export async function runMain(): Promise<void> {
 			);
 			return;
 		}
-		const specifiedDevContainerCliVersion = core.getInput('cliVersion') ?? 'latest';
+		const specifiedDevContainerCliVersion =
+			core.getInput('cliVersion') ?? 'latest';
 		const devContainerCliInstalled = await devcontainer.isCliInstalled(
 			exec,
 			specifiedDevContainerCliVersion,
