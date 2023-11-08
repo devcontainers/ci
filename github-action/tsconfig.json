@@ -5,6 +5,7 @@
     "outDir": "./lib",
     "rootDir": "./src",
     "strict": true,
+    "useUnknownInCatchVariables": false,
     "noImplicitAny": true,
     "esModuleInterop": true,
     "moduleResolution": "node"
