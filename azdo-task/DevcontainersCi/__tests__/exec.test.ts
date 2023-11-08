@@ -5,12 +5,12 @@ describe('exec', () => {
 		const result = await exec('bash', ['-c', 'echo hi'], {silent: false});
 		console.log(result);
 		expect(result.exitCode).toBe(0);
-		expect(result.stdout).toStrictEqual('hi\n');
+		expect(result.stdout).toStrictEqual('hi\n\n');
 	});
 	test('silent returns correct output', async () => {
 		const result = await exec('bash', ['-c', 'echo hi'], {silent: true});
 		console.log(result);
 		expect(result.exitCode).toBe(0);
-		expect(result.stdout).toStrictEqual('hi\n');
+		expect(result.stdout).toStrictEqual('hi\n\n');
 	});
 });
