@@ -2,7 +2,7 @@
 // https://github.com/microsoft/vscode-dev-containers/tree/v0.117.1/containers/go
 {
 	"name": "outputs",
-	"image": "mcr.microsoft.com/vscode/devcontainers/base:debian-10",
+	"image": "mcr.microsoft.com/vscode/devcontainers/base:debian-12",
 	"build": {
 		"cacheFrom": "ghcr.io/devcontainers/ci/tests/outputs:latest"
 	},
