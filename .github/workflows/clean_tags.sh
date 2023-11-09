@@ -57,9 +57,9 @@ do
 	echo "Checking image $image_name..."
 	escaped_image_name=$(echo ${image_name} | sed "s/\//%2f/g")
 	response=$(curl -s  -H "Authorization: Bearer $GITHUB_TOKEN"  -H "Accept: application/vnd.github.v3+json" "https://api.github.com/orgs/devcontainers/packages/container/$escaped_image_name/versions")
-	message=$(echo $response | jq -r .message)
-	if [[ $message == "null" ]]; then
-		version_id=$( | jq -r ".[] | select(.metadata.container.tags | index(\"${tag}\")) | .id")
+	message=$(echo "$response" | jq -r ".message?")
+	if [[ -z "$message" || "$message" == "null" ]]; then
+		version_id=$(echo "$response" | jq -r ".[] | select(.metadata.container.tags | index(\"${tag}\")) | .id")
 		if [[ -n $version_id ]]; then
 			echo "Found version '$version_id' for '$image_name:$tag' - deleting..."
 		curl -s -X DELETE -H "Authorization: Bearer $GITHUB_TOKEN"  -H "Accept: application/vnd.github.v3+json" "https://api.github.com/orgs/devcontainers/packages/container/$escaped_image_name/versions/$version_id"
