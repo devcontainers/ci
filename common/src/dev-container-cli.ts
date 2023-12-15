@@ -152,6 +152,7 @@ export interface DevContainerCliBuildResult
   extends DevContainerCliSuccessResult {}
 export interface DevContainerCliBuildArgs {
   workspaceFolder: string;
+  configFile: string | undefined;
   imageName?: string[];
   platform?: string;
   additionalCacheFroms?: string[];
@@ -168,6 +169,9 @@ async function devContainerBuild(
     '--workspace-folder',
     args.workspaceFolder,
   ];
+  if (args.configFile) {
+    commandArgs.push('--config', args.configFile);
+  }
   if (args.imageName) {
     args.imageName.forEach(iName =>
       commandArgs.push('--image-name', iName),
@@ -203,6 +207,7 @@ export interface DevContainerCliUpResult extends DevContainerCliSuccessResult {
 }
 export interface DevContainerCliUpArgs {
   workspaceFolder: string;
+  configFile: string | undefined;
   additionalCacheFroms?: string[];
   skipContainerUserIdUpdate?: boolean;
   env?: string[];
@@ -220,6 +225,9 @@ async function devContainerUp(
     args.workspaceFolder,
     ...remoteEnvArgs,
   ];
+  if (args.configFile) {
+    commandArgs.push('--config', args.configFile);
+  }
   if (args.additionalCacheFroms) {
     args.additionalCacheFroms.forEach(cacheFrom =>
       commandArgs.push('--cache-from', cacheFrom),
@@ -245,6 +253,7 @@ async function devContainerUp(
 
 export interface DevContainerCliExecArgs {
   workspaceFolder: string;
+  configFile: string | undefined;
   command: string[];
   env?: string[];
   userDataFolder?: string;
@@ -255,12 +264,15 @@ async function devContainerExec(
 ): Promise<number | null> {
   // const remoteEnvArgs = args.env ? args.env.flatMap(e=> ["--remote-env", e]): []; // TODO - test flatMap again
   const remoteEnvArgs = getRemoteEnvArray(args.env);
-  const commandArgs = ["exec", "--workspace-folder", args.workspaceFolder, ...remoteEnvArgs, ...args.command];
+  const commandArgs = ["exec", "--workspace-folder", args.workspaceFolder, ...remoteEnvArgs];
+  if (args.configFile) {
+    commandArgs.push('--config', args.configFile);
+  }
   if (args.userDataFolder) {
     commandArgs.push("--user-data-folder", args.userDataFolder);
   }
   return await runSpecCliNonJsonCommand({
-    args: commandArgs,
+    args: commandArgs.concat(args.command),
     log,
     env: {DOCKER_BUILDKIT: '1', COMPOSE_DOCKER_CLI_BUILD: '1'},
   });

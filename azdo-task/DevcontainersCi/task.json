@@ -53,6 +53,12 @@
       "required": false
     },
     {
+      "name": "configFile",
+      "type": "string",
+      "label": "Specify the path to a devcontainer.json file instead of using `./.devcontainer/devcontainer.json` or `./.devcontainer.json`",
+      "required": false
+    },
+    {
       "name": "env",
       "type": "multiLine",
       "label": "Specify environment variables to pass to the docker run command",

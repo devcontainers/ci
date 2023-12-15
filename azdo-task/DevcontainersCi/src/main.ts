@@ -41,6 +41,7 @@ export async function runMain(): Promise<void> {
 		const imageTag = task.getInput('imageTag');
 		const platform = task.getInput('platform');
 		const subFolder = task.getInput('subFolder') ?? '.';
+		const relativeConfigFile = task.getInput('configFile');
 		const runCommand = task.getInput('runCmd');
 		const envs = task.getInput('env')?.split('\n') ?? [];
 		const inputEnvsWithDefaults = populateDefaults(envs);
@@ -62,6 +63,8 @@ export async function runMain(): Promise<void> {
 
 		const log = (message: string): void => console.log(message);
 		const workspaceFolder = path.resolve(checkoutPath, subFolder);
+		const configFile =
+			relativeConfigFile && path.resolve(checkoutPath, relativeConfigFile);
 
 		const resolvedImageTag = imageTag ?? 'latest';
 		const imageTagArray = resolvedImageTag.split(',');
@@ -91,6 +94,7 @@ export async function runMain(): Promise<void> {
 		}
 		const buildArgs: DevContainerCliBuildArgs = {
 			workspaceFolder,
+			configFile,
 			imageName: fullImageNameArray,
 			platform,
 			additionalCacheFroms: cacheFrom,
@@ -120,6 +124,7 @@ export async function runMain(): Promise<void> {
 			console.log('***');
 			const upArgs: DevContainerCliUpArgs = {
 				workspaceFolder,
+				configFile,
 				additionalCacheFroms: cacheFrom,
 				skipContainerUserIdUpdate,
 				env: inputEnvsWithDefaults,
@@ -141,6 +146,7 @@ export async function runMain(): Promise<void> {
 			console.log('***');
 			const execArgs: DevContainerCliExecArgs = {
 				workspaceFolder,
+				configFile,
 				command: ['bash', '-c', runCommand],
 				env: inputEnvsWithDefaults,
 			};
