@@ -48,6 +48,9 @@ export async function runMain(): Promise<void> {
 		const imageTag = emptyStringAsUndefined(core.getInput('imageTag'));
 		const platform = emptyStringAsUndefined(core.getInput('platform'));
 		const subFolder: string = core.getInput('subFolder');
+		const relativeConfigFile = emptyStringAsUndefined(
+			core.getInput('configFile'),
+		);
 		const runCommand = core.getInput('runCmd');
 		const inputEnvs: string[] = core.getMultilineInput('env');
 		const inputEnvsWithDefaults = populateDefaults(inputEnvs);
@@ -72,6 +75,8 @@ export async function runMain(): Promise<void> {
 
 		const log = (message: string): void => core.info(message);
 		const workspaceFolder = path.resolve(checkoutPath, subFolder);
+		const configFile =
+			relativeConfigFile && path.resolve(checkoutPath, relativeConfigFile);
 
 		const resolvedImageTag = imageTag ?? 'latest';
 		const imageTagArray = resolvedImageTag.split(',');
@@ -108,6 +113,7 @@ export async function runMain(): Promise<void> {
 		const buildResult = await core.group('🏗️ build container', async () => {
 			const args: DevContainerCliBuildArgs = {
 				workspaceFolder,
+				configFile,
 				imageName: fullImageNameArray,
 				platform,
 				additionalCacheFroms: cacheFrom,
@@ -142,6 +148,7 @@ export async function runMain(): Promise<void> {
 			const upResult = await core.group('🏃 start container', async () => {
 				const args: DevContainerCliUpArgs = {
 					workspaceFolder,
+					configFile,
 					additionalCacheFroms: cacheFrom,
 					skipContainerUserIdUpdate,
 					env: inputEnvsWithDefaults,
@@ -166,6 +173,7 @@ export async function runMain(): Promise<void> {
 				async () => {
 					const args: DevContainerCliExecArgs = {
 						workspaceFolder,
+						configFile,
 						command: ['bash', '-c', runCommand],
 						env: inputEnvsWithDefaults,
 						userDataFolder,

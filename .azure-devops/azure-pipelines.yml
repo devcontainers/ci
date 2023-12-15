@@ -90,6 +90,21 @@ jobs:
           exit 1
         fi
 
+  - job: test_config_file
+    displayName: Test configFile option
+    steps:
+    - task: DevcontainersCi@0
+      inputs:
+        subFolder: github-tests/Dockerfile/config-file
+        configFile: github-tests/Dockerfile/config-file/.devcontainer/subfolder/devcontainer.json
+        runCmd: echo $HOSTNAME && [[ $HOSTNAME == "my-host" ]]
+    - script: |
+        echo "'runCmdOutput' value: $runCmdOutput"
+        if [["$runCmdOutput" = *my-host*]]; then
+          echo "'runCmdOutput' output of test_config_file job doesn't contain expected value 'my-host'"
+          exit 1
+        fi
+
   - job: test_build_args
     displayName: Test build-args
     steps:
