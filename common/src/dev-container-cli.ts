@@ -5,6 +5,8 @@ import {env} from 'process';
 import {promisify} from 'util';
 import {ExecFunction} from './exec';
 
+export const MAJOR_VERSION_FALLBACK = '0';
+
 export interface DevContainerCliError {
   outcome: 'error';
   code: number;
@@ -26,7 +28,7 @@ function getSpecCliInfo() {
 async function isCliInstalled(exec: ExecFunction, cliVersion: string): Promise<boolean> {
   try {
     const {exitCode, stdout} = await exec(getSpecCliInfo().command, ['--version'], {});
-    return exitCode === 0 && stdout === cliVersion;
+    return exitCode === 0 && stdout.trim() === cliVersion;
   } catch (error) {
     return false;
   }

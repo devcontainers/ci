@@ -7,6 +7,7 @@ import {
 	DevContainerCliBuildArgs,
 	DevContainerCliExecArgs,
 	DevContainerCliUpArgs,
+	MAJOR_VERSION_FALLBACK
 } from '../../../common/src/dev-container-cli';
 
 import {isDockerBuildXInstalled, pushImage} from './docker';
@@ -24,7 +25,7 @@ export async function runMain(): Promise<void> {
 			return;
 		}
 		const specifiedDevContainerCliVersion =
-			task.getInput('cliVersion') ?? 'latest';
+			task.getInput('cliVersion') ?? MAJOR_VERSION_FALLBACK;
 		const devContainerCliInstalled = await devcontainer.isCliInstalled(
 			exec,
 			specifiedDevContainerCliVersion,
