@@ -178,7 +178,7 @@ async function devContainerBuild(
     );
   }
   if (args.platform) {
-    commandArgs.push('--platform', args.platform);
+    commandArgs.push('--platform', args.platform.split(/\s*,\s*/).join(','));
   }
   if (args.output) {
     commandArgs.push('--output', args.output);

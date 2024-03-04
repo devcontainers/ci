@@ -79,7 +79,7 @@ export async function runMain(): Promise<void> {
 			relativeConfigFile && path.resolve(checkoutPath, relativeConfigFile);
 
 		const resolvedImageTag = imageTag ?? 'latest';
-		const imageTagArray = resolvedImageTag.split(',');
+		const imageTagArray = resolvedImageTag.split(/\s*,\s*/);
 		const fullImageNameArray: string[] = [];
 		for (const tag of imageTagArray) {
 			fullImageNameArray.push(`${imageName}:${tag}`);
@@ -256,7 +256,7 @@ export async function runPost(): Promise<void> {
 
 	const imageTag =
 		emptyStringAsUndefined(core.getInput('imageTag')) ?? 'latest';
-	const imageTagArray = imageTag.split(',');
+	const imageTagArray = imageTag.split(/\s*,\s*/);
 	if (!imageName) {
 		if (pushOption) {
 			// pushOption was set (and not to "never") - give an error that imageName is required

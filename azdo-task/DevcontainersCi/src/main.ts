@@ -67,7 +67,7 @@ export async function runMain(): Promise<void> {
 			relativeConfigFile && path.resolve(checkoutPath, relativeConfigFile);
 
 		const resolvedImageTag = imageTag ?? 'latest';
-		const imageTagArray = resolvedImageTag.split(',');
+		const imageTagArray = resolvedImageTag.split(/\s*,\s*/);
 		const fullImageNameArray: string[] = [];
 		for (const tag of imageTagArray) {
 			fullImageNameArray.push(`${imageName}:${tag}`);
@@ -255,7 +255,7 @@ export async function runPost(): Promise<void> {
 		return;
 	}
 	const imageTag = task.getInput('imageTag') ?? 'latest';
-	const imageTagArray = imageTag.split(',');
+	const imageTagArray = imageTag.split(/\s*,\s*/);
 	const platform = task.getInput('platform');
 	if (platform) {
 		for (const tag of imageTagArray) {
