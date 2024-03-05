@@ -4,15 +4,21 @@ name: CI (main)
 
 on:
   push:
-    branches: [main]
+    branches: [chrmarti/deafening-dingo]
   workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: write
+  packages: write
 
 jobs:
   build-test-publish:
     name: "Build, test, publish"
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/chrmarti/deafening-dingo'
     uses: ./.github/workflows/ci_common.yml
     with:
-      release: true
+      release: false
     secrets:
-      AZDO_TOKEN: ${{ secrets.AZDO_TOKEN }}
+      AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}

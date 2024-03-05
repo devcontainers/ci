@@ -10,6 +10,11 @@ on:
       - README.md
       - 'docs/**'
 
+permissions:
+  id-token: write
+  contents: write
+  packages: write
+
 jobs:
   build-test:
     name: "Build, test, publish"
@@ -19,4 +24,5 @@ jobs:
       release: false
       runFullTests: false
     secrets:
-      AZDO_TOKEN: ${{ secrets.AZDO_TOKEN }}
+      AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
