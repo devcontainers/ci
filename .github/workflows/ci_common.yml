@@ -52,6 +52,9 @@ on:
       AZURE_TENANT_ID:
         description: "Azure Tenant ID"
         required: true
+      AZDO_TOKEN:
+        description: "AZDO Token"
+        required: true
 
 permissions:
   id-token: write
@@ -287,19 +290,19 @@ jobs:
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Azure Login
-        uses: azure/login@v2
-        with:
-          client-id: ${{ secrets.AZURE_CLIENT_ID }}
-          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-          allow-no-subscriptions: true
-      - name: Get Token
-        id: get_token
-        run: |
-          echo "azdo_token=$(az account get-access-token --resource=https://monacotools.visualstudio.com --query accessToken -o tsv)" >> $GITHUB_OUTPUT
-      - name: Check Token
-        run: |
-          echo "Token length: $(echo "${{ steps.get_token.outputs.azdo_token }}" | wc -c)"
+      # - name: Azure Login
+      #   uses: azure/login@v2
+      #   with:
+      #     client-id: ${{ secrets.AZURE_CLIENT_ID }}
+      #     tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+      #     allow-no-subscriptions: true
+      # - name: Get Token
+      #   id: get_token
+      #   run: |
+      #     echo "azdo_token=$(az account get-access-token --resource=https://monacotools.visualstudio.com --query accessToken -o tsv)" >> $GITHUB_OUTPUT
+      # - name: Check Token
+      #   run: |
+      #     echo "Token length: $(echo "${{ steps.get_token.outputs.azdo_token }}" | wc -c)"
 
       # Published action contains compiled JS, but we need to compile it here
       - uses: actions/setup-node@v3
@@ -317,8 +320,8 @@ jobs:
           AZDO_PROJECT: ${{ inputs.AZDO_PROJECT }}
           AZDO_BUILD: ${{ inputs.AZDO_BUILD }}
           AZDO_ORG: ${{ inputs.AZDO_ORG }}
-          AZDO_TOKEN: ${{ steps.get_token.outputs.azdo_token }}
-          AZURE_DEVOPS_EXT_PAT: ${{ steps.get_token.outputs.azdo_token }}
+          AZDO_TOKEN: ${{ secrets.AZDO_TOKEN }}
+          AZURE_DEVOPS_EXT_PAT: ${{ secrets.AZDO_TOKEN }}
           BUILD_NUMBER: ${{ github.run_id }}
           IS_PR: ${{ github.head_ref }}
           BRANCH: ${{ github.ref }}
@@ -400,19 +403,19 @@ jobs:
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Azure Login
-        uses: azure/login@v2
-        with:
-          client-id: ${{ secrets.AZURE_CLIENT_ID }}
-          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-          allow-no-subscriptions: true
-      - name: Get Token
-        id: get_token
-        run: |
-          echo "azdo_token=$(az account get-access-token --resource=https://monacotools.visualstudio.com --query accessToken -o tsv)" >> $GITHUB_OUTPUT
-      - name: Check Token
-        run: |
-          echo "Token length: $(echo "${{ steps.get_token.outputs.azdo_token }}" | wc -c)"
+      # - name: Azure Login
+      #   uses: azure/login@v2
+      #   with:
+      #     client-id: ${{ secrets.AZURE_CLIENT_ID }}
+      #     tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+      #     allow-no-subscriptions: true
+      # - name: Get Token
+      #   id: get_token
+      #   run: |
+      #     echo "azdo_token=$(az account get-access-token --resource=https://monacotools.visualstudio.com --query accessToken -o tsv)" >> $GITHUB_OUTPUT
+      # - name: Check Token
+      #   run: |
+      #     echo "Token length: $(echo "${{ steps.get_token.outputs.azdo_token }}" | wc -c)"
 
       # Published action contains compiled JS, but we need to compile it here
       - uses: actions/setup-node@v3
@@ -430,8 +433,8 @@ jobs:
           AZDO_PROJECT: ${{ inputs.AZDO_PROJECT }}
           AZDO_BUILD: ${{ inputs.AZDO_BUILD }}
           AZDO_ORG: ${{ inputs.AZDO_ORG }}
-          AZDO_TOKEN: ${{ steps.get_token.outputs.azdo_token }}
-          AZURE_DEVOPS_EXT_PAT: ${{ steps.get_token.outputs.azdo_token }}
+          AZDO_TOKEN: ${{ secrets.AZDO_TOKEN }}
+          AZURE_DEVOPS_EXT_PAT: ${{ secrets.AZDO_TOKEN }}
           BUILD_NUMBER: ${{ github.run_id }}
           IS_PR: ${{ github.head_ref }}
           BRANCH: ${{ github.ref }}
