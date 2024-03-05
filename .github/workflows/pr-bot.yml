@@ -10,7 +10,6 @@ on:
     # https://docs.github.com/en/developers/webhooks-and-events/webhooks/webhook-events-and-payloads#issue_comment
 
 permissions:
-  id-token: write
   contents: write
   packages: write
 
@@ -79,6 +78,4 @@ jobs:
       prHeadSha: ${{ needs.pr_comment.outputs.prHeadSha }}
       release: false
     secrets:
-      AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
-      AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
       AZDO_TOKEN: ${{ secrets.AZDO_TOKEN }}

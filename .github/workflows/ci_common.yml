@@ -46,18 +46,11 @@ on:
         required: false
         default: devcontainers.ci
     secrets:
-      AZURE_CLIENT_ID:
-        description: "Azure Client ID"
-        required: true
-      AZURE_TENANT_ID:
-        description: "Azure Tenant ID"
-        required: true
       AZDO_TOKEN:
-        description: "AZDO Token"
+        description: ""
         required: true
 
 permissions:
-  id-token: write
   contents: write
   packages: write
 
@@ -248,7 +241,6 @@ jobs:
   release:
     name: Create release
     runs-on: ubuntu-latest
-    environment: ci
     needs:
       - build
       - checks-succeeded
@@ -289,20 +281,6 @@ jobs:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
-
-      # - name: Azure Login
-      #   uses: azure/login@v2
-      #   with:
-      #     client-id: ${{ secrets.AZURE_CLIENT_ID }}
-      #     tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-      #     allow-no-subscriptions: true
-      # - name: Get Token
-      #   id: get_token
-      #   run: |
-      #     echo "azdo_token=$(az account get-access-token --resource=https://monacotools.visualstudio.com --query accessToken -o tsv)" >> $GITHUB_OUTPUT
-      # - name: Check Token
-      #   run: |
-      #     echo "Token length: $(echo "${{ steps.get_token.outputs.azdo_token }}" | wc -c)"
 
       # Published action contains compiled JS, but we need to compile it here
       - uses: actions/setup-node@v3
@@ -364,7 +342,6 @@ jobs:
   test-azdo:
     name: Run AzDO test
     runs-on: ubuntu-latest
-    environment: ci
     needs: build
     if: ${{ needs.build.outputs.image_push_option == 'filter' }}
     steps:
@@ -402,20 +379,6 @@ jobs:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
-
-      # - name: Azure Login
-      #   uses: azure/login@v2
-      #   with:
-      #     client-id: ${{ secrets.AZURE_CLIENT_ID }}
-      #     tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-      #     allow-no-subscriptions: true
-      # - name: Get Token
-      #   id: get_token
-      #   run: |
-      #     echo "azdo_token=$(az account get-access-token --resource=https://monacotools.visualstudio.com --query accessToken -o tsv)" >> $GITHUB_OUTPUT
-      # - name: Check Token
-      #   run: |
-      #     echo "Token length: $(echo "${{ steps.get_token.outputs.azdo_token }}" | wc -c)"
 
       # Published action contains compiled JS, but we need to compile it here
       - uses: actions/setup-node@v3

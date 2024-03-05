@@ -17,7 +17,6 @@ on:
         required: false
 
 permissions:
-  id-token: write
   contents: write
   packages: write
 
@@ -31,6 +30,4 @@ jobs:
       # despite the runFullTests input being a boolean, we seem to get a string below!
       runFullTests: ${{ github.event.inputs.runFullTests == 'true' }}
     secrets:
-      AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
-      AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
       AZDO_TOKEN: ${{ secrets.AZDO_TOKEN }}
