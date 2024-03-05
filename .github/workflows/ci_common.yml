@@ -50,6 +50,10 @@ on:
         description: ""
         required: true
 
+permissions:
+  contents: write
+  packages: write
+
 jobs:
   build: # run build using the github action!
     runs-on: ubuntu-latest

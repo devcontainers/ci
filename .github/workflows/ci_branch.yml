@@ -16,6 +16,10 @@ on:
         type: boolean
         required: false
 
+permissions:
+  contents: write
+  packages: write
+
 jobs:
   build-test-publish:
     name: "Build, test, publish"
