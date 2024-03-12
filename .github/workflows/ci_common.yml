@@ -957,10 +957,10 @@ jobs:
           ref: ${{ inputs.prRef }}
 
       - name: Set up QEMU for multi-architecture builds
-        uses: docker/setup-qemu-action@v2
+        uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
+        uses: docker/setup-buildx-action@v3
 
       # This can be omitted once runner images have a version of Skopeo > 1.4.1
       # See https://github.com/containers/skopeo/issues/1874 (and https://github.com/devcontainers/ci/issues/191#issuecomment-1416384710)
@@ -1057,10 +1057,10 @@ jobs:
           push: always
 
       - name: Set up QEMU for multi-architecture builds
-        uses: docker/setup-qemu-action@v2
+        uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
+        uses: docker/setup-buildx-action@v3
 
       - name: Install updated Skopeo
         # This can be omitted once runner images have a version of Skopeo > 1.4.1
