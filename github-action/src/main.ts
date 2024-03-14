@@ -168,39 +168,34 @@ export async function runMain(): Promise<void> {
 				return;
 			}
 
-			const execResult = await core.group(
-				'🚀 Run command in container',
-				async () => {
-					const args: DevContainerCliExecArgs = {
-						workspaceFolder,
-						configFile,
-						command: ['bash', '-c', runCommand],
-						env: inputEnvsWithDefaults,
-						userDataFolder,
-					};
-					let execLogString = '';
-					const execLog = (message: string): void => {
-						core.info(message);
-						if (!message.includes('@devcontainers/cli')) {
-							execLogString += message;
-						}
-					};
-					const exitCode = await devcontainer.exec(args, execLog);
-					if (exitCode !== 0) {
-						const errorMessage = `Dev container exec failed: (exit code: ${exitCode})`;
-						core.error(errorMessage);
-						core.setFailed(errorMessage);
-					}
-					core.setOutput('runCmdOutput', execLogString);
-					if (Buffer.byteLength(execLogString, 'utf-8') > 1000000) {
-						execLogString = truncate(execLogString, 999966);
-						execLogString += 'TRUNCATED TO 1 MB MAX OUTPUT SIZE';
-					}
-					core.setOutput('runCmdOutput', execLogString);
-					return exitCode;
-				},
-			);
-			if (execResult !== 0) {
+			
+			const args: DevContainerCliExecArgs = {
+				workspaceFolder,
+				configFile,
+				command: ['bash', '-c', runCommand],
+				env: inputEnvsWithDefaults,
+				userDataFolder,
+			};
+			let execLogString = '';
+			const execLog = (message: string): void => {
+				core.info(message);
+				if (!message.includes('@devcontainers/cli')) {
+					execLogString += message;
+				}
+			};
+			const exitCode = await devcontainer.exec(args, execLog);
+			if (exitCode !== 0) {
+				const errorMessage = `Dev container exec failed: (exit code: ${exitCode})`;
+				core.error(errorMessage);
+				core.setFailed(errorMessage);
+			}
+			core.setOutput('runCmdOutput', execLogString);
+			if (Buffer.byteLength(execLogString, 'utf-8') > 1000000) {
+				execLogString = truncate(execLogString, 999966);
+				execLogString += 'TRUNCATED TO 1 MB MAX OUTPUT SIZE';
+			}
+			core.setOutput('runCmdOutput', execLogString);
+			if (exitCode !== 0) {
 				return;
 			}
 		} else {
