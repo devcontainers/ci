@@ -33,21 +33,34 @@ describe('substituteValues', () => {
 describe('populateDefaults', () => {
 	test('returns original inputs when fully specified', () => {
 		const input = ['TEST_ENV1=value1', 'TEST_ENV2=value2'];
-		const result = populateDefaults(input);
+		const result = populateDefaults(input, false);
 		expect(result).toEqual(['TEST_ENV1=value1', 'TEST_ENV2=value2']);
 	});
 
 	test('adds process env value when set and input value not provided', () => {
 		const input = ['TEST_ENV1', 'TEST_ENV2=value2'];
 		process.env.TEST_ENV1 = 'TestEnvValue1';
-		const result = populateDefaults(input);
+		const result = populateDefaults(input, false);
 		expect(result).toEqual(['TEST_ENV1=TestEnvValue1', 'TEST_ENV2=value2']);
 	});
 
 	test('skips value when process env value not set and input value not provided', () => {
 		const input = ['TEST_ENV1', 'TEST_ENV2=value2'];
 		delete process.env.TEST_ENV1;
-		const result = populateDefaults(input);
+		const result = populateDefaults(input, false);
 		expect(result).toEqual(['TEST_ENV2=value2']);
+	});
+
+	test('inherits process env when asked', () => {
+		const originalEnv = structuredClone(process.env);
+		try {
+			process.env = {TEST_ENV1: 'value1'};
+			const input = ['TEST_ENV2=value2'];
+			const result = populateDefaults(input, true);
+			expect(result).toEqual(['TEST_ENV1=value1', 'TEST_ENV2=value2']);
+		}
+		finally {
+			process.env = originalEnv;
+		}
 	});
 });

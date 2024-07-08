@@ -29,8 +29,13 @@ function getSubstitutionValue(regexMatch: string, placeholder: string): string {
 // In the latter case, the corresponding returned item would be "BAR=hi"
 // where the value is taken from the matching process env var.
 // In the case of values not set in the process, they are omitted
-export function populateDefaults(envs: string[]): string[] {
+export function populateDefaults(envs: string[], inerhitEnv: boolean): string[] {
 	const result: string[] = [];
+	if (inerhitEnv) {
+		for (const [key, value] of Object.entries(process.env)) {
+			result.push(`${key}=${value}`);
+		}
+	}
 	for (let i = 0; i < envs.length; i++) {
 		const inputEnv = envs[i];
 		if (inputEnv.indexOf('=') >= 0) {

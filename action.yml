@@ -44,6 +44,10 @@ inputs:
   env:
     required: false
     description: Specify environment variables to pass to the docker run command
+  inheritEnv:
+    required: false
+    default: false
+    description: Inherit all environment variables of the runner CI machine.
   skipContainerUserIdUpdate:
     required: false
     default: false
