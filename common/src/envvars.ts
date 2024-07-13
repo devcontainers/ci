@@ -33,7 +33,14 @@ export function populateDefaults(envs: string[], inheritEnv: boolean): string[] 
 	const result: string[] = [];
 	if (inheritEnv) {
 		for (const [key, value] of Object.entries(process.env)) {
-			result.push(`${key}=${value}`);
+			switch (key) {
+				case 'PATH':
+					// don't copy these by default (user can still explicitly specify them).
+					break;
+				default:
+					result.push(`${key}=${value}`);
+					break;
+			}
 		}
 	}
 	for (let i = 0; i < envs.length; i++) {
