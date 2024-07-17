@@ -52,7 +52,7 @@ describe('populateDefaults', () => {
 	});
 
 	test('inherits process env when asked', () => {
-		const originalEnv = structuredClone(process.env);
+		const originalEnv = process.env;
 		try {
 			process.env = {TEST_ENV1: 'value1'};
 			const input = ['TEST_ENV2=value2'];
