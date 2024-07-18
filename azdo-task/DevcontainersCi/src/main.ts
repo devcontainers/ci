@@ -44,7 +44,8 @@ export async function runMain(): Promise<void> {
 		const relativeConfigFile = task.getInput('configFile');
 		const runCommand = task.getInput('runCmd');
 		const envs = task.getInput('env')?.split('\n') ?? [];
-		const inputEnvsWithDefaults = populateDefaults(envs);
+		const inheritEnv = (task.getInput('inheritEnv') ?? 'false') === 'true';
+		const inputEnvsWithDefaults = populateDefaults(envs, inheritEnv);
 		const cacheFrom = task.getInput('cacheFrom')?.split('\n') ?? [];
 		const noCache = (task.getInput('noCache') ?? 'false') === 'true';
 		const skipContainerUserIdUpdate =

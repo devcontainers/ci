@@ -65,6 +65,13 @@
       "required": false
     },
     {
+      "name": "inheritEnv",
+      "type": "boolean",
+      "label": "Inherit all environment variables of the runner CI machine",
+      "defaultValue": false,
+      "required": false
+    },
+    {
       "name": "push",
       "type": "pickList",
       "options": {

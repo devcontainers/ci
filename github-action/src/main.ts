@@ -53,7 +53,8 @@ export async function runMain(): Promise<void> {
 		);
 		const runCommand = core.getInput('runCmd');
 		const inputEnvs: string[] = core.getMultilineInput('env');
-		const inputEnvsWithDefaults = populateDefaults(inputEnvs);
+		const inheritEnv: boolean = core.getBooleanInput('inheritEnv');
+		const inputEnvsWithDefaults = populateDefaults(inputEnvs, inheritEnv);
 		const cacheFrom: string[] = core.getMultilineInput('cacheFrom');
 		const noCache: boolean = core.getBooleanInput('noCache');
 		const skipContainerUserIdUpdate = core.getBooleanInput(
