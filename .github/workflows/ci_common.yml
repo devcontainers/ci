@@ -53,6 +53,7 @@ on:
 permissions:
   contents: write
   packages: write
+  pull-requests: write
 
 jobs:
   build: # run build using the github action!
