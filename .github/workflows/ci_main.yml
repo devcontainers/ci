@@ -11,6 +11,7 @@ permissions:
   contents: write
   packages: write
   pull-requests: write
+  checks: write
 
 jobs:
   build-test-publish:

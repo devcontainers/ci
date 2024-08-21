@@ -13,6 +13,7 @@ permissions:
   contents: write
   packages: write
   pull-requests: write
+  checks: write
 
 jobs:
   pr_comment:
