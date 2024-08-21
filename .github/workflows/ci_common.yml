@@ -54,6 +54,7 @@ permissions:
   contents: write
   packages: write
   pull-requests: write
+  checks: write
 
 jobs:
   build: # run build using the github action!
