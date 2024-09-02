@@ -122,6 +122,12 @@
       "type": "boolean",
       "label": "Builds the image with `--no-cache` (takes precedence over `cacheFrom`)",
       "required": false
+    },
+    {
+      "name": "cacheTo",
+      "type": "string",
+      "label": "Specify the image to cache the built image to",
+      "required": false
     }
   ],
   "outputVariables": [{

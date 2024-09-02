@@ -48,6 +48,7 @@ export async function runMain(): Promise<void> {
 		const inputEnvsWithDefaults = populateDefaults(envs, inheritEnv);
 		const cacheFrom = task.getInput('cacheFrom')?.split('\n') ?? [];
 		const noCache = (task.getInput('noCache') ?? 'false') === 'true';
+		const cacheTo = task.getInput('cacheTo') ?? undefined;
 		const skipContainerUserIdUpdate =
 			(task.getInput('skipContainerUserIdUpdate') ?? 'false') === 'true';
 
@@ -101,6 +102,7 @@ export async function runMain(): Promise<void> {
 			additionalCacheFroms: cacheFrom,
 			output: buildxOutput,
 			noCache,
+			cacheTo,
 		};
 
 		console.log('\n\n');
