@@ -195,11 +195,11 @@ async function devContainerBuild(
     args.additionalCacheFroms.forEach(cacheFrom =>
       commandArgs.push('--cache-from', cacheFrom),
     );
-    if (args.cacheTo) {
-      args.cacheTo.forEach(cacheTo =>
-        commandArgs.push('--cache-to', cacheTo),
-      );
-    }
+  }
+  if (args.cacheTo) {
+    args.cacheTo.forEach(cacheTo =>
+      commandArgs.push('--cache-to', cacheTo),
+    );
   }
   return await runSpecCliJsonCommand<DevContainerCliBuildResult>({
     args: commandArgs,
@@ -217,6 +217,7 @@ export interface DevContainerCliUpArgs {
   workspaceFolder: string;
   configFile: string | undefined;
   additionalCacheFroms?: string[];
+  cacheTo?: string[];
   skipContainerUserIdUpdate?: boolean;
   env?: string[];
   userDataFolder?: string;
@@ -239,6 +240,11 @@ async function devContainerUp(
   if (args.additionalCacheFroms) {
     args.additionalCacheFroms.forEach(cacheFrom =>
       commandArgs.push('--cache-from', cacheFrom),
+    );
+  }
+  if (args.cacheTo) {
+    args.cacheTo.forEach(cacheTo =>
+      commandArgs.push('--cache-to', cacheTo),
     );
   }
   if (args.userDataFolder) {

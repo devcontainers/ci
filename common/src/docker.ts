@@ -89,7 +89,9 @@ async function buildImageBase(
 	}
 	cacheFrom.forEach(cacheValue => args.push('--cache-from', cacheValue));
 	if (cacheTo) {
-		cacheTo.forEach(cacheValue => args.push('--cache-to', cacheValue));
+		coerceToArray(cacheTo).forEach(cacheValue =>
+			args.push('--cache-to', cacheValue),
+		);
 	} else {
 		args.push('--cache-to');
 		args.push('type=inline');
