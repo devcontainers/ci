@@ -57,7 +57,7 @@ export async function runMain(): Promise<void> {
 		const inputEnvsWithDefaults = populateDefaults(inputEnvs, inheritEnv);
 		const cacheFrom: string[] = core.getMultilineInput('cacheFrom');
 		const noCache: boolean = core.getBooleanInput('noCache');
-		const cacheTo = emptyStringAsUndefined(core.getInput('cacheTo'));
+		const cacheTo: string[] = core.getMultilineInput('cacheFrom');
 		const skipContainerUserIdUpdate = core.getBooleanInput(
 			'skipContainerUserIdUpdate',
 		);

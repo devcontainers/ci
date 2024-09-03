@@ -12,7 +12,7 @@ export async function buildImage(
 	subFolder: string,
 	skipContainerUserIdUpdate: boolean,
 	cacheFrom: string[],
-	cacheTo: string | undefined,
+	cacheTo: string[],
 ): Promise<string> {
 	console.log('🏗 Building dev container...');
 	try {

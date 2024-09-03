@@ -21,7 +21,7 @@ export async function buildImage(
 	subFolder: string,
 	skipContainerUserIdUpdate: boolean,
 	cacheFrom: string[],
-	cacheTo: string | undefined,
+	cacheTo: string[],
 ): Promise<string> {
 	const folder = path.join(checkoutPath, subFolder);
 	const devcontainerJsonPath = path.join(
@@ -63,7 +63,7 @@ async function buildImageBase(
 	folder: string,
 	devcontainerConfig: config.DevContainerConfig,
 	cacheFrom: string[],
-	cacheTo: string | undefined,
+	cacheTo: string[],
 ): Promise<void> {
 	const configDockerfile = config.getDockerfile(devcontainerConfig);
 	if (!configDockerfile) {
@@ -89,8 +89,7 @@ async function buildImageBase(
 	}
 	cacheFrom.forEach(cacheValue => args.push('--cache-from', cacheValue));
 	if (cacheTo) {
-		args.push('--cache-to');
-		args.push(cacheTo);
+		cacheTo.forEach(cacheValue => args.push('--cache-to', cacheValue));
 	} else {
 		args.push('--cache-to');
 		args.push('type=inline');

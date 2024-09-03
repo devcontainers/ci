@@ -15,7 +15,7 @@ export interface DevContainerConfig {
 		context?: string;
 		args?: Record<string, string>;
 		cacheFrom?: string | string[];
-		cacheTo?: string;
+		cacheTo?: string | string[];
 	};
 	runArgs?: string[];
 	mounts?: string[];
