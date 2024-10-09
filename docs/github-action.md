@@ -141,6 +141,7 @@ The [`devcontainers/ci` action](https://github.com/marketplace/actions/devcontai
 | skipContainerUserIdUpdate | false    | For non-root Dev Containers (i.e. where `remoteUser` is specified), the action attempts to make the container user UID and GID match those of the host user. Set this to true to skip this step (defaults to false)                            |
 | cacheFrom                 | false    | Specify additional images to use for build caching                                                                                                                                                                                             |
 | noCache                   | false    | Builds the image with `--no-cache` (takes precedence over `cacheFrom`)                                                                                                                                                                         |
+| cacheTo                 | false    | Specify the image to cache the built image to                                                                                                                                                                                             |
 | platform                  | false    | Platforms for which the image should be built. If omitted, defaults to the platform of the GitHub Actions Runner. Multiple platforms should be comma separated.                                                                                |
 
 ## Outputs

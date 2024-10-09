@@ -21,6 +21,7 @@ export async function buildImage(
 	subFolder: string,
 	skipContainerUserIdUpdate: boolean,
 	cacheFrom: string[],
+	cacheTo: string[],
 ): Promise<string> {
 	const folder = path.join(checkoutPath, subFolder);
 	const devcontainerJsonPath = path.join(
@@ -37,6 +38,7 @@ export async function buildImage(
 		folder,
 		devcontainerConfig,
 		cacheFrom,
+		cacheTo,
 	);
 
 	if (!devcontainerConfig.remoteUser || skipContainerUserIdUpdate == true) {
@@ -61,6 +63,7 @@ async function buildImageBase(
 	folder: string,
 	devcontainerConfig: config.DevContainerConfig,
 	cacheFrom: string[],
+	cacheTo: string[],
 ): Promise<void> {
 	const configDockerfile = config.getDockerfile(devcontainerConfig);
 	if (!configDockerfile) {
@@ -85,8 +88,14 @@ async function buildImageBase(
 		);
 	}
 	cacheFrom.forEach(cacheValue => args.push('--cache-from', cacheValue));
-	args.push('--cache-to');
-	args.push('type=inline');
+	if (cacheTo) {
+		coerceToArray(cacheTo).forEach(cacheValue =>
+			args.push('--cache-to', cacheValue),
+		);
+	} else {
+		args.push('--cache-to');
+		args.push('type=inline');
+	}
 	args.push('--output=type=docker');
 
 	const buildArgs = devcontainerConfig.build?.args;
