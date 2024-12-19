@@ -63,6 +63,9 @@ inputs:
     required: false
     default: false
     description: Builds the image with `--no-cache` (takes precedence over `cacheFrom`)
+  cacheTo:
+    required: false
+    description: Specify the image to cache the built image to
 outputs:
   runCmdOutput:
     description: The output of the command specified in the runCmd input
