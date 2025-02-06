@@ -9,7 +9,7 @@
     "tsc_version": "tsc --version"
   },
   "dependencies": {
-    "jsonc-parser": "^3.2.0"
+    "jsonc-parser": "^3.3.1"
   },
   "devDependencies": {
     "@types/node": "^20.9.0",
