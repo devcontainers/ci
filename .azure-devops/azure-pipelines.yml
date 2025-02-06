@@ -203,17 +203,8 @@ jobs:
       env:
         IMAGE_TAG: $(IMAGE_TAG)
 
-    - script: |
-        sudo apt purge buildah golang-github-containers-common podman skopeo
-        sudo apt autoremove --purge
-        REPO_URL="https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/unstable"
-        source /etc/os-release
-        sudo sh -c "echo 'deb ${REPO_URL}/x${NAME}_${VERSION_ID}/ /' > /etc/apt/sources.list.d/devel:kubic:libcontainers:unstable.list"
-        sudo wget -qnv https://download.opensuse.org/repositories/devel:kubic:libcontainers:stable/x${NAME}_${VERSION_ID}/Release.key -O Release.key
-        sudo apt-key add Release.key
-        sudo apt-get update
-        sudo apt-get install skopeo
-      displayName: Update skopeo
+    - script: skopeo --version
+      displayName: Skopeo version
 
 
     - script: docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
