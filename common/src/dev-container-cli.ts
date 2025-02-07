@@ -4,6 +4,7 @@ import path from 'path';
 import {env} from 'process';
 import {promisify} from 'util';
 import {ExecFunction} from './exec';
+import {findWindowsExecutable} from './windows';
 
 export const MAJOR_VERSION_FALLBACK = '0';
 
@@ -27,7 +28,8 @@ function getSpecCliInfo() {
 
 async function isCliInstalled(exec: ExecFunction, cliVersion: string): Promise<boolean> {
   try {
-    const {exitCode, stdout} = await exec(getSpecCliInfo().command, ['--version'], {});
+    const command = await findWindowsExecutable(getSpecCliInfo().command);
+    const {exitCode, stdout} = await exec(command, ['--version'], {});
     return exitCode === 0 && stdout.trim() === cliVersion;
   } catch (error) {
     return false;
@@ -119,7 +121,7 @@ async function runSpecCliJsonCommand<T>(options: {
     err: data => options.log(data),
     env: options.env ? {...process.env, ...options.env} : process.env,
   };
-  const command = getSpecCliInfo().command;
+  const command = await findWindowsExecutable(getSpecCliInfo().command);
   console.log(`About to run ${command} ${options.args.join(' ')}`); // TODO - take an output arg to allow GH to use core.info
   await spawn(command, options.args, spawnOptions);
 
@@ -136,7 +138,7 @@ async function runSpecCliNonJsonCommand(options: {
     err: data => options.log(data),
     env: options.env ? {...process.env, ...options.env} : process.env,
   };
-  const command = getSpecCliInfo().command;
+  const command = await findWindowsExecutable(getSpecCliInfo().command);
   console.log(`About to run ${command} ${options.args.join(' ')}`); // TODO - take an output arg to allow GH to use core.info
   const result = await spawn(command, options.args, spawnOptions);
   return result.code
@@ -150,12 +152,14 @@ export interface DevContainerCliBuildResult
   extends DevContainerCliSuccessResult {}
 export interface DevContainerCliBuildArgs {
   workspaceFolder: string;
+  configFile: string | undefined;
   imageName?: string[];
   platform?: string;
   additionalCacheFroms?: string[];
   userDataFolder?: string;
   output?: string,
   noCache?: boolean,
+  cacheTo?: string[],
 }
 async function devContainerBuild(
   args: DevContainerCliBuildArgs,
@@ -166,13 +170,16 @@ async function devContainerBuild(
     '--workspace-folder',
     args.workspaceFolder,
   ];
+  if (args.configFile) {
+    commandArgs.push('--config', args.configFile);
+  }
   if (args.imageName) {
     args.imageName.forEach(iName =>
       commandArgs.push('--image-name', iName),
     );
   }
   if (args.platform) {
-    commandArgs.push('--platform', args.platform);
+    commandArgs.push('--platform', args.platform.split(/\s*,\s*/).join(','));
   }
   if (args.output) {
     commandArgs.push('--output', args.output);
@@ -185,6 +192,11 @@ async function devContainerBuild(
   } else if (args.additionalCacheFroms) {
     args.additionalCacheFroms.forEach(cacheFrom =>
       commandArgs.push('--cache-from', cacheFrom),
+    );
+  }
+  if (args.cacheTo) {
+    args.cacheTo.forEach(cacheTo =>
+      commandArgs.push('--cache-to', cacheTo),
     );
   }
   return await runSpecCliJsonCommand<DevContainerCliBuildResult>({
@@ -201,7 +213,9 @@ export interface DevContainerCliUpResult extends DevContainerCliSuccessResult {
 }
 export interface DevContainerCliUpArgs {
   workspaceFolder: string;
+  configFile: string | undefined;
   additionalCacheFroms?: string[];
+  cacheTo?: string[];
   skipContainerUserIdUpdate?: boolean;
   env?: string[];
   userDataFolder?: string;
@@ -218,9 +232,17 @@ async function devContainerUp(
     args.workspaceFolder,
     ...remoteEnvArgs,
   ];
+  if (args.configFile) {
+    commandArgs.push('--config', args.configFile);
+  }
   if (args.additionalCacheFroms) {
     args.additionalCacheFroms.forEach(cacheFrom =>
       commandArgs.push('--cache-from', cacheFrom),
+    );
+  }
+  if (args.cacheTo) {
+    args.cacheTo.forEach(cacheTo =>
+      commandArgs.push('--cache-to', cacheTo),
     );
   }
   if (args.userDataFolder) {
@@ -243,6 +265,7 @@ async function devContainerUp(
 
 export interface DevContainerCliExecArgs {
   workspaceFolder: string;
+  configFile: string | undefined;
   command: string[];
   env?: string[];
   userDataFolder?: string;
@@ -253,12 +276,15 @@ async function devContainerExec(
 ): Promise<number | null> {
   // const remoteEnvArgs = args.env ? args.env.flatMap(e=> ["--remote-env", e]): []; // TODO - test flatMap again
   const remoteEnvArgs = getRemoteEnvArray(args.env);
-  const commandArgs = ["exec", "--workspace-folder", args.workspaceFolder, ...remoteEnvArgs, ...args.command];
+  const commandArgs = ["exec", "--workspace-folder", args.workspaceFolder, ...remoteEnvArgs];
+  if (args.configFile) {
+    commandArgs.push('--config', args.configFile);
+  }
   if (args.userDataFolder) {
     commandArgs.push("--user-data-folder", args.userDataFolder);
   }
   return await runSpecCliNonJsonCommand({
-    args: commandArgs,
+    args: commandArgs.concat(args.command),
     log,
     env: {DOCKER_BUILDKIT: '1', COMPOSE_DOCKER_CLI_BUILD: '1'},
   });

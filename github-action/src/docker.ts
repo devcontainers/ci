@@ -12,6 +12,7 @@ export async function buildImage(
 	subFolder: string,
 	skipContainerUserIdUpdate: boolean,
 	cacheFrom: string[],
+	cacheTo: string[],
 ): Promise<string> {
 	core.startGroup('🏗 Building dev container...');
 	try {
@@ -23,6 +24,7 @@ export async function buildImage(
 			subFolder,
 			skipContainerUserIdUpdate,
 			cacheFrom,
+			cacheTo,
 		);
 	} catch (error) {
 		core.setFailed(error);

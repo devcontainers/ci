@@ -21,6 +21,10 @@ inputs:
     required: false
     description: Specify a child folder (containing a .devcontainer) instead of using the repository root
     default:
+  configFile:
+    required: false
+    description: Specify the path to a devcontainer.json file instead of using `./.devcontainer/devcontainer.json` or `./.devcontainer.json`
+    default:
   checkoutPath:
     required: false
     description: Specify path to checked out folder if not using default (or for testing with nektos/act)
@@ -40,6 +44,10 @@ inputs:
   env:
     required: false
     description: Specify environment variables to pass to the docker run command
+  inheritEnv:
+    required: false
+    default: false
+    description: Inherit all environment variables of the runner CI machine.
   skipContainerUserIdUpdate:
     required: false
     default: false
@@ -59,11 +67,14 @@ inputs:
     required: false
     default: latest
     description: The version of the devcontainer CLI to use
+  cacheTo:
+    required: false
+    description: Specify the image to cache the built image to
 outputs:
   runCmdOutput:
     description: The output of the command specified in the runCmd input
 runs:
-  using: 'node16'
+  using: 'node20'
   main: 'github-action/run-main.js'
   post: 'github-action/run-post.js'
   post-if: 'success()'

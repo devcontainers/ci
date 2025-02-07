@@ -53,9 +53,22 @@
       "required": false
     },
     {
+      "name": "configFile",
+      "type": "string",
+      "label": "Specify the path to a devcontainer.json file instead of using `./.devcontainer/devcontainer.json` or `./.devcontainer.json`",
+      "required": false
+    },
+    {
       "name": "env",
       "type": "multiLine",
       "label": "Specify environment variables to pass to the docker run command",
+      "required": false
+    },
+    {
+      "name": "inheritEnv",
+      "type": "boolean",
+      "label": "Inherit all environment variables of the runner CI machine",
+      "defaultValue": false,
       "required": false
     },
     {
@@ -109,6 +122,12 @@
       "type": "boolean",
       "label": "Builds the image with `--no-cache` (takes precedence over `cacheFrom`)",
       "required": false
+    },
+    {
+      "name": "cacheTo",
+      "type": "multiLine",
+      "label": "Specify the image to cache the built image to",
+      "required": false
     }
   ],
   "outputVariables": [{
@@ -116,13 +135,13 @@
     "description": "The output of the command specified in the runCmd input"
   }],
   "execution": {
-    "Node10": {
+    "Node16": {
       "target": "run-main.js",
       "argumentFormat": ""
     }
   },
   "postjobexecution": {
-    "Node10": {
+    "Node16": {
       "target": "run-post.js",
       "argumentFormat": ""
     }

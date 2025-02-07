@@ -1,4 +1,4 @@
-FROM golang:1.16.0-alpine3.13 as builder
+FROM golang:1.21.3-alpine3.18 as builder
 
 # Install certs, git, and mercurial
 # RUN apk add --no-cache ca-certificates git build-base
