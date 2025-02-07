@@ -30,7 +30,7 @@ Additionally, it is desirable to add new tests to cover any new functionality.
 
 When a PR is created, some tests will be automatically triggered against the PR. The full suite of tests requires secrets and needs to be triggered by a maintainer.
 
-Testing and publishing the AzDO task requires the `AZDO_TOKEN` GitHub secret to be an AzDO PAT for monacotools with Build Read & Execute, Marketplace Acquire & Manage, Extensions Read & Manage and Packing Read & Write permissions.
+Testing and publishing the AzDO task requires the `AZDO_TOKEN` GitHub secret to be an AzDO PAT for monacotools with Build Read & Execute, Marketplace Acquire & Manage, Extensions Read & Manage and Packing Read & Write permissions. If the corresponding account needs JIT access for Project Collection Administrators permissions, enable that and re-evaluate permissions at https://dev.azure.com/monacotools/_usersSettings/permissionsRefresh.
 
 ## Miscellaneous
 
