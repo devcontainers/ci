@@ -135,13 +135,13 @@
     "description": "The output of the command specified in the runCmd input"
   }],
   "execution": {
-    "Node10": {
+    "Node16": {
       "target": "run-main.js",
       "argumentFormat": ""
     }
   },
   "postjobexecution": {
-    "Node10": {
+    "Node16": {
       "target": "run-post.js",
       "argumentFormat": ""
     }

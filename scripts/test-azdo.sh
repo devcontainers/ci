@@ -17,7 +17,7 @@ echo "Publishing private extension version..."
 tfx extension publish  --token "$AZDO_TOKEN" --vsix "$vsix_file" --override "{\"public\": false, \"publisher\": \"devcontainers-dev\"}" --share-with monacotools
 
 echo "Uninstalling private extension"
-tfx extension uninstall --token "$AZDO_TOKEN" --service-url "$AZDO_ORG" --extension-id "ci" --publisher "devcontainers-dev" || true
+AZURE_DEVOPS_EXT_PAT="$AZDO_TOKEN" az devops extension uninstall --organization "$AZDO_ORG" --extension-id "ci" --publisher-id "devcontainers-dev" --yes --verbose || true
 
 echo "Installing private extension"
 tfx extension install --token "$AZDO_TOKEN" --vsix "$vsix_file" --service-url "$AZDO_ORG"
