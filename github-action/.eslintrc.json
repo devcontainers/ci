@@ -21,7 +21,7 @@
       "camelcase": "off",
       "@typescript-eslint/consistent-type-assertions": "error",
       "@typescript-eslint/explicit-function-return-type": ["error", {"allowExpressions": true}],
-      "@typescript-eslint/func-call-spacing": ["error", "never"],
+      "func-call-spacing": ["error", "never"],
       "@typescript-eslint/no-array-constructor": "error",
       "@typescript-eslint/no-empty-interface": "error",
       "@typescript-eslint/no-explicit-any": "error",
@@ -42,9 +42,7 @@
       "@typescript-eslint/promise-function-async": "error",
       "@typescript-eslint/require-array-sort-compare": "error",
       "@typescript-eslint/restrict-plus-operands": "error",
-      "semi": "off",
-      "@typescript-eslint/semi": ["error", "always"],
-      "@typescript-eslint/type-annotation-spacing": "error",
+      "semi": ["error", "always"],
       "@typescript-eslint/unbound-method": "error"
     },
     "env": {
