@@ -171,7 +171,6 @@ export async function runMain(): Promise<void> {
 				return;
 			}
 
-			
 			const args: DevContainerCliExecArgs = {
 				workspaceFolder,
 				configFile,
