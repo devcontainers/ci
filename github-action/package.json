@@ -29,7 +29,6 @@
   "dependencies": {
     "@actions/core": "^1.11.1",
     "@actions/exec": "^1.1.1",
-    "devcontainer-build-run-common": "file:../common",
     "jsonc-parser": "^3.3.1",
     "truncate-utf8-bytes": "^1.0.2"
   },
