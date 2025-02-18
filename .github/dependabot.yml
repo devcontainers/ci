@@ -6,26 +6,18 @@ updates:
       interval: "weekly"
 
   - package-ecosystem: "github-actions"
-    directory: "/"
-    schedule:
-      interval: "weekly"
-
-  - package-ecosystem: "npm"
-    directory: "azdo-task/DevcontainersCi"
-    schedule:
-      interval: "weekly"
-
-  - package-ecosystem: "npm"
-    directory: "/common"
-    schedule:
-      interval: "weekly"
-
-  - package-ecosystem: "npm"
-    directory: "/github-action"
-    schedule:
-      interval: "weekly"
-
-  - package-ecosystem: "npm"
-    directory: "/.github/scripts"
+    directories:
+      - "/"
+      - "azdo-task/DevcontainersCi"
+      - "/common"
+      - "/github-action"
+      - "/.github/scripts"
+    groups:
+      all:
+        patterns:
+          - "*"
+    ignore:
+      - dependency-name: "eslint"
+        update-types: ["version-update:semver-major"] # eslint 9 removed support for JSON config files
     schedule:
       interval: "weekly"
