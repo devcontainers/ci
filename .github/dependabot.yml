@@ -6,9 +6,13 @@ updates:
       interval: "weekly"
 
   - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+
+  - package-ecosystem: "npm"
     directories:
-      - "/"
-      - "azdo-task/DevcontainersCi"
+      - "/azdo-task/DevcontainersCi"
       - "/common"
       - "/github-action"
       - "/.github/scripts"
