@@ -1,5 +1,5 @@
 import * as actions_exec from '@actions/exec';
-import {ExecOptions, ExecResult} from 'devcontainer-build-run-common/src/exec';
+import {ExecOptions, ExecResult} from '../../common/src/exec';
 
 export async function exec(
 	command: string,
