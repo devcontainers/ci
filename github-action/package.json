@@ -34,9 +34,9 @@
   },
   "devDependencies": {
     "@types/jest": "^29.5.14",
-    "@types/node": "^22.13.4",
-    "@typescript-eslint/eslint-plugin": "^8.24.1",
-    "@typescript-eslint/parser": "^8.24.1",
+    "@types/node": "^22.13.5",
+    "@typescript-eslint/eslint-plugin": "^8.25.0",
+    "@typescript-eslint/parser": "^8.25.0",
     "@vercel/ncc": "^0.38.3",
     "eslint": "^8.57.0",
     "eslint-plugin-github": "^5.1.8",
@@ -44,8 +44,8 @@
     "jest": "^29.7.0",
     "jest-circus": "^29.7.0",
     "js-yaml": "^4.1.0",
-    "prettier": "^3.5.1",
-    "ts-jest": "^29.2.5",
+    "prettier": "^3.5.2",
+    "ts-jest": "^29.2.6",
     "typescript": "^5.7.3",
     "@types/truncate-utf8-bytes": "^1.0.2"
   }
