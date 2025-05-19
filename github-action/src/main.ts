@@ -138,6 +138,54 @@ export async function runMain(): Promise<void> {
 			return;
 		}
 
+		// If we have a platform specified and the image was built, get the image digest
+		if (buildResult.outcome === 'success') {
+			// Create a digests object to track digests for each platform
+			const digestsObj: Record<string, string> = {};
+			
+			if (platform) {
+				// Extract the image digest from the build output
+				if (buildResult.imageDigest) {
+					core.info(`Image digest for ${platform}: ${buildResult.imageDigest}`);
+					digestsObj[platform] = buildResult.imageDigest;
+				} else {
+					// If buildResult doesn't have imageDigest, try to get it from the built image
+					if (imageName) {
+						const inspectCmd = await exec('docker', ['buildx', 'imagetools', 'inspect', `${imageName}:${imageTagArray[0]}`, '--format', '{{json .}}'], { silent: true });
+						if (inspectCmd.exitCode === 0) {
+							try {
+								const imageInfo = JSON.parse(inspectCmd.stdout);
+								if (imageInfo.manifest && imageInfo.manifest.digest) {
+									const digest = imageInfo.manifest.digest;
+									core.info(`Image digest for ${platform}: ${digest}`);
+									digestsObj[platform] = digest;
+								}
+							} catch (error) {
+								core.warning(`Failed to parse image digest: ${error.message}`);
+							}
+						} else {
+							core.warning(`Failed to inspect image: ${inspectCmd.stderr}`);
+						}
+					}
+				}
+			} else if (imageName) {
+				// For non-platform specific builds, still try to get the digest
+				const inspectCmd = await exec('docker', ['inspect', `${imageName}:${imageTagArray[0]}`, '--format', '{{.Id}}'], { silent: true });
+				if (inspectCmd.exitCode === 0) {
+					const digest = inspectCmd.stdout.trim();
+					core.info(`Image digest: ${digest}`);
+					digestsObj['default'] = digest;
+				}
+			}
+			
+			// Output the digests as a JSON string
+			if (Object.keys(digestsObj).length > 0) {
+				const digestsJson = JSON.stringify(digestsObj);
+				core.info(`Image digests: ${digestsJson}`);
+				core.setOutput('imageDigests', digestsJson);
+			}
+		}
+
 		for (const [key, value] of Object.entries(githubEnvs)) {
 			if (process.env[key]) {
 				// Add additional bind mount
@@ -264,17 +312,74 @@ export async function runPost(): Promise<void> {
 
 	const platform = emptyStringAsUndefined(core.getInput('platform'));
 	if (platform) {
+		// Create a digests object to track digests for each platform
+		const digestsObj: Record<string, string> = {};
+		const platforms = platform.split(/\s*,\s*/);
+		
 		for (const tag of imageTagArray) {
 			core.info(`Copying multiplatform image '${imageName}:${tag}'...`);
 			const imageSource = `oci-archive:/tmp/output.tar:${tag}`;
 			const imageDest = `docker://${imageName}:${tag}`;
 
 			await copyImage(true, imageSource, imageDest);
+			
+			// After pushing, get and set digest
+			const inspectCmd = await exec('docker', ['buildx', 'imagetools', 'inspect', `${imageName}:${tag}`, '--format', '{{json .}}'], { silent: true });
+			if (inspectCmd.exitCode === 0) {
+				try {
+					const imageInfo = JSON.parse(inspectCmd.stdout);
+					
+					// If it's a manifest list, extract digests for each platform
+					if (imageInfo.manifests) {
+						for (const manifest of imageInfo.manifests) {
+							if (manifest.platform && manifest.digest) {
+								const platformStr = `${manifest.platform.os}/${manifest.platform.architecture}${manifest.platform.variant ? '/' + manifest.platform.variant : ''}`;
+								core.info(`Image digest for ${imageName}:${tag} (${platformStr}): ${manifest.digest}`);
+								digestsObj[platformStr] = manifest.digest;
+							}
+						}
+					} else if (imageInfo.manifest && imageInfo.manifest.digest) {
+						// Single platform image
+						const digest = imageInfo.manifest.digest;
+						core.info(`Image digest for ${imageName}:${tag}: ${digest}`);
+						digestsObj[platforms[0] || 'default'] = digest;
+					}
+				} catch (error) {
+					core.warning(`Failed to parse image digest: ${error.message}`);
+				}
+			}
+		}
+		
+		// Output the digests as a JSON string
+		if (Object.keys(digestsObj).length > 0) {
+			const digestsJson = JSON.stringify(digestsObj);
+			core.info(`Image digests: ${digestsJson}`);
+			core.setOutput('imageDigests', digestsJson);
 		}
 	} else {
+		// Create a digests object for non-platform specific builds
+		const digestsObj: Record<string, string> = {};
+		
 		for (const tag of imageTagArray) {
 			core.info(`Pushing image '${imageName}:${tag}'...`);
 			await pushImage(imageName, tag);
+			
+			// After pushing, get and set digest
+			const inspectCmd = await exec('docker', ['inspect', `${imageName}:${tag}`, '--format', '{{.Id}}'], { silent: true });
+			if (inspectCmd.exitCode === 0) {
+				const digest = inspectCmd.stdout.trim();
+				core.info(`Image digest for ${imageName}:${tag}: ${digest}`);
+				digestsObj[tag] = digest;
+			} else {
+				core.warning(`Failed to get image digest: ${inspectCmd.stderr}`);
+			}
+		}
+		
+		// Output the digests as a JSON string
+		if (Object.keys(digestsObj).length > 0) {
+			const digestsJson = JSON.stringify(digestsObj);
+			core.info(`Image digests: ${digestsJson}`);
+			core.setOutput('imageDigests', digestsJson);
 		}
 	}
 }
