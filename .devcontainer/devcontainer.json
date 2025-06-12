@@ -4,7 +4,12 @@
 	"name": "devcontainers-ci",
 	"dockerFile": "Dockerfile",
 	"build": {
-		"cacheFrom": "ghcr.io/devcontainers/ci-devcontainer:latest"
+		"cacheFrom": "ghcr.io/devcontainers/ci-devcontainer:latest",
+		"args": {
+			// This is a temporary workaround when developing from host -> remote host -> devcontainer
+            // see: https://github.com/microsoft/vscode-remote-release/issues/7958
+            "BUILDKIT_INLINE_CACHE": "0"
+		}
 	},
 	"mounts": [
 		// Keep command history 
