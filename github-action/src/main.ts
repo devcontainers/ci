@@ -7,6 +7,7 @@ import {
 	DevContainerCliBuildArgs,
 	DevContainerCliExecArgs,
 	DevContainerCliUpArgs,
+	MAJOR_VERSION_FALLBACK
 } from '../../common/src/dev-container-cli';
 
 import {isDockerBuildXInstalled, pushImage} from './docker';
@@ -33,10 +34,18 @@ export async function runMain(): Promise<void> {
 			);
 			return;
 		}
-		const devContainerCliInstalled = await devcontainer.isCliInstalled(exec);
+		const specifiedDevContainerCliVersion =
+			core.getInput('cliVersion') ?? MAJOR_VERSION_FALLBACK;
+		const devContainerCliInstalled = await devcontainer.isCliInstalled(
+			exec,
+			specifiedDevContainerCliVersion,
+		);
 		if (!devContainerCliInstalled) {
 			core.info('Installing @devcontainers/cli...');
-			const success = await devcontainer.installCli(exec);
+			const success = await devcontainer.installCli(
+				exec,
+				specifiedDevContainerCliVersion,
+			);
 			if (!success) {
 				core.setFailed('@devcontainers/cli install failed!');
 				return;
