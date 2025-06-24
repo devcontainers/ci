@@ -153,6 +153,16 @@ export async function runMain(): Promise<void> {
 				} else {
 					// If buildResult doesn't have imageDigest, try to get it from the built image
 					if (imageName) {
+						// sleep for 5 seconds
+						await new Promise(resolve => setTimeout(resolve, 5000));
+						// list images
+						const listCmd = await exec(
+							'docker',
+							['images', '--format', '{{.Repository}}:{{.Tag}}'],
+							{silent: true},
+						);
+						core.info(`Images: ${listCmd.stdout}`);
+						// get the digest of the image
 						const inspectCmd = await exec(
 							'docker',
 							[

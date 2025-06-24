@@ -2250,6 +2250,12 @@ function runMain() {
                     else {
                         // If buildResult doesn't have imageDigest, try to get it from the built image
                         if (imageName) {
+                            // sleep for 5 seconds
+                            yield new Promise(resolve => setTimeout(resolve, 5000));
+                            // list images
+                            const listCmd = yield (0, exec_1.exec)('docker', ['images', '--format', '{{.Repository}}:{{.Tag}}'], { silent: true });
+                            core.info(`Images: ${listCmd.stdout}`);
+                            // get the digest of the image
                             const inspectCmd = yield (0, exec_1.exec)('docker', [
                                 'buildx',
                                 'imagetools',
