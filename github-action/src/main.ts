@@ -144,6 +144,12 @@ export async function runMain(): Promise<void> {
 			const digestsObj: Record<string, string> = {};
 
 			if (platform) {
+				for (const tag of imageTagArray) {
+					const imageSource = `oci-archive:/tmp/output.tar:${tag}`;
+					const imageDest = `docker://${imageName}:${tag}`;
+					await copyImage(true, imageSource, imageDest);
+				}
+
 				// Extract the image digest from the build output
 				if (buildResult.imageDigests) {
 					core.info(

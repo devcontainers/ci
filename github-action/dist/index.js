@@ -2242,6 +2242,11 @@ function runMain() {
                 // Create a digests object to track digests for each platform
                 const digestsObj = {};
                 if (platform) {
+                    for (const tag of imageTagArray) {
+                        const imageSource = `oci-archive:/tmp/output.tar:${tag}`;
+                        const imageDest = `docker://${imageName}:${tag}`;
+                        yield (0, skopeo_1.copyImage)(true, imageSource, imageDest);
+                    }
                     // Extract the image digest from the build output
                     if (buildResult.imageDigests) {
                         core.info(`Image digest for ${platform}: ${buildResult.imageDigests}`);
