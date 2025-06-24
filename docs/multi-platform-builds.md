@@ -107,59 +107,49 @@ name: Build Multi-Platform Images
 
 on:
   push:
-    branches: [ main ]
+    branches:
+      - main
   pull_request:
-    branches: [ main ]
+    branches:
+      - main
 
 env:
-  REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
+  IMAGE_NAME: ghcr.io/${{ github.repository }}
+  IMAGE_TAGS: ${{ github.sha }}${{ github.ref_name == github.event.repository.default_branch && ',latest' || '' }}
 
 jobs:
   # Build images on parallel native runners
   build:
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         platform:
           - linux/amd64
           - linux/arm64
-      fail-fast: false
     outputs:
-      IMAGE_DIGEST_linux_amd64: ${{ steps.build.outputs.IMAGE_DIGEST_linux_amd64 }}
-      IMAGE_DIGEST_linux_arm64: ${{ steps.build.outputs.IMAGE_DIGEST_linux_arm64 }}
+      IMAGE_DIGEST_linux_amd64: ${{ steps.matrix-outputs.outputs.IMAGE_DIGEST_linux_amd64 }}
+      IMAGE_DIGEST_linux_arm64: ${{ steps.matrix-outputs.outputs.IMAGE_DIGEST_linux_arm64 }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-
-      - name: Login to Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Build and push
         id: build
         uses: devcontainers/ci@v0.3
         with:
-          imageName: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-          platform: ${{ matrix.platform }}
           push: always
-                
-      # Combine all digests from the matrix into a single output
+          platform: ${{ matrix.platform }}
+          imageName: ${{ env.IMAGE_NAME }}
+          imageTag: ${{ env.IMAGE_TAGS }}
       - name: Set matrix outputs
         if: always()
+        id: matrix-outputs
         run: |
-          # Extract the digest for this platform from the JSON output
           DIGESTS_JSON='${{ steps.build.outputs.imageDigests }}'
-          PLATFORM="${{ matrix.platform }}"
-          DIGEST=$(echo $DIGESTS_JSON | jq -r --arg platform "$PLATFORM" '.[$platform]')
-          echo "IMAGE_DIGEST_${PLATFORM//\//_}=${DIGEST}" >> $GITHUB_OUTPUT
-          
+          echo $DIGESTS_JSON | jq -r 'to_entries[] | "echo \"IMAGE_DIGEST_\(.key | gsub("/"; "_"))=\(.value)\" >> $GITHUB_OUTPUT"' | bash
+
 
   # Create a manifest list from all platform images
   manifest:
@@ -168,18 +158,14 @@ jobs:
     steps:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-                
       - name: Create and push manifest list
         run: |
-          IMAGE=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-          
-          # Create manifest list from each platform's digest
-          docker buildx imagetools create \
-            -t ${IMAGE}:latest \
-            ${IMAGE}@${{ needs.build.outputs.IMAGE_DIGEST_linux_amd64 }} \
-            ${IMAGE}@${{ needs.build.outputs.IMAGE_DIGEST_linux_arm64 }}
-
-      - name: Inspect manifest
-        run: |
-          docker buildx imagetools inspect ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest 
+          IFS=',' read -ra TAGS <<< "${{ env.IMAGE_TAGS }}"
+          for tag in "${TAGS[@]}"; do
+            docker buildx imagetools create \
+              -t ${{ env.IMAGE_NAME }}:${tag} \
+              ${{ env.IMAGE_NAME }}@${{ needs.build.outputs.IMAGE_DIGEST_linux_amd64 }} \
+              ${{ env.IMAGE_NAME }}@${{ needs.build.outputs.IMAGE_DIGEST_linux_arm64 }}
+            docker buildx imagetools inspect ${{ env.IMAGE_NAME }}:${tag} 
+          done
 ```
