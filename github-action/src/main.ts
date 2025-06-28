@@ -63,6 +63,7 @@ export async function runMain(): Promise<void> {
 		);
 		const userDataFolder: string = core.getInput('userDataFolder');
 		const mounts: string[] = core.getMultilineInput('mounts');
+		const prebuild: boolean = core.getBooleanInput('prebuild');
 
 		if (platform) {
 			const skopeoInstalled = await isSkopeoInstalled();
@@ -157,6 +158,7 @@ export async function runMain(): Promise<void> {
 					env: inputEnvsWithDefaults,
 					userDataFolder,
 					additionalMounts: mounts,
+					prebuild: prebuild,
 				};
 				const result = await devcontainer.up(args, log);
 				if (result.outcome !== 'success') {
