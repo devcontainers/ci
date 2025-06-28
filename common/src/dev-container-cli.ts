@@ -222,6 +222,7 @@ export interface DevContainerCliUpArgs {
   env?: string[];
   userDataFolder?: string;
   additionalMounts?: string[];
+  prebuild?: boolean;
 }
 async function devContainerUp(
   args: DevContainerCliUpArgs,
@@ -257,6 +258,9 @@ async function devContainerUp(
     args.additionalMounts.forEach(mount =>
       commandArgs.push('--mount', mount),
     );
+  }
+  if (args.prebuild) {
+    commandArgs.push('--prebuild');
   }
   return await runSpecCliJsonCommand<DevContainerCliUpResult>({
     args: commandArgs,

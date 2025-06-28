@@ -66,6 +66,10 @@ inputs:
   cacheTo:
     required: false
     description: Specify the image to cache the built image to
+  prebuild:
+    required: false
+    default: false
+    description: Set to true to prebuild the dev container image. This is useful for speeding up the first run of the dev container.
 outputs:
   runCmdOutput:
     description: The output of the command specified in the runCmd input
