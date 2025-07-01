@@ -12,10 +12,10 @@
     "jsonc-parser": "^3.3.1"
   },
   "devDependencies": {
-    "@types/node": "^24.0.3",
+    "@types/node": "^24.0.8",
     "@types/jest": "^30.0.0",
     "typescript": "^5.8.3",
-    "jest": "^30.0.0",
+    "jest": "^30.0.3",
     "jest-circus": "^30.0.0",
     "ts-jest": "^29.4.0"
   }
