@@ -1,0 +1,42 @@
+name: Test CI/CD with DevContainer Builder
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test-custom-builder:
+    runs-on: ubuntu-latest
+    
+    # Add permissions for pushing to GitHub Container Registry
+    permissions:
+      contents: read
+      packages: write
+    
+    steps:    
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    # Add authentication step for GitHub Container Registry
+    - name: Log in to GitHub Container Registry
+      uses: docker/login-action@v2
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Pre-build dev container image
+      uses: devcontainers/ci@v0.3
+      with:
+        imageName: ghcr.io/${{ github.repository }}/devcontainer
+        # cacheFrom: ghcr.io/${{ github.repository }}/devcontainer
+        # push: always    
+
+    - name: Run make ci-build in dev container
+      uses: devcontainers/ci@v0.3
+      with:    
+        push: never
+        runCmd: python3 special_add.py
+    # ...existing code...

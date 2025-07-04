@@ -1,37 +1,25 @@
-// For format details, see https://aka.ms/vscode-remote/devcontainer.json or this file's README at:
-// https://github.com/microsoft/vscode-dev-containers/tree/v0.117.1/containers/go
 {
-	"name": "devcontainers-ci",
-	"dockerFile": "Dockerfile",
+	"name": "Test CI/CD Project",
 	"build": {
-		"cacheFrom": "ghcr.io/devcontainers/ci-devcontainer:latest"
-	},
-	"mounts": [
-		// Keep command history 
-		"source=devcontainer-build-run-bashhistory,target=/home/vscode/commandhistory",
-		// Mount host docker socket
-		"type=bind,source=/var/run/docker.sock,target=/var/run/docker.sock"
-	],
-	"postCreateCommand": ".devcontainer/scripts/postCreate.sh",
-	"remoteUser": "vscode",
-	"customizations": {
-		"vscode": {
-			"settings": {
-				"terminal.integrated.defaultProfile.linux": "bash",
-				"files.eol": "\n"
-			},
-			"extensions": [
-				"ms-azuretools.vscode-docker",
-				"yzhang.markdown-all-in-one",
-				"davidanson.vscode-markdownlint",
-				"heaths.vscode-guid",
-				"esbenp.prettier-vscode",
-				"meganrogge.template-string-converter",
-				"ms-azure-devops.azure-pipelines"		
-			]
-		}
+		"dockerfile": "Dockerfile"
 	},
 	"features": {
-		"ghcr.io/devcontainers/features/github-cli:1": "latest"
-	}
+		"ghcr.io/devcontainers/features/git:1": {
+			"version": "latest"
+		}
+	},
+	"postCreateCommand": "chmod +x scripts/*.sh && scripts/post-create.sh",
+	"postStartCommand": "chmod +x scripts/*.sh && scripts/post-start.sh",
+	"customizations": {
+		"vscode": {
+			"extensions": [
+				"ms-azuretools.vscode-docker"
+			],
+			"settings": {
+				"terminal.integrated.defaultProfile.linux": "bash"
+			}
+		}
+	},
+	"remoteUser": "root",
+	"forwardPorts": []
 }
