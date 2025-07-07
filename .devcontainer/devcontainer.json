@@ -8,7 +8,7 @@
 			"version": "latest"
 		}
 	},
-	"postCreateCommand": "chmod +x scripts/*.sh && scripts/post-create.sh",
+	"postCreateCommand": "chmod +x scripts/*.sh && ./devcontainer/scripts/post-create.sh",
 	"postStartCommand": "chmod +x scripts/*.sh && scripts/post-start.sh",
 	"customizations": {
 		"vscode": {
