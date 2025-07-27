@@ -1,5 +1,6 @@
-# [Choice] Debian / Ubuntu version: debian-10, debian-9, ubuntu-20.04, ubuntu-18.04
-# See https://github.com/microsoft/vscode-dev-containers/tree/master/containers/debian
+# [Choice] Debian / Ubuntu version: debian-12, debian-11, ubuntu-24.04, ubuntu-22.04
+# See https://github.com/devcontainers/images/tree/main/src/base-debian
+# and https://github.com/devcontainers/images/tree/main/src/base-ubuntu
 ARG VARIANT=debian-12
 FROM mcr.microsoft.com/vscode/devcontainers/base:${VARIANT}
 
@@ -48,7 +49,7 @@ RUN /bin/bash /tmp/node.sh 20.x
 COPY scripts/docker-client.sh /tmp/
 RUN /bin/bash /tmp/docker-client.sh
 
-#Add user to docker group
+# Add user to docker group
 RUN sudo groupadd docker && sudo usermod -aG docker $USERNAME && newgrp docker
 
 # act
