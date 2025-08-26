@@ -205,7 +205,6 @@ export async function runMain(): Promise<void> {
 			// Output the digests as a JSON string
 			if (Object.keys(digestsObj).length > 0) {
 				const digestsJson = JSON.stringify(digestsObj);
-				core.info(`Image digests: ${digestsJson}`);
 				core.setOutput('imageDigests', digestsJson);
 			}
 		}
@@ -336,8 +335,6 @@ export async function runPost(): Promise<void> {
 
 	const platform = emptyStringAsUndefined(core.getInput('platform'));
 	if (platform) {
-		// Create a digests object to track digests for each platform
-		const digestsObj: Record<string, string> = {};
 
 		for (const tag of imageTagArray) {
 			core.info(`Copying multiplatform image '${imageName}:${tag}'...`);
@@ -345,93 +342,12 @@ export async function runPost(): Promise<void> {
 			const imageDest = `docker://${imageName}:${tag}`;
 
 			await copyImage(true, imageSource, imageDest);
-
-			// Try to inspect local OCI archive first to get the correct digest
-			// This avoids race conditions with parallel multi-platform builds
-			const inspectOCICmd = await exec(
-				'skopeo',
-				[
-					'inspect',
-					imageSource,
-				],
-				{silent: true},
-			);
-			
-			if (inspectOCICmd.exitCode === 0) {
-				try {
-					const imageInfo = JSON.parse(inspectOCICmd.stdout);
-					if (imageInfo.Digest) {
-						core.info(`Image digest for ${imageName}:${tag} (${platform}): ${imageInfo.Digest}`);
-						digestsObj[platform] = imageInfo.Digest;
-					}
-				} catch (error) {
-					core.warning(`Failed to parse local OCI image info: ${error.message}`);
-				}
-			} else {
-				// Fallback to registry inspection (with race condition risk)
-				core.info('Local OCI inspection failed, trying registry...');
-				const inspectCmd = await exec(
-					'docker',
-					[
-						'buildx',
-						'imagetools',
-						'inspect',
-						`${imageName}:${tag}`,
-						'--format',
-						'{{json .}}',
-					],
-					{silent: true},
-				);
-				if (inspectCmd.exitCode === 0) {
-					try {
-						const imageInfo = JSON.parse(inspectCmd.stdout);
-						if (imageInfo.manifest && imageInfo.manifest.digest) {
-							// Single platform image
-							const digest = imageInfo.manifest.digest;
-							core.info(`Image digest for ${imageName}:${tag}: ${digest}`);
-							digestsObj[platform] = digest;
-						}
-					} catch (error) {
-						core.warning(`Failed to parse registry image info: ${error.message}`);
-					}
-				}
-			}
 		}
 
-		// Output the digests as a JSON string
-		if (Object.keys(digestsObj).length > 0) {
-			const digestsJson = JSON.stringify(digestsObj);
-			core.info(`Image digests: ${digestsJson}`);
-			core.setOutput('imageDigests', digestsJson);
-		}
 	} else {
-		// Create a digests object for non-platform specific builds
-		const digestsObj: Record<string, string> = {};
-
 		for (const tag of imageTagArray) {
 			core.info(`Pushing image '${imageName}:${tag}'...`);
 			await pushImage(imageName, tag);
-
-			// After pushing, get and set digest
-			const inspectCmd = await exec(
-				'docker',
-				['inspect', `${imageName}:${tag}`, '--format', '{{.Id}}'],
-				{silent: true},
-			);
-			if (inspectCmd.exitCode === 0) {
-				const digest = inspectCmd.stdout.trim();
-				core.info(`Image digest for ${imageName}:${tag}: ${digest}`);
-				digestsObj[tag] = digest;
-			} else {
-				core.warning(`Failed to get image digest: ${inspectCmd.stderr}`);
-			}
-		}
-
-		// Output the digests as a JSON string
-		if (Object.keys(digestsObj).length > 0) {
-			const digestsJson = JSON.stringify(digestsObj);
-			core.info(`Image digests: ${digestsJson}`);
-			core.setOutput('imageDigests', digestsJson);
 		}
 	}
 }
