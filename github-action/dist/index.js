@@ -2192,6 +2192,8 @@ function runMain() {
             const imageTagArray = resolvedImageTag.split(/\s*,\s*/);
             const fullImageNameArray = [];
             for (const tag of imageTagArray) {
+                // Always use original tags for the build (OCI tarball will contain these)
+                // We'll use arch-specific tags only when pushing to registry
                 fullImageNameArray.push(`${imageName}:${tag}`);
             }
             if (imageName) {
@@ -2242,70 +2244,57 @@ function runMain() {
                 // Create a digests object to track digests for each platform
                 const digestsObj = {};
                 if (platform) {
+                    // Copy image to registry FIRST with architecture-specific tags
                     for (const tag of imageTagArray) {
+                        const finalTag = platform ? `${tag}-${platform.replace('/', '-')}` : tag;
+                        // Use original tag from OCI tarball, push to arch-specific registry tag
                         const imageSource = `oci-archive:/tmp/output.tar:${tag}`;
-                        const imageDest = `docker://${imageName}:${tag}`;
+                        const imageDest = `docker://${imageName}:${finalTag}`;
+                        core.info(`Copying multiplatform image to architecture-specific tag: ${imageName}:${finalTag}`);
                         yield (0, skopeo_1.copyImage)(true, imageSource, imageDest);
                     }
-                    // Extract the image digest from the build output
-                    if (buildResult.imageDigests) {
-                        core.info(`Image digest for ${platform}: ${buildResult.imageDigests}`);
-                        digestsObj[platform] = buildResult.imageDigests[platform];
-                    }
-                    else {
-                        // If buildResult doesn't have imageDigest, try to get it from the built image
-                        if (imageName) {
-                            // sleep for 5 seconds
-                            yield new Promise(resolve => setTimeout(resolve, 5000));
-                            // list images
-                            const listCmd = yield (0, exec_1.exec)('docker', ['images', '--format', '{{.Repository}}:{{.Tag}}'], { silent: true });
-                            core.info(`Images: ${listCmd.stdout}`);
-                            // get the digest of the image
-                            const inspectCmd = yield (0, exec_1.exec)('docker', [
-                                'buildx',
-                                'imagetools',
-                                'inspect',
-                                `${imageName}:${imageTagArray[0]}`,
-                                '--format',
-                                '{{json .}}',
-                            ], { silent: true });
-                            if (inspectCmd.exitCode === 0) {
-                                try {
-                                    const imageInfo = JSON.parse(inspectCmd.stdout);
-                                    if (imageInfo.manifest && imageInfo.manifest.digest) {
-                                        const digest = imageInfo.manifest.digest;
-                                        core.info(`Image digest for ${platform}: ${digest}`);
-                                        digestsObj[platform] = digest;
-                                    }
-                                }
-                                catch (error) {
-                                    core.warning(`Failed to parse image digest: ${error.message}`);
-                                }
+                    // Extract digest from registry AFTER push to get the actual registry digest
+                    for (const tag of imageTagArray) {
+                        const finalTag = platform ? `${tag}-${platform.replace('/', '-')}` : tag;
+                        const inspectCmd = yield (0, exec_1.exec)('docker', ['buildx', 'imagetools', 'inspect', `${imageName}:${finalTag}`, '--format', '{{.Manifest.Digest}}'], { silent: true });
+                        if (inspectCmd.exitCode === 0) {
+                            const digest = inspectCmd.stdout.trim();
+                            if (digest && digest.startsWith('sha256:')) {
+                                core.info(`Image digest for ${platform}: ${digest}`);
+                                digestsObj[platform] = digest;
+                                break; // Found digest, stop looking
                             }
-                            else {
-                                core.warning(`Failed to inspect image: ${inspectCmd.stderr}`);
-                            }
+                        }
+                        else {
+                            core.warning(`Failed to inspect registry image for ${finalTag}: ${inspectCmd.stderr}`);
                         }
                     }
                 }
                 else if (imageName) {
-                    // For non-platform specific builds, still try to get the digest
+                    // For non-platform specific builds, use local docker inspect
                     const inspectCmd = yield (0, exec_1.exec)('docker', [
                         'inspect',
                         `${imageName}:${imageTagArray[0]}`,
                         '--format',
-                        '{{.Id}}',
+                        '{{index .RepoDigests 0}}',
                     ], { silent: true });
                     if (inspectCmd.exitCode === 0) {
-                        const digest = inspectCmd.stdout.trim();
-                        core.info(`Image digest: ${digest}`);
-                        digestsObj['default'] = digest;
+                        const digestLine = inspectCmd.stdout.trim();
+                        // Extract just the digest part (sha256:...)
+                        const digestMatch = digestLine.match(/sha256:[a-f0-9]+/);
+                        if (digestMatch) {
+                            const digest = digestMatch[0];
+                            core.info(`Image digest: ${digest}`);
+                            digestsObj['default'] = digest;
+                        }
+                    }
+                    else {
+                        core.warning(`Failed to get image digest: ${inspectCmd.stderr}`);
                     }
                 }
                 // Output the digests as a JSON string
                 if (Object.keys(digestsObj).length > 0) {
                     const digestsJson = JSON.stringify(digestsObj);
-                    core.info(`Image digests: ${digestsJson}`);
                     core.setOutput('imageDigests', digestsJson);
                 }
             }
@@ -2421,77 +2410,15 @@ function runPost() {
         }
         const platform = emptyStringAsUndefined(core.getInput('platform'));
         if (platform) {
-            // Create a digests object to track digests for each platform
-            const digestsObj = {};
-            const platforms = platform.split(/\s*,\s*/);
-            for (const tag of imageTagArray) {
-                core.info(`Copying multiplatform image '${imageName}:${tag}'...`);
-                const imageSource = `oci-archive:/tmp/output.tar:${tag}`;
-                const imageDest = `docker://${imageName}:${tag}`;
-                yield (0, skopeo_1.copyImage)(true, imageSource, imageDest);
-                // After pushing, get and set digest
-                const inspectCmd = yield (0, exec_1.exec)('docker', [
-                    'buildx',
-                    'imagetools',
-                    'inspect',
-                    `${imageName}:${tag}`,
-                    '--format',
-                    '{{json .}}',
-                ], { silent: true });
-                if (inspectCmd.exitCode === 0) {
-                    try {
-                        const imageInfo = JSON.parse(inspectCmd.stdout);
-                        // If it's a manifest list, extract digests for each platform
-                        if (imageInfo.manifests) {
-                            for (const manifest of imageInfo.manifests) {
-                                if (manifest.platform && manifest.digest) {
-                                    const platformStr = `${manifest.platform.os}/${manifest.platform.architecture}${manifest.platform.variant ? `/${manifest.platform.variant}` : ''}`;
-                                    core.info(`Image digest for ${imageName}:${tag} (${platformStr}): ${manifest.digest}`);
-                                    digestsObj[platformStr] = manifest.digest;
-                                }
-                            }
-                        }
-                        else if (imageInfo.manifest && imageInfo.manifest.digest) {
-                            // Single platform image
-                            const digest = imageInfo.manifest.digest;
-                            core.info(`Image digest for ${imageName}:${tag}: ${digest}`);
-                            digestsObj[platforms[0] || 'default'] = digest;
-                        }
-                    }
-                    catch (error) {
-                        core.warning(`Failed to parse image digest: ${error.message}`);
-                    }
-                }
-            }
-            // Output the digests as a JSON string
-            if (Object.keys(digestsObj).length > 0) {
-                const digestsJson = JSON.stringify(digestsObj);
-                core.info(`Image digests: ${digestsJson}`);
-                core.setOutput('imageDigests', digestsJson);
-            }
+            // Platform-specific builds are now handled in runMain() to extract post-registry digests
+            // Skip copying here to avoid duplicate operations
+            core.info('Platform-specific image copying was handled in the main build step');
+            return;
         }
         else {
-            // Create a digests object for non-platform specific builds
-            const digestsObj = {};
             for (const tag of imageTagArray) {
                 core.info(`Pushing image '${imageName}:${tag}'...`);
                 yield (0, docker_1.pushImage)(imageName, tag);
-                // After pushing, get and set digest
-                const inspectCmd = yield (0, exec_1.exec)('docker', ['inspect', `${imageName}:${tag}`, '--format', '{{.Id}}'], { silent: true });
-                if (inspectCmd.exitCode === 0) {
-                    const digest = inspectCmd.stdout.trim();
-                    core.info(`Image digest for ${imageName}:${tag}: ${digest}`);
-                    digestsObj[tag] = digest;
-                }
-                else {
-                    core.warning(`Failed to get image digest: ${inspectCmd.stderr}`);
-                }
-            }
-            // Output the digests as a JSON string
-            if (Object.keys(digestsObj).length > 0) {
-                const digestsJson = JSON.stringify(digestsObj);
-                core.info(`Image digests: ${digestsJson}`);
-                core.setOutput('imageDigests', digestsJson);
             }
         }
     });
