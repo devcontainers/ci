@@ -83,8 +83,9 @@ export async function runMain(): Promise<void> {
 		const resolvedImageTag = imageTag ?? 'latest';
 		const imageTagArray = resolvedImageTag.split(/\s*,\s*/);
 		const fullImageNameArray: string[] = [];
+		
 		for (const tag of imageTagArray) {
-			// For multi-platform builds, append architecture to tag to prevent overwrites
+			// For multi-platform builds, use architecture-specific tags consistently throughout
 			const finalTag = platform ? `${tag}-${platform.replace('/', '-')}` : tag;
 			fullImageNameArray.push(`${imageName}:${finalTag}`);
 		}
@@ -146,11 +147,12 @@ export async function runMain(): Promise<void> {
 			const digestsObj: Record<string, string> = {};
 
 			if (platform) {
-				// Copy image to registry FIRST
+				// Copy image to registry FIRST with architecture-specific tags
 				for (const tag of imageTagArray) {
 					const finalTag = platform ? `${tag}-${platform.replace('/', '-')}` : tag;
-					const imageSource = `oci-archive:/tmp/output.tar:${tag}`;
+					const imageSource = `oci-archive:/tmp/output.tar:${finalTag}`;
 					const imageDest = `docker://${imageName}:${finalTag}`;
+					core.info(`Copying multiplatform image to architecture-specific tag: ${imageName}:${finalTag}`);
 					await copyImage(true, imageSource, imageDest);
 				}
 				
@@ -333,16 +335,10 @@ export async function runPost(): Promise<void> {
 
 	const platform = emptyStringAsUndefined(core.getInput('platform'));
 	if (platform) {
-
-		for (const tag of imageTagArray) {
-			const finalTag = platform ? `${tag}-${platform.replace('/', '-')}` : tag;
-			core.info(`Copying multiplatform image '${imageName}:${finalTag}'...`);
-			const imageSource = `oci-archive:/tmp/output.tar:${tag}`;
-			const imageDest = `docker://${imageName}:${finalTag}`;
-
-			await copyImage(true, imageSource, imageDest);
-		}
-
+		// Platform-specific builds are now handled in runMain() to extract post-registry digests
+		// Skip copying here to avoid duplicate operations
+		core.info('Platform-specific image copying was handled in the main build step');
+		return;
 	} else {
 		for (const tag of imageTagArray) {
 			core.info(`Pushing image '${imageName}:${tag}'...`);
