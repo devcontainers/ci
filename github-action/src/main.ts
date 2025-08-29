@@ -173,23 +173,25 @@ export async function runMain(): Promise<void> {
 					
 					const inspectCmd = await exec(
 						'docker',
-						['buildx', 'imagetools', 'inspect', `${imageName}:${finalTag}`, '--format', '{{.Manifest.Digest}}'],
+						['buildx', 'imagetools', 'inspect', `${imageName}:${finalTag}`],
 						{silent: true}
 					);
 					
 					core.info(`Inspect command exit code: ${inspectCmd.exitCode}`);
-					core.info(`Inspect command stdout: "${inspectCmd.stdout}"`);
-					core.info(`Inspect command stderr: "${inspectCmd.stderr}"`);
 					
 					if (inspectCmd.exitCode === 0) {
-						const digest = inspectCmd.stdout.trim();
-						core.info(`Raw digest output: "${digest}"`);
-						if (digest && digest.startsWith('sha256:')) {
+						const output = inspectCmd.stdout.trim();
+						core.info(`Inspect output: "${output}"`);
+						
+						// Extract digest from the output (format: "Digest:    sha256:...")
+						const digestMatch = output.match(/Digest:\s+(sha256:[a-f0-9]+)/);
+						if (digestMatch) {
+							const digest = digestMatch[1];
 							core.info(`Image digest for ${platform}: ${digest}`);
 							digestsObj[platform] = digest;
 							break; // Found digest, stop looking
 						} else {
-							core.warning(`Invalid digest format: "${digest}"`);
+							core.warning(`Could not extract digest from inspect output: "${output}"`);
 						}
 					} else {
 						core.warning(`Failed to inspect registry image for ${finalTag}: ${inspectCmd.stderr}`);
