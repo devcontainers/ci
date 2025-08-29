@@ -85,9 +85,9 @@ export async function runMain(): Promise<void> {
 		const fullImageNameArray: string[] = [];
 		
 		for (const tag of imageTagArray) {
-			// For multi-platform builds, use architecture-specific tags consistently throughout
-			const finalTag = platform ? `${tag}-${platform.replace('/', '-')}` : tag;
-			fullImageNameArray.push(`${imageName}:${finalTag}`);
+			// Always use original tags for the build (OCI tarball will contain these)
+			// We'll use arch-specific tags only when pushing to registry
+			fullImageNameArray.push(`${imageName}:${tag}`);
 		}
 		if (imageName) {
 			if (fullImageNameArray.length === 1) {
@@ -150,7 +150,8 @@ export async function runMain(): Promise<void> {
 				// Copy image to registry FIRST with architecture-specific tags
 				for (const tag of imageTagArray) {
 					const finalTag = platform ? `${tag}-${platform.replace('/', '-')}` : tag;
-					const imageSource = `oci-archive:/tmp/output.tar:${finalTag}`;
+					// Use original tag from OCI tarball, push to arch-specific registry tag
+					const imageSource = `oci-archive:/tmp/output.tar:${tag}`;
 					const imageDest = `docker://${imageName}:${finalTag}`;
 					core.info(`Copying multiplatform image to architecture-specific tag: ${imageName}:${finalTag}`);
 					await copyImage(true, imageSource, imageDest);
