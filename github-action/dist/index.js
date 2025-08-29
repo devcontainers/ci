@@ -2251,24 +2251,42 @@ function runMain() {
                         const imageSource = `oci-archive:/tmp/output.tar:${tag}`;
                         const imageDest = `docker://${imageName}:${finalTag}`;
                         core.info(`Copying multiplatform image to architecture-specific tag: ${imageName}:${finalTag}`);
-                        yield (0, skopeo_1.copyImage)(true, imageSource, imageDest);
+                        core.info(`Copy source: ${imageSource}`);
+                        core.info(`Copy destination: ${imageDest}`);
+                        try {
+                            yield (0, skopeo_1.copyImage)(true, imageSource, imageDest);
+                            core.info(`Successfully copied image to ${finalTag}`);
+                        }
+                        catch (error) {
+                            core.error(`Failed to copy image to ${finalTag}: ${error}`);
+                            throw error;
+                        }
                     }
                     // Extract digest from registry AFTER push to get the actual registry digest
                     for (const tag of imageTagArray) {
                         const finalTag = platform ? `${tag}-${platform.replace('/', '-')}` : tag;
+                        core.info(`Attempting to inspect registry image: ${imageName}:${finalTag}`);
                         const inspectCmd = yield (0, exec_1.exec)('docker', ['buildx', 'imagetools', 'inspect', `${imageName}:${finalTag}`, '--format', '{{.Manifest.Digest}}'], { silent: true });
+                        core.info(`Inspect command exit code: ${inspectCmd.exitCode}`);
+                        core.info(`Inspect command stdout: "${inspectCmd.stdout}"`);
+                        core.info(`Inspect command stderr: "${inspectCmd.stderr}"`);
                         if (inspectCmd.exitCode === 0) {
                             const digest = inspectCmd.stdout.trim();
+                            core.info(`Raw digest output: "${digest}"`);
                             if (digest && digest.startsWith('sha256:')) {
                                 core.info(`Image digest for ${platform}: ${digest}`);
                                 digestsObj[platform] = digest;
                                 break; // Found digest, stop looking
+                            }
+                            else {
+                                core.warning(`Invalid digest format: "${digest}"`);
                             }
                         }
                         else {
                             core.warning(`Failed to inspect registry image for ${finalTag}: ${inspectCmd.stderr}`);
                         }
                     }
+                    core.info(`Final digestsObj: ${JSON.stringify(digestsObj)}`);
                 }
                 else if (imageName) {
                     // For non-platform specific builds, use local docker inspect
