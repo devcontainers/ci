@@ -84,7 +84,9 @@ export async function runMain(): Promise<void> {
 		const imageTagArray = resolvedImageTag.split(/\s*,\s*/);
 		const fullImageNameArray: string[] = [];
 		for (const tag of imageTagArray) {
-			fullImageNameArray.push(`${imageName}:${tag}`);
+			// For multi-platform builds, append architecture to tag to prevent overwrites
+			const finalTag = platform ? `${tag}-${platform.replace('/', '-')}` : tag;
+			fullImageNameArray.push(`${imageName}:${finalTag}`);
 		}
 		if (imageName) {
 			if (fullImageNameArray.length === 1) {
@@ -144,37 +146,33 @@ export async function runMain(): Promise<void> {
 			const digestsObj: Record<string, string> = {};
 
 			if (platform) {
-				// Extract digest from OCI tarball
+				// Copy image to registry FIRST
 				for (const tag of imageTagArray) {
+					const finalTag = platform ? `${tag}-${platform.replace('/', '-')}` : tag;
 					const imageSource = `oci-archive:/tmp/output.tar:${tag}`;
-					
-					const inspectOCICmd = await exec(
-						'skopeo',
-						['inspect', imageSource],
+					const imageDest = `docker://${imageName}:${finalTag}`;
+					await copyImage(true, imageSource, imageDest);
+				}
+				
+				// Extract digest from registry AFTER push to get the actual registry digest
+				for (const tag of imageTagArray) {
+					const finalTag = platform ? `${tag}-${platform.replace('/', '-')}` : tag;
+					const inspectCmd = await exec(
+						'docker',
+						['buildx', 'imagetools', 'inspect', `${imageName}:${finalTag}`, '--format', '{{.Manifest.Digest}}'],
 						{silent: true}
 					);
 					
-					if (inspectOCICmd.exitCode === 0) {
-						try {
-							const imageInfo = JSON.parse(inspectOCICmd.stdout);
-							if (imageInfo.Digest) {
-								core.info(`Image digest for ${platform}: ${imageInfo.Digest}`);
-								digestsObj[platform] = imageInfo.Digest;
-								break; // Found digest, stop looking
-							}
-						} catch (error) {
-							core.warning(`Failed to parse OCI archive info: ${error}`);
+					if (inspectCmd.exitCode === 0) {
+						const digest = inspectCmd.stdout.trim();
+						if (digest && digest.startsWith('sha256:')) {
+							core.info(`Image digest for ${platform}: ${digest}`);
+							digestsObj[platform] = digest;
+							break; // Found digest, stop looking
 						}
 					} else {
-						core.warning(`Failed to inspect OCI tarball for ${tag}`);
+						core.warning(`Failed to inspect registry image for ${finalTag}: ${inspectCmd.stderr}`);
 					}
-				}
-				
-				// Copy image to registry AFTER extracting digest locally
-				for (const tag of imageTagArray) {
-					const imageSource = `oci-archive:/tmp/output.tar:${tag}`;
-					const imageDest = `docker://${imageName}:${tag}`;
-					await copyImage(true, imageSource, imageDest);
 				}
 			} else if (imageName) {
 				// For non-platform specific builds, use local docker inspect
@@ -337,9 +335,10 @@ export async function runPost(): Promise<void> {
 	if (platform) {
 
 		for (const tag of imageTagArray) {
-			core.info(`Copying multiplatform image '${imageName}:${tag}'...`);
+			const finalTag = platform ? `${tag}-${platform.replace('/', '-')}` : tag;
+			core.info(`Copying multiplatform image '${imageName}:${finalTag}'...`);
 			const imageSource = `oci-archive:/tmp/output.tar:${tag}`;
-			const imageDest = `docker://${imageName}:${tag}`;
+			const imageDest = `docker://${imageName}:${finalTag}`;
 
 			await copyImage(true, imageSource, imageDest);
 		}
