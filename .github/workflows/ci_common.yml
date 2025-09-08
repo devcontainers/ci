@@ -131,7 +131,7 @@ jobs:
             console.log(context);
 
       # Published action contains compiled JS, but we need to compile it here
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 20
       - name: Compile GH action
@@ -285,7 +285,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       # Published action contains compiled JS, but we need to compile it here
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 20
       - name: Compile GH action
@@ -383,7 +383,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       # Published action contains compiled JS, but we need to compile it here
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 20
       - name: Compile GH action
@@ -435,7 +435,7 @@ jobs:
           ref: ${{ inputs.prRef }}
 
       # Published action contains compiled JS, but we need to compile it here
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 20
       - name: Compile GH action
@@ -473,7 +473,7 @@ jobs:
           ref: ${{ inputs.prRef }}
 
       # Published action contains compiled JS, but we need to compile it here
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 20
       - name: Compile GH action
@@ -523,7 +523,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       # Published action contains compiled JS, but we need to compile it here
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 20
       - name: Compile GH action
@@ -568,7 +568,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       # Published action contains compiled JS, but we need to compile it here
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 20
       - name: Compile GH action
@@ -621,7 +621,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       # Published action contains compiled JS, but we need to compile it here
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 20
       - name: Compile GH action
@@ -666,7 +666,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       # Published action contains compiled JS, but we need to compile it here
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 20
       - name: Compile GH action
@@ -711,7 +711,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       # Published action contains compiled JS, but we need to compile it here
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 20
       - name: Compile GH action
@@ -756,7 +756,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       # Published action contains compiled JS, but we need to compile it here
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 20
       - name: Compile GH action
@@ -801,7 +801,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       # Published action contains compiled JS, but we need to compile it here
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 20
       - name: Compile GH action
@@ -846,7 +846,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       # Published action contains compiled JS, but we need to compile it here
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 20
       - name: Compile GH action
@@ -898,7 +898,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       # Published action contains compiled JS, but we need to compile it here
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 20
       - name: Compile GH action
@@ -932,7 +932,7 @@ jobs:
           ref: ${{ inputs.prRef }}
 
       # Published action contains compiled JS, but we need to compile it here
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 20
       - name: Compile GH action
@@ -976,7 +976,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       # Published action contains compiled JS, but we need to compile it here
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 20
       - name: Compile GH action
@@ -1030,7 +1030,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       # Published action contains compiled JS, but we need to compile it here
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 20
       - name: Compile GH action
@@ -1057,7 +1057,7 @@ jobs:
         run: skopeo --version
 
       # Published action contains compiled JS, but we need to compile it here
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 20
       - name: Compile GH action
@@ -1128,7 +1128,7 @@ jobs:
 
 
       # Published action contains compiled JS, but we need to compile it here
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 20
       - name: Compile GH action
