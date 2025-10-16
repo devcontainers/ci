@@ -764,6 +764,9 @@ jobs:
           (cd common && npm install && npm run build)
           (cd github-action/ && npm install && npm run build && npm run package)
 
+      - name: UID INFO
+        run: echo 'UID INFO'; id; ls -l /var/run/docker.sock
+
       - name: Run test
         uses: ./
         with:
