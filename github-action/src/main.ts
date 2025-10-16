@@ -83,7 +83,10 @@ export async function runMain(): Promise<void> {
 		const resolvedImageTag = imageTag ?? 'latest';
 		const imageTagArray = resolvedImageTag.split(/\s*,\s*/);
 		const fullImageNameArray: string[] = [];
+		
 		for (const tag of imageTagArray) {
+			// Always use original tags for the build (OCI tarball will contain these)
+			// We'll use arch-specific tags only when pushing to registry
 			fullImageNameArray.push(`${imageName}:${tag}`);
 		}
 		if (imageName) {
@@ -136,6 +139,97 @@ export async function runMain(): Promise<void> {
 		});
 		if (buildResult.outcome !== 'success') {
 			return;
+		}
+
+		// If we have a platform specified and the image was built, get the image digest
+		if (buildResult.outcome === 'success') {
+			// Create a digests object to track digests for each platform
+			const digestsObj: Record<string, string> = {};
+
+			if (platform) {
+				// Copy image to registry FIRST with architecture-specific tags
+				for (const tag of imageTagArray) {
+					const finalTag = platform ? `${tag}-${platform.replace('/', '-')}` : tag;
+					// Use original tag from OCI tarball, push to arch-specific registry tag
+					const imageSource = `oci-archive:/tmp/output.tar:${tag}`;
+					const imageDest = `docker://${imageName}:${finalTag}`;
+					core.info(`Copying multiplatform image to architecture-specific tag: ${imageName}:${finalTag}`);
+					core.info(`Copy source: ${imageSource}`);
+					core.info(`Copy destination: ${imageDest}`);
+					
+					try {
+						await copyImage(true, imageSource, imageDest);
+						core.info(`Successfully copied image to ${finalTag}`);
+					} catch (error) {
+						core.error(`Failed to copy image to ${finalTag}: ${error}`);
+						throw error;
+					}
+				}
+				
+				// Extract digest from registry AFTER push to get the actual registry digest
+				for (const tag of imageTagArray) {
+					const finalTag = platform ? `${tag}-${platform.replace('/', '-')}` : tag;
+					core.info(`Attempting to inspect registry image: ${imageName}:${finalTag}`);
+					
+					const inspectCmd = await exec(
+						'docker',
+						['buildx', 'imagetools', 'inspect', `${imageName}:${finalTag}`],
+						{silent: true}
+					);
+					
+					core.info(`Inspect command exit code: ${inspectCmd.exitCode}`);
+					
+					if (inspectCmd.exitCode === 0) {
+						const output = inspectCmd.stdout.trim();
+						core.info(`Inspect output: "${output}"`);
+						
+						// Extract digest from the output (format: "Digest:    sha256:...")
+						const digestMatch = output.match(/Digest:\s+(sha256:[a-f0-9]+)/);
+						if (digestMatch) {
+							const digest = digestMatch[1];
+							core.info(`Image digest for ${platform}: ${digest}`);
+							digestsObj[platform] = digest;
+							break; // Found digest, stop looking
+						} else {
+							core.warning(`Could not extract digest from inspect output: "${output}"`);
+						}
+					} else {
+						core.warning(`Failed to inspect registry image for ${finalTag}: ${inspectCmd.stderr}`);
+					}
+				}
+				
+				core.info(`Final digestsObj: ${JSON.stringify(digestsObj)}`);
+			} else if (imageName) {
+				// For non-platform specific builds, use local docker inspect
+				const inspectCmd = await exec(
+					'docker',
+					[
+						'inspect',
+						`${imageName}:${imageTagArray[0]}`,
+						'--format',
+						'{{index .RepoDigests 0}}',
+					],
+					{silent: true},
+				);
+				if (inspectCmd.exitCode === 0) {
+					const digestLine = inspectCmd.stdout.trim();
+					// Extract just the digest part (sha256:...)
+					const digestMatch = digestLine.match(/sha256:[a-f0-9]+/);
+					if (digestMatch) {
+						const digest = digestMatch[0];
+						core.info(`Image digest: ${digest}`);
+						digestsObj['default'] = digest;
+					}
+				} else {
+					core.warning(`Failed to get image digest: ${inspectCmd.stderr}`);
+				}
+			}
+
+			// Output the digests as a JSON string
+			if (Object.keys(digestsObj).length > 0) {
+				const digestsJson = JSON.stringify(digestsObj);
+				core.setOutput('imageDigests', digestsJson);
+			}
 		}
 
 		for (const [key, value] of Object.entries(githubEnvs)) {
@@ -264,13 +358,10 @@ export async function runPost(): Promise<void> {
 
 	const platform = emptyStringAsUndefined(core.getInput('platform'));
 	if (platform) {
-		for (const tag of imageTagArray) {
-			core.info(`Copying multiplatform image '${imageName}:${tag}'...`);
-			const imageSource = `oci-archive:/tmp/output.tar:${tag}`;
-			const imageDest = `docker://${imageName}:${tag}`;
-
-			await copyImage(true, imageSource, imageDest);
-		}
+		// Platform-specific builds are now handled in runMain() to extract post-registry digests
+		// Skip copying here to avoid duplicate operations
+		core.info('Platform-specific image copying was handled in the main build step');
+		return;
 	} else {
 		for (const tag of imageTagArray) {
 			core.info(`Pushing image '${imageName}:${tag}'...`);
@@ -285,3 +376,5 @@ function emptyStringAsUndefined(value: string): string | undefined {
 	}
 	return value;
 }
+
+

@@ -12,7 +12,7 @@ inputs:
     required: false
     description: One or more comma-separated image tags (defaults to latest)
   platform:
-    require: false
+    required: false
     description: Platforms for which the image should be built. If omitted, defaults to the platform of the GitHub Actions Runner. Multiple platforms should be comma separated.
   runCmd:
     required: false
@@ -20,11 +20,11 @@ inputs:
   subFolder:
     required: false
     description: Specify a child folder (containing a .devcontainer) instead of using the repository root
-    default:
+    default: ""
   configFile:
     required: false
     description: Specify the path to a devcontainer.json file instead of using `./.devcontainer/devcontainer.json` or `./.devcontainer.json`
-    default:
+    default: ""
   checkoutPath:
     required: false
     description: Specify path to checked out folder if not using default (or for testing with nektos/act)
@@ -35,7 +35,7 @@ inputs:
     description: Control when images are pushed. Options are never, filter, always. For filter (default), images are pushed if the refFilterForPush and eventFilterForPush conditions are met
   refFilterForPush:
     required: false
-    default:
+    default: ""
     description: Set the source branches (e.g. refs/heads/main) that are allowed to trigger a push of the dev container image. Leave empty to allow all.
   eventFilterForPush:
     required: false
@@ -46,11 +46,11 @@ inputs:
     description: Specify environment variables to pass to the docker run command
   inheritEnv:
     required: false
-    default: false
+    default: "false"
     description: Inherit all environment variables of the runner CI machine.
   skipContainerUserIdUpdate:
     required: false
-    default: false
+    default: "false"
     description: For non-root Dev Containers (i.e. where `remoteUser` is specified), the action attempts to make the container user UID and GID match those of the host user. Set this to true to skip this step (defaults to false)
   userDataFolder:
     required: false
@@ -59,9 +59,8 @@ inputs:
     required: false
     description: Specify additional images to use for build caching
   noCache:
-    type: boolean
     required: false
-    default: false
+    default: "false"
     description: Builds the image with `--no-cache` (takes precedence over `cacheFrom`)
   cacheTo:
     required: false
@@ -69,6 +68,8 @@ inputs:
 outputs:
   runCmdOutput:
     description: The output of the command specified in the runCmd input
+  imageDigests:
+    description: The SHA256 digests of the built images. JSON object with platform keys and digest values.
 runs:
   using: 'node20'
   main: 'github-action/run-main.js'
