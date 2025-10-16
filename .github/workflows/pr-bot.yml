@@ -41,7 +41,7 @@ jobs:
       # Determine whether the comment is a command
       - id: check_command
         name: Check for a command using GitHub script
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const script = require('./.github/scripts/build.js')
