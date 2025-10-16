@@ -6,7 +6,7 @@ import {promisify} from 'util';
 import {ExecFunction} from './exec';
 import {findWindowsExecutable} from './windows';
 
-const cliVersion = "0"; // Use 'latest' to get latest CLI version, or pin to specific version e.g. '0.14.1' if required
+export const MAJOR_VERSION_FALLBACK = '0';
 
 export interface DevContainerCliError {
   outcome: 'error';
@@ -26,19 +26,17 @@ function getSpecCliInfo() {
   };
 }
 
-async function isCliInstalled(exec: ExecFunction): Promise<boolean> {
+async function isCliInstalled(exec: ExecFunction, cliVersion: string): Promise<boolean> {
   try {
     const command = await findWindowsExecutable(getSpecCliInfo().command);
-    const {exitCode} = await exec(command, ['--help'], {
-      silent: true,
-    });
-    return exitCode === 0;
+    const {exitCode, stdout} = await exec(command, ['--version'], {});
+    return exitCode === 0 && stdout.trim() === cliVersion;
   } catch (error) {
     return false;
   }
 }
 const fstat = promisify(fs.stat);
-async function installCli(exec: ExecFunction): Promise<boolean> {
+async function installCli(exec: ExecFunction, cliVersion: string): Promise<boolean> {
   // if we have a local 'cli' folder, then use that as we're testing a private cli build
   let cliStat = null;
   try {
@@ -54,7 +52,7 @@ async function installCli(exec: ExecFunction): Promise<boolean> {
     }
     return exitCode === 0;
   }
-  console.log('** Installing @devcontainers/cli');
+  console.log(`** Installing @devcontainers/cli@${cliVersion}`);
   const {exitCode, stdout, stderr} = await exec('bash', ['-c', `npm install -g @devcontainers/cli@${cliVersion}`], {});
   if (exitCode != 0) {
     console.log(stdout);
