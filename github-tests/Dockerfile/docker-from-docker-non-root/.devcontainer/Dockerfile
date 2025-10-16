@@ -52,7 +52,13 @@ COPY scripts/docker-client.sh /tmp/
 RUN /tmp/docker-client.sh
 
 #Add user to docker group
-RUN sudo groupadd docker && sudo usermod -aG docker $USERNAME && newgrp docker
+ARG DOCKER_GID=
+RUN if [ -n "$DOCKER_GID" ]; then \
+    sudo groupadd -g $DOCKER_GID docker; \
+    else \
+    sudo groupadd docker; \
+    fi \
+    && sudo usermod -aG docker $USERNAME
 
 # __DEVCONTAINER_SNIPPET_INSERT__ (control where snippets get inserted using the devcontainer CLI)
 

@@ -4,6 +4,9 @@
 	"name": "dc-test",
 	"dockerFile": "Dockerfile",
 	"build": {
+		"args": {
+			"DOCKER_GID": "${localEnv:DOCKER_GID}"
+		},
 		"cacheFrom": "ghcr.io/devcontainers/ci/tests/docker-from-docker-non-root:latest"
 	},
 

@@ -767,6 +767,10 @@ jobs:
       - name: UID INFO
         run: echo 'UID INFO'; id; ls -l /var/run/docker.sock
 
+      - name: Set DOCKER_GID
+        run: |
+          echo "DOCKER_GID=$(getent group docker | cut -d: -f3)" >> $GITHUB_ENV
+
       - name: Run test
         uses: ./
         with:
@@ -778,6 +782,8 @@ jobs:
           eventFilterForPush: |
             push
             pull_request
+        env:
+          DOCKER_GID: ${{ env.DOCKER_GID }}
 
   test-gh-docker-from-docker-root:
     name: Run GitHub docker-from-docker-root test
