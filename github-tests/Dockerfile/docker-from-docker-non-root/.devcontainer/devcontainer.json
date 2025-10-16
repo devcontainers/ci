@@ -4,6 +4,9 @@
 	"name": "dc-test",
 	"dockerFile": "Dockerfile",
 	"build": {
+		"args": {
+			"DOCKER_GID": "${localEnv:DOCKER_GID}"
+		},
 		"cacheFrom": "ghcr.io/devcontainers/ci/tests/docker-from-docker-non-root:latest"
 	},
 
@@ -55,6 +58,7 @@
 
 	// Use 'postCreateCommand' to run commands after the container is created.
 	"postCreateCommand": "./scripts/go-tools.sh",
+	"postStartCommand": "echo 'UID INFO'; id; ls -l /var/run/docker.sock",
 
 	"remoteUser": "vscode",
 	
