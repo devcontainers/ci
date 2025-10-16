@@ -55,6 +55,7 @@
 
 	// Use 'postCreateCommand' to run commands after the container is created.
 	"postCreateCommand": "./scripts/go-tools.sh",
+	"postStartCommand": "echo 'UID INFO'; id; ls -l /var/run/docker.sock",
 
 	"remoteUser": "vscode",
 	
