@@ -22,6 +22,43 @@ const githubEnvs = {
 	GITHUB_STEP_SUMMARY: '/mnt/github/step-summary',
 };
 
+// Helper function to parse multiline input and filter out empty lines
+function parseMultilineInput(input: string): string[] {
+	return input
+		.split('\n')
+		.map(line => line.trim())
+		.filter(line => line.length > 0);
+}
+
+// Helper function to construct full image names from images and tags
+function constructFullImageNames(images: string[], tags: string[]): string[] {
+	const fullImageNames: string[] = [];
+	
+	if (images.length === 0) {
+		// If no images specified, return tags as-is (they might be full image names)
+		return tags;
+	}
+	
+	if (tags.length === 0) {
+		// If no tags specified, default to 'latest'
+		tags = ['latest'];
+	}
+	
+	// Create cartesian product of images and tags
+	for (const image of images) {
+		for (const tag of tags) {
+			// Check if tag is already a full image name (contains ':')
+			if (tag.includes(':')) {
+				fullImageNames.push(tag);
+			} else {
+				fullImageNames.push(`${image}:${tag}`);
+			}
+		}
+	}
+	
+	return fullImageNames;
+}
+
 export async function runMain(): Promise<void> {
 	try {
 		core.info('Starting...');
@@ -44,8 +81,40 @@ export async function runMain(): Promise<void> {
 		}
 
 		const checkoutPath: string = core.getInput('checkoutPath');
+		
+		// Get legacy inputs
 		const imageName = emptyStringAsUndefined(core.getInput('imageName'));
 		const imageTag = emptyStringAsUndefined(core.getInput('imageTag'));
+		
+		// Get new inputs (these take precedence)
+		const imagesInput = core.getInput('images');
+		const tagsInput = core.getInput('tags');
+		
+		// Parse and determine which inputs to use
+		let images: string[] = [];
+		let tags: string[] = [];
+		
+		if (imagesInput || tagsInput) {
+			// Use new input format
+			if (imagesInput) {
+				images = parseMultilineInput(imagesInput);
+			}
+			if (tagsInput) {
+				tags = parseMultilineInput(tagsInput);
+			}
+		} else if (imageName || imageTag) {
+			// Use legacy input format
+			if (imageName) {
+				images = [imageName];
+			}
+			if (imageTag) {
+				tags = imageTag.split(/\s*,\s*/);
+			}
+		}
+		
+		// Construct full image names
+		const fullImageNameArray = constructFullImageNames(images, tags);
+		
 		const platform = emptyStringAsUndefined(core.getInput('platform'));
 		const subFolder: string = core.getInput('subFolder');
 		const relativeConfigFile = emptyStringAsUndefined(
@@ -80,13 +149,8 @@ export async function runMain(): Promise<void> {
 		const configFile =
 			relativeConfigFile && path.resolve(checkoutPath, relativeConfigFile);
 
-		const resolvedImageTag = imageTag ?? 'latest';
-		const imageTagArray = resolvedImageTag.split(/\s*,\s*/);
-		const fullImageNameArray: string[] = [];
-		for (const tag of imageTagArray) {
-			fullImageNameArray.push(`${imageName}:${tag}`);
-		}
-		if (imageName) {
+		// Handle caching logic for full image names
+		if (fullImageNameArray.length > 0) {
 			if (fullImageNameArray.length === 1) {
 				if (!noCache && !cacheFrom.includes(fullImageNameArray[0])) {
 					// If the cacheFrom options don't include the fullImageName, add it here
@@ -106,12 +170,14 @@ export async function runMain(): Promise<void> {
 				);
 			}
 		} else {
+			// Legacy warning message for backwards compatibility
 			if (imageTag) {
 				core.warning(
 					'imageTag specified without specifying imageName - ignoring imageTag',
 				);
 			}
 		}
+		
 		const buildResult = await core.group('🏗️ build container', async () => {
 			const args: DevContainerCliBuildArgs = {
 				workspaceFolder,
@@ -212,19 +278,50 @@ export async function runMain(): Promise<void> {
 
 export async function runPost(): Promise<void> {
 	const pushOption = emptyStringAsUndefined(core.getInput('push'));
-	const imageName = emptyStringAsUndefined(core.getInput('imageName'));
 	const refFilterForPush: string[] = core.getMultilineInput('refFilterForPush');
 	const eventFilterForPush: string[] =
 		core.getMultilineInput('eventFilterForPush');
 
-	// default to 'never' if not set and no imageName
-	if (pushOption === 'never' || (!pushOption && !imageName)) {
+	// Get legacy and new inputs for determining image names to push
+	const imageName = emptyStringAsUndefined(core.getInput('imageName'));
+	const imageTag = emptyStringAsUndefined(core.getInput('imageTag'));
+	const imagesInput = core.getInput('images');
+	const tagsInput = core.getInput('tags');
+	
+	// Parse and determine which inputs to use
+	let images: string[] = [];
+	let tags: string[] = [];
+	
+	if (imagesInput || tagsInput) {
+		// Use new input format
+		if (imagesInput) {
+			images = parseMultilineInput(imagesInput);
+		}
+		if (tagsInput) {
+			tags = parseMultilineInput(tagsInput);
+		}
+	} else if (imageName || imageTag) {
+		// Use legacy input format
+		if (imageName) {
+			images = [imageName];
+		}
+		if (imageTag) {
+			tags = imageTag.split(/\s*,\s*/);
+		}
+	}
+	
+	// Construct full image names
+	const fullImageNameArray = constructFullImageNames(images, tags);
+	const hasImageNames = fullImageNameArray.length > 0;
+
+	// default to 'never' if not set and no imageName/images
+	if (pushOption === 'never' || (!pushOption && !hasImageNames)) {
 		core.info(`Image push skipped because 'push' is set to '${pushOption}'`);
 		return;
 	}
 
-	// default to 'filter' if not set and imageName is set
-	if (pushOption === 'filter' || (!pushOption && imageName)) {
+	// default to 'filter' if not set and imageName/images is set
+	if (pushOption === 'filter' || (!pushOption && hasImageNames)) {
 		// https://docs.github.com/en/actions/reference/environment-variables#default-environment-variables
 		const ref = process.env.GITHUB_REF;
 		if (
@@ -251,30 +348,38 @@ export async function runPost(): Promise<void> {
 		return;
 	}
 
-	const imageTag =
-		emptyStringAsUndefined(core.getInput('imageTag')) ?? 'latest';
-	const imageTagArray = imageTag.split(/\s*,\s*/);
-	if (!imageName) {
+	if (!hasImageNames) {
 		if (pushOption) {
-			// pushOption was set (and not to "never") - give an error that imageName is required
-			core.error('imageName is required to push images');
+			// pushOption was set (and not to "never") - give an error that imageName/images is required
+			core.error('imageName or images is required to push images');
 		}
 		return;
 	}
 
 	const platform = emptyStringAsUndefined(core.getInput('platform'));
 	if (platform) {
-		for (const tag of imageTagArray) {
-			core.info(`Copying multiplatform image '${imageName}:${tag}'...`);
+		// For multi-platform builds, fullImageNameArray contains full image:tag combinations
+		for (const fullImageName of fullImageNameArray) {
+			core.info(`Copying multiplatform image '${fullImageName}'...`);
+			const [imageName, tag] = fullImageName.split(':');
 			const imageSource = `oci-archive:/tmp/output.tar:${tag}`;
-			const imageDest = `docker://${imageName}:${tag}`;
+			const imageDest = `docker://${fullImageName}`;
 
 			await copyImage(true, imageSource, imageDest);
 		}
 	} else {
-		for (const tag of imageTagArray) {
-			core.info(`Pushing image '${imageName}:${tag}'...`);
-			await pushImage(imageName, tag);
+		// For single-platform builds, parse image and tag for each full image name
+		for (const fullImageName of fullImageNameArray) {
+			core.info(`Pushing image '${fullImageName}'...`);
+			const lastColonIndex = fullImageName.lastIndexOf(':');
+			if (lastColonIndex > -1) {
+				const imageName = fullImageName.substring(0, lastColonIndex);
+				const tag = fullImageName.substring(lastColonIndex + 1);
+				await pushImage(imageName, tag);
+			} else {
+				// Fallback: treat as image name with 'latest' tag
+				await pushImage(fullImageName, 'latest');
+			}
 		}
 	}
 }
