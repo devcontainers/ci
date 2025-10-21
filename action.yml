@@ -63,6 +63,10 @@ inputs:
     required: false
     default: false
     description: Builds the image with `--no-cache` (takes precedence over `cacheFrom`)
+  cliVersion:
+    required: false
+    default: latest
+    description: The version of the devcontainer CLI to use
   cacheTo:
     required: false
     description: Specify the image to cache the built image to
