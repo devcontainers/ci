@@ -151,7 +151,9 @@ export interface DevContainerCliSuccessResult {
 }
 
 export interface DevContainerCliBuildResult
-  extends DevContainerCliSuccessResult {}
+  extends DevContainerCliSuccessResult {
+    imageDigests?: Record<string, string>;
+}
 export interface DevContainerCliBuildArgs {
   workspaceFolder: string;
   configFile: string | undefined;
