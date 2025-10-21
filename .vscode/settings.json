@@ -6,4 +6,12 @@
     "typescript.format.insertSpaceAfterCommaDelimiter": true,
     "typescript.format.insertSpaceAfterConstructor": false,
     "typescript.format.semicolons": "insert",
+    "editor.experimental.treeSitterTelemetry": true,
+    "workbench.editor.enablePreviewFromCodeNavigation": true,
+    "workbench.editor.enablePreviewFromQuickOpen": true,
+    "workbench.editor.limit.enabled": true,
+    "workbench.editor.defaultBinaryEditor": "jsProfileVisualizer.cpuprofile.table",
+    "workbench.editor.autoLockGroups": {
+        "default": true
+    },
 }
