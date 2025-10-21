@@ -80,7 +80,7 @@ jobs:
 
       - id: set_image_push_option
         name: Set image push option
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             // if running full tests then use the filter option, for the dev container action
@@ -110,7 +110,7 @@ jobs:
 
       - id: set_image_tag
         name: Set image_tag...
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         env:
           PR_NUMBER: ${{ inputs.prNumber }}
         with:
