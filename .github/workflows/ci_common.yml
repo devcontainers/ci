@@ -266,7 +266,7 @@ jobs:
           echo "VERSION_MAJOR=${VERSION_MAJOR}"
 
       - name: Download release VSIX
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v6
         with:
           name: azdo-task
           path: output
@@ -364,12 +364,12 @@ jobs:
           echo "VERSION_SHORT: $VERSION_SHORT"
 
       - name: Download workflow artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v6
         with:
           path: output
 
       - name: Download release VSIX
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v6
         with:
           name: azdo-task-dev
           path: output
