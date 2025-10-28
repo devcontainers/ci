@@ -178,14 +178,14 @@ jobs:
           echo "VERSION_SHORT=${VERSION_SHORT}"
           echo "VERSION_MAJOR=${VERSION_MAJOR}"
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         name: Create dev AzDO VSIX artifact
         with:
           name: azdo-task-dev
           path: ./output/devcontainers-dev.ci-${{ steps.build.outputs.version }}.vsix
           if-no-files-found: error
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         name: Create release AzDO VSIX artifact
         with:
           name: azdo-task
