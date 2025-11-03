@@ -30,9 +30,9 @@
   },
   "devDependencies": {
     "@types/jest": "^30.0.0",
-    "@types/node": "^24.9.0",
+    "@types/node": "^24.10.0",
     "@types/q": "^1.5.8",
-    "@typescript-eslint/eslint-plugin": "^8.46.2",
+    "@typescript-eslint/eslint-plugin": "^8.46.3",
     "@typescript-eslint/parser": "^8.46.2",
     "@vercel/ncc": "^0.38.4",
     "azure-pipelines-task-lib": "^5.2.1",
