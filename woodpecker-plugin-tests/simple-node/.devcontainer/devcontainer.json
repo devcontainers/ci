@@ -1,0 +1,11 @@
+{
+  "name": "Woodpecker Plugin Test",
+  "image": "mcr.microsoft.com/devcontainers/javascript-node:20",
+  "features": {},
+  "customizations": {
+    "vscode": {
+      "extensions": []
+    }
+  },
+  "postCreateCommand": "echo 'DevContainer initialized successfully' && node --version && npm --version"
+}

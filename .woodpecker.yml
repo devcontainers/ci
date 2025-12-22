@@ -1,0 +1,130 @@
+# Woodpecker CI configuration for testing the woodpecker-plugin
+# This config is only for testing purposes in local Woodpecker CI
+
+when:
+  event: [push, pull_request, manual]
+
+steps:
+  # Check code formatting
+  - name: format-check
+    image: node:20-alpine
+    commands:
+      - cd woodpecker-plugin && npm ci && npm run format-check
+
+  # Lint TypeScript code
+  - name: lint
+    image: node:20-alpine
+    commands:
+      - cd woodpecker-plugin && npm ci && npm run lint
+
+  # Install dependencies and build TypeScript
+  - name: build-typescript
+    image: node:20-alpine
+    commands:
+      - cd common && npm ci && npm run build
+      - cd ../woodpecker-plugin && npm ci && npm run build
+    depends_on:
+      - format-check
+      - lint
+
+  # Run unit tests for env-parser
+  - name: test-env-parser
+    image: node:20-alpine
+    commands:
+      - cd woodpecker-plugin && npm test
+    depends_on:
+      - build-typescript
+
+  # Build the plugin Docker image
+  - name: build-plugin-image
+    image: docker:latest
+    commands:
+      - docker build -f woodpecker-plugin/Dockerfile -t woodpecker-plugin:test .
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      - test-env-parser
+
+  # Test scenario 1: simple-node (image-based)
+  - name: test-simple-node-build
+    image: woodpecker-plugin:test
+    settings:
+      sub_folder: woodpecker-plugin-tests/simple-node
+      image_name: test-simple-node
+      image_tag: test
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      - build-plugin-image
+
+  - name: test-simple-node-run
+    image: test-simple-node:test
+    commands:
+      - echo "Testing simple-node DevContainer!"
+      - node --version
+      - npm --version
+    depends_on:
+      - test-simple-node-build
+
+  - name: test-simple-node-run-cmd
+    image: woodpecker-plugin:test
+    settings:
+      sub_folder: woodpecker-plugin-tests/simple-node
+      run_cmd: echo "run_cmd test!" && node --version
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      - test-simple-node-build
+
+  # Test scenario 2: with-dockerfile
+  - name: test-dockerfile-build
+    image: woodpecker-plugin:test
+    settings:
+      sub_folder: woodpecker-plugin-tests/with-dockerfile
+      image_name: test-dockerfile
+      image_tag: test
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      - build-plugin-image
+
+  - name: test-dockerfile-run
+    image: test-dockerfile:test
+    commands:
+      - echo "Testing with-dockerfile DevContainer!"
+      - node --version
+      - git --version
+    depends_on:
+      - test-dockerfile-build
+
+  # Test scenario 3: with-features (features + build args)
+  - name: test-features-build
+    image: woodpecker-plugin:test
+    settings:
+      sub_folder: woodpecker-plugin-tests/with-features
+      image_name: test-features
+      image_tag: test
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      - build-plugin-image
+
+  - name: test-features-run
+    image: test-features:test
+    commands:
+      - echo "Testing with-features DevContainer!"
+      - node --version
+      - git --version
+      - python3 --version
+    depends_on:
+      - test-features-build
+
+  - name: test-features-run-cmd
+    image: woodpecker-plugin:test
+    settings:
+      sub_folder: woodpecker-plugin-tests/with-features
+      run_cmd: echo "Features run_cmd test!" && node --version && git --version && python3 --version
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      - test-features-build

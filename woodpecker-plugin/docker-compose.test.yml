@@ -1,0 +1,90 @@
+# Temporary local Woodpecker CI for testing the plugin
+#
+# This sets up a complete local CI environment with:
+# - Forgejo (Git forge)
+# - Woodpecker Server
+# - Woodpecker Agent
+#
+# Usage:
+#   1. Copy .env.example to .env and configure OAuth credentials
+#   2. Start: docker-compose -f docker-compose.test.yml up -d
+#   3. Setup Forgejo: http://forgejo:3000 (first-time setup)
+#   4. Create OAuth app in Forgejo and update .env with credentials
+#   5. Restart: docker-compose -f docker-compose.test.yml down && docker-compose -f docker-compose.test.yml up -d
+#   6. Access Woodpecker: http://localhost:8000
+#   7. Cleanup: docker-compose -f docker-compose.test.yml down
+#
+# Note: Use 'down' without '-v' to preserve Forgejo data and OAuth configuration
+
+services:
+  forgejo:
+    image: codeberg.org/forgejo/forgejo:13.0.3
+    container_name: forgejo
+    ports:
+      - "3000:3000"
+      - "2222:22"
+    volumes:
+      - forgejo-data:/data
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+    environment:
+      - USER_UID=1000
+      - USER_GID=1000
+      - FORGEJO__server__DOMAIN=forgejo
+      - FORGEJO__server__ROOT_URL=http://forgejo:3000
+      - FORGEJO__server__SSH_DOMAIN=forgejo
+      - FORGEJO__server__SSH_PORT=2222
+
+  woodpecker-server:
+    image: woodpeckerci/woodpecker-server:v3.12.0
+    container_name: woodpecker-server
+    user: root
+    ports:
+      - "8000:8000"
+      - "9000:9000"
+    volumes:
+      - woodpecker-server-data:/var/lib/woodpecker/
+    extra_hosts:
+      - "localhost:host-gateway"
+    depends_on:
+      - forgejo
+    environment:
+      # Server configuration
+      - WOODPECKER_HOST=http://localhost:8000
+      - WOODPECKER_OPEN=true
+      - WOODPECKER_ADMIN=test
+      - WOODPECKER_REPO_OWNERS=test
+
+      # Security policy - allow volumes and privileged mode
+      - WOODPECKER_PLUGINS_PRIVILEGED=plugins/docker,woodpecker/*,docker,woodpecker-plugin:test
+      - WOODPECKER_ESCALATE=plugins/docker,woodpecker/*,docker,docker:*,woodpecker-plugin:test
+
+      # Forgejo integration (Gitea-compatible)
+      - WOODPECKER_GITEA=true
+      - WOODPECKER_GITEA_URL=http://forgejo:3000
+      - WOODPECKER_GITEA_CLIENT=${WOODPECKER_GITEA_CLIENT}
+      - WOODPECKER_GITEA_SECRET=${WOODPECKER_GITEA_SECRET}
+
+      # Agent secret
+      - WOODPECKER_AGENT_SECRET=${WOODPECKER_AGENT_SECRET}
+
+  woodpecker-agent:
+    image: woodpeckerci/woodpecker-agent:v3.12.0
+    container_name: woodpecker-agent
+    command: agent
+    restart: always
+    privileged: true
+    depends_on:
+      - woodpecker-server
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - WOODPECKER_SERVER=woodpecker-server:9000
+      - WOODPECKER_AGENT_SECRET=${WOODPECKER_AGENT_SECRET}
+      - WOODPECKER_BACKEND=docker
+      - WOODPECKER_MAX_WORKFLOWS=4
+      - WOODPECKER_BACKEND_DOCKER_NETWORK=woodpecker-plugin_default
+
+volumes:
+  forgejo-data:
+  woodpecker-server-data:

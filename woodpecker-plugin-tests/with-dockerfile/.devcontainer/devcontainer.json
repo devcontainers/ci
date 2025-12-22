@@ -1,0 +1,10 @@
+{
+  "name": "Node with Dockerfile",
+  "dockerFile": "Dockerfile",
+  "customizations": {
+    "vscode": {
+      "extensions": []
+    }
+  },
+  "postCreateCommand": "echo 'DevContainer with Dockerfile initialized!' && node --version && git --version"
+}
