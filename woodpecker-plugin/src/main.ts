@@ -1,9 +1,10 @@
 import path from "path";
-import os from "os";
 import { exec } from "./exec";
 import {
   devcontainer,
   DevContainerCliBuildArgs,
+  DevContainerCliUpArgs,
+  DevContainerCliExecArgs,
 } from "../../common/src/dev-container-cli";
 
 import { isDockerBuildXInstalled, pushImage } from "./docker";
@@ -102,126 +103,64 @@ async function main(): Promise<void> {
       }
     }
 
-    // 3. Build the dev container
-    console.log("");
-    console.log("🏗️  Building dev container...");
-    const buildArgs: DevContainerCliBuildArgs = {
-      workspaceFolder,
-      configFile,
-      imageName: fullImageNameArray,
-      platform: config.platform,
-      additionalCacheFroms: config.cacheFrom,
-      userDataFolder: config.userDataFolder,
-      output: buildxOutput,
-      noCache: config.noCache,
-      cacheTo: config.cacheTo,
-    };
-    const buildResult = await devcontainer.build(buildArgs, log);
-
-    if (buildResult.outcome !== "success") {
-      console.error(
-        `❌ Dev container build failed: ${buildResult.message} (exit code: ${buildResult.code})`,
-      );
-      console.error(buildResult.description);
-      process.exit(1);
-    }
-    console.log("✅ Build completed successfully");
-
-    // 4. Run command in container (if specified)
+    // Prepare environment variables for container
     const inputEnvsWithDefaults = populateDefaults(
       config.env,
       config.inheritEnv,
     );
 
-    // Woodpecker doesn't have equivalent env files like GitHub Actions
-    // but we can pass through Woodpecker CI environment variables
+    // Pass through Woodpecker CI environment variables
     for (const [key, value] of Object.entries(process.env)) {
       if (key.startsWith("CI_") || key.startsWith("WOODPECKER_")) {
         inputEnvsWithDefaults.push(`${key}=${value}`);
       }
     }
 
+    // 3. Choose execution path based on configuration
     if (config.runCmd) {
+      // Use devcontainer up + exec for running commands
+      // This automatically mounts the workspace and handles everything
       console.log("");
-      console.log("▶️  Running command in dev container...");
+      console.log("🏗️  Starting dev container...");
 
-      // Get the built image name
-      let builtImageName: string;
-      if (fullImageNameArray.length > 0) {
-        builtImageName = fullImageNameArray[0];
-      } else {
-        // Find the most recently created image starting with vsc-
-        const { stdout: imagesOutput } = await exec(
-          "docker",
-          [
-            "images",
-            "--format",
-            "{{.Repository}}:{{.Tag}}",
-            "--filter",
-            "reference=vsc-*",
-          ],
-          {},
+      const upArgs: DevContainerCliUpArgs = {
+        workspaceFolder,
+        configFile,
+        additionalCacheFroms: config.cacheFrom,
+        cacheTo: config.cacheTo,
+        skipContainerUserIdUpdate: config.skipContainerUserIdUpdate,
+        env: inputEnvsWithDefaults,
+        userDataFolder: config.userDataFolder,
+        additionalMounts: config.mounts,
+      };
+
+      const upResult = await devcontainer.up(upArgs, log);
+
+      if (upResult.outcome !== "success") {
+        console.error(
+          `❌ Dev container up failed: ${upResult.message} (exit code: ${upResult.code})`,
         );
-        const images = imagesOutput
-          .trim()
-          .split("\n")
-          .filter((img) => img && img.startsWith("vsc-"));
-        if (images.length === 0) {
-          console.error("❌ Could not find built devcontainer image");
-          process.exit(1);
-        }
-        builtImageName = images[0];
-        console.log(`Using built image: ${builtImageName}`);
+        console.error(upResult.description);
+        process.exit(1);
       }
+      console.log("✅ Dev container started successfully");
+      console.log(`   Container ID: ${upResult.containerId}`);
+      console.log(`   Remote user: ${upResult.remoteUser}`);
+      console.log(`   Remote workspace: ${upResult.remoteWorkspaceFolder}`);
 
-      // Build environment variable flags
-      const envFlags = inputEnvsWithDefaults.map((e) => ["-e", e]).flat();
+      // Execute command in the running container
+      console.log("");
+      console.log("▶️  Executing command in dev container...");
 
-      // Get the current container's workspace mount to reuse it
-      const hostname = os.hostname();
-      const { stdout: inspectOutput } = await exec(
-        "docker",
-        ["inspect", hostname],
-        {},
-      );
-      const containerInfo = JSON.parse(inspectOutput)[0];
+      const execArgs: DevContainerCliExecArgs = {
+        workspaceFolder,
+        configFile,
+        command: ["bash", "-c", config.runCmd],
+        env: inputEnvsWithDefaults,
+        userDataFolder: config.userDataFolder,
+      };
 
-      // Find the /woodpecker mount
-      let volumeMount = "";
-      for (const mount of containerInfo.Mounts) {
-        if (
-          mount.Destination === "/woodpecker" ||
-          mount.Destination.startsWith("/woodpecker")
-        ) {
-          if (mount.Type === "volume") {
-            volumeMount = `${mount.Name}:/workspace`;
-          } else if (mount.Type === "bind") {
-            volumeMount = `${mount.Source}:/workspace`;
-          }
-          break;
-        }
-      }
-
-      // Run container with workspace mounted
-      const dockerArgs = [
-        "run",
-        "--rm",
-        ...envFlags,
-        "-v",
-        volumeMount || `${workspaceFolder}:/workspace`,
-        "-w",
-        "/workspace",
-        builtImageName,
-        "bash",
-        "-c",
-        config.runCmd,
-      ];
-
-      console.log(`Executing: docker ${dockerArgs.join(" ")}`);
-      const { exitCode, stdout, stderr } = await exec("docker", dockerArgs, {});
-
-      if (stdout) console.log(stdout);
-      if (stderr) console.error(stderr);
+      const exitCode = await devcontainer.exec(execArgs, log);
 
       if (exitCode !== 0) {
         console.error(
@@ -230,9 +169,74 @@ async function main(): Promise<void> {
         process.exit(exitCode || 1);
       }
       console.log("✅ Command executed successfully");
+
+      // If imageName is set, tag the built image for pushing
+      if (config.imageName && fullImageNameArray.length > 0) {
+        console.log("");
+        console.log("🏷️  Tagging image for push...");
+
+        // Get the image that was built by devcontainer up
+        const { exitCode: inspectExitCode, stdout: inspectOutput } = await exec(
+          "docker",
+          ["inspect", upResult.containerId, "--format", "{{.Image}}"],
+          {},
+        );
+
+        if (inspectExitCode !== 0 || !inspectOutput.trim()) {
+          console.error(
+            `❌ Failed to inspect container ${upResult.containerId}`,
+          );
+          process.exit(1);
+        }
+
+        const imageId = inspectOutput.trim();
+
+        // Tag the image with all requested tags
+        for (const fullImageName of fullImageNameArray) {
+          console.log(`   Tagging ${imageId} as ${fullImageName}`);
+          const { exitCode: tagExitCode } = await exec(
+            "docker",
+            ["tag", imageId, fullImageName],
+            {},
+          );
+          if (tagExitCode !== 0) {
+            console.error(`❌ Failed to tag image as ${fullImageName}`);
+            process.exit(1);
+          }
+        }
+        console.log("✅ Image tagged successfully");
+      }
+    } else if (config.imageName) {
+      // Use devcontainer build for building images without running
+      console.log("");
+      console.log("🏗️  Building dev container image...");
+
+      const buildArgs: DevContainerCliBuildArgs = {
+        workspaceFolder,
+        configFile,
+        imageName: fullImageNameArray,
+        platform: config.platform,
+        additionalCacheFroms: config.cacheFrom,
+        userDataFolder: config.userDataFolder,
+        output: buildxOutput,
+        noCache: config.noCache,
+        cacheTo: config.cacheTo,
+      };
+
+      const buildResult = await devcontainer.build(buildArgs, log);
+
+      if (buildResult.outcome !== "success") {
+        console.error(
+          `❌ Dev container build failed: ${buildResult.message} (exit code: ${buildResult.code})`,
+        );
+        console.error(buildResult.description);
+        process.exit(1);
+      }
+      console.log("✅ Build completed successfully");
     } else {
       console.log("");
-      console.log("ℹ️  No runCmd set - skipping container start and execution");
+      console.log("ℹ️  No runCmd or imageName set - nothing to do");
+      return;
     }
 
     // 5. Push image (if configured)

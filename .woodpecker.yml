@@ -4,56 +4,92 @@
 when:
   event: [push, pull_request, manual]
 
+# YAML anchors for reusable configuration
+variables:
+  - &dind_env
+    DOCKER_HOST: tcp://docker:2376
+    DOCKER_CERT_PATH: /dind-certs/client
+    DOCKER_TLS_VERIFY: "1"
+  - &dind_volumes
+    - dind-certs:/dind-certs
+
+services:
+  - name: docker
+    image: docker:dind
+    privileged: true
+    environment:
+      DOCKER_TLS_CERTDIR: /dind-certs
+    commands: dockerd-entrypoint.sh --insecure-registry=registry:5000
+    volumes:
+      - dind-certs:/dind-certs
+      - docker-cache:/var/lib/docker
+    ports:
+      - 2376
+
 steps:
-  # Check code formatting
+  # Install all dependencies once (cached for subsequent steps)
+  - name: install-dependencies
+    image: node:24-alpine3.23
+    volumes:
+      - npm-cache:/root/.npm
+    commands:
+      - cd common && npm ci
+      - cd ../woodpecker-plugin && npm ci
+
+  # Check code formatting (reuses installed node_modules)
   - name: format-check
-    image: node:20-alpine
+    image: node:24-alpine3.23
     commands:
-      - cd woodpecker-plugin && npm ci && npm run format-check
+      - cd woodpecker-plugin && npm run format-check
+    depends_on:
+      - install-dependencies
 
-  # Lint TypeScript code
+  # Lint TypeScript code (reuses installed node_modules)
   - name: lint
-    image: node:20-alpine
+    image: node:24-alpine3.23
     commands:
-      - cd woodpecker-plugin && npm ci && npm run lint
+      - cd woodpecker-plugin && npm run lint
+    depends_on:
+      - install-dependencies
 
-  # Install dependencies and build TypeScript
+  # Build TypeScript (reuses installed node_modules)
   - name: build-typescript
-    image: node:20-alpine
+    image: node:24-alpine3.23
     commands:
-      - cd common && npm ci && npm run build
-      - cd ../woodpecker-plugin && npm ci && npm run build
+      - cd common && npm run build
+      - cd ../woodpecker-plugin && npm run build
     depends_on:
       - format-check
       - lint
 
-  # Run unit tests for env-parser
+  # Run unit tests for env-parser (reuses installed node_modules)
   - name: test-env-parser
-    image: node:20-alpine
+    image: node:24-alpine3.23
     commands:
       - cd woodpecker-plugin && npm test
     depends_on:
       - build-typescript
 
-  # Build the plugin Docker image
+  # Build the plugin Docker image (with BuildKit for better layer caching)
   - name: build-plugin-image
-    image: docker:latest
+    image: docker:cli
+    environment:
+      <<: *dind_env
+    volumes: *dind_volumes
     commands:
-      - docker build -f woodpecker-plugin/Dockerfile -t woodpecker-plugin:test .
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
+      - DOCKER_BUILDKIT=1 docker build -f woodpecker-plugin/Dockerfile -twoodpecker-plugin:test .
     depends_on:
       - test-env-parser
 
   # Test scenario 1: simple-node (image-based)
   - name: test-simple-node-build
     image: woodpecker-plugin:test
-    settings:
-      sub_folder: woodpecker-plugin-tests/simple-node
-      image_name: test-simple-node
-      image_tag: test
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      <<: *dind_env
+      PLUGIN_SUB_FOLDER: woodpecker-plugin-tests/simple-node
+      PLUGIN_IMAGE_NAME: test-simple-node
+      PLUGIN_IMAGE_TAG: test
+    volumes: *dind_volumes
     depends_on:
       - build-plugin-image
 
@@ -68,23 +104,23 @@ steps:
 
   - name: test-simple-node-run-cmd
     image: woodpecker-plugin:test
-    settings:
-      sub_folder: woodpecker-plugin-tests/simple-node
-      run_cmd: echo "run_cmd test!" && node --version
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      <<: *dind_env
+      PLUGIN_SUB_FOLDER: woodpecker-plugin-tests/simple-node
+      PLUGIN_RUN_CMD: echo "run_cmd test!" && node --version
+    volumes: *dind_volumes
     depends_on:
       - test-simple-node-build
 
   # Test scenario 2: with-dockerfile
   - name: test-dockerfile-build
     image: woodpecker-plugin:test
-    settings:
-      sub_folder: woodpecker-plugin-tests/with-dockerfile
-      image_name: test-dockerfile
-      image_tag: test
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      <<: *dind_env
+      PLUGIN_SUB_FOLDER: woodpecker-plugin-tests/with-dockerfile
+      PLUGIN_IMAGE_NAME: test-dockerfile
+      PLUGIN_IMAGE_TAG: test
+    volumes: *dind_volumes
     depends_on:
       - build-plugin-image
 
@@ -100,12 +136,12 @@ steps:
   # Test scenario 3: with-features (features + build args)
   - name: test-features-build
     image: woodpecker-plugin:test
-    settings:
-      sub_folder: woodpecker-plugin-tests/with-features
-      image_name: test-features
-      image_tag: test
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      <<: *dind_env
+      PLUGIN_SUB_FOLDER: woodpecker-plugin-tests/with-features
+      PLUGIN_IMAGE_NAME: test-features
+      PLUGIN_IMAGE_TAG: test
+    volumes: *dind_volumes
     depends_on:
       - build-plugin-image
 
@@ -121,10 +157,10 @@ steps:
 
   - name: test-features-run-cmd
     image: woodpecker-plugin:test
-    settings:
-      sub_folder: woodpecker-plugin-tests/with-features
-      run_cmd: echo "Features run_cmd test!" && node --version && git --version && python3 --version
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      <<: *dind_env
+      PLUGIN_SUB_FOLDER: woodpecker-plugin-tests/with-features
+      PLUGIN_RUN_CMD: echo "Features run_cmd test!" && node --version && git --version && python3 --version
+    volumes: *dind_volumes
     depends_on:
       - test-features-build

@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 
 # Build stage
-FROM node:20-alpine AS builder
+FROM node:24-alpine3.23 AS builder
 
 WORKDIR /build
 
@@ -22,7 +22,7 @@ RUN cd common && npm run build && \
     cd ../woodpecker-plugin && npm run build
 
 # Runtime stage
-FROM node:20-alpine
+FROM node:24-alpine3.23
 
 # Install runtime dependencies
 # - docker-cli: Required for docker operations

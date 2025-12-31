@@ -27,21 +27,15 @@ steps:
       run_cmd: npm test
 ```
 
+That's it! The Woodpecker agent provides Docker access automatically.
+
 ### Build and Push
 
 Build and push your Dev Container image:
 
 ```yaml
 steps:
-  - name: docker-login
-    image: docker:latest
-    commands:
-      - echo "$DOCKER_PASSWORD" | docker login ghcr.io -u "$DOCKER_USERNAME" --password-stdin
-    secrets:
-      - docker_username
-      - docker_password
-
-  - name: build-devcontainer
+  - name: build-and-test
     image: ghcr.io/devcontainers/ci-woodpecker:latest
     settings:
       image_name: ghcr.io/${CI_REPO_OWNER}/${CI_REPO_NAME}
@@ -50,6 +44,8 @@ steps:
       ref_filter_for_push: refs/heads/main
       run_cmd: npm test
 ```
+
+The plugin will automatically build the Dev Container, run tests, and push the image when on the main branch.
 
 ## Configuration
 
@@ -223,6 +219,39 @@ steps:
         - BUILD_VERSION=${CI_COMMIT_TAG}
 ```
 
+## Advanced Usage
+
+### Using Docker-in-Docker (Optional)
+
+For Dev Containers that use `docker-compose` or need to run Docker commands inside the container, you can use a Docker-in-Docker service:
+
+```yaml
+services:
+  - name: docker
+    image: docker:dind
+    privileged: true
+    environment:
+      DOCKER_TLS_CERTDIR: /dind-certs
+    volumes:
+      - /opt/woodpeckerci/dind-certs:/dind-certs
+    ports:
+      - 2376
+
+steps:
+  - name: build-and-test
+    image: ghcr.io/devcontainers/ci-woodpecker:latest
+    environment:
+      DOCKER_HOST: tcp://docker:2376
+      DOCKER_CERT_PATH: /dind-certs/client
+      DOCKER_TLS_VERIFY: "1"
+    volumes:
+      - /opt/woodpeckerci/dind-certs:/dind-certs
+    settings:
+      run_cmd: npm test
+```
+
+**Note:** This requires enabling "trusted" mode for your repository in Woodpecker CI settings.
+
 ## Building the Plugin
 
 ### Build Prerequisites
@@ -275,18 +304,6 @@ docker buildx build \
 
 ## Troubleshooting
 
-### Docker Socket Permission Denied
-
-Ensure your Woodpecker runner has access to the Docker socket:
-
-```yaml
-# In your Woodpecker server configuration
-services:
-  woodpecker-agent:
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-```
-
 ### Multi-Platform Build Fails
 
 Ensure your runner has:
@@ -300,15 +317,21 @@ docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
 
 ### Image Push Authentication
 
-Make sure to run `docker login` before pushing:
+The plugin uses the Docker daemon's existing authentication. Make sure to authenticate before running the plugin step:
 
 ```yaml
 steps:
   - name: docker-login
-    image: docker:latest
+    image: docker:cli
     commands:
       - echo "$PASSWORD" | docker login registry.example.com -u "$USERNAME" --password-stdin
     secrets: [username, password]
+
+  - name: build-and-push
+    image: ghcr.io/devcontainers/ci-woodpecker:latest
+    settings:
+      image_name: registry.example.com/my-image
+      push: always
 ```
 
 ## Testing
