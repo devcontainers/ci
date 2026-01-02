@@ -76,6 +76,7 @@ services:
     privileged: true
     depends_on:
       - woodpecker-server
+      - registry
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     environment:
@@ -85,6 +86,15 @@ services:
       - WOODPECKER_MAX_WORKFLOWS=4
       - WOODPECKER_BACKEND_DOCKER_NETWORK=woodpecker-plugin_default
 
+  registry:
+    image: registry:2
+    container_name: woodpecker-registry
+    ports:
+      - "5001:5000"
+    volumes:
+      - registry-data:/var/lib/registry
+
 volumes:
   forgejo-data:
   woodpecker-server-data:
+  registry-data:

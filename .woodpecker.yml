@@ -19,7 +19,7 @@ services:
     privileged: true
     environment:
       DOCKER_TLS_CERTDIR: /dind-certs
-    commands: dockerd-entrypoint.sh --insecure-registry=registry:5000
+    commands: dockerd-entrypoint.sh --insecure-registry=registry:5000 --insecure-registry=localhost:5001
     volumes:
       - dind-certs:/dind-certs
       - docker-cache:/var/lib/docker
@@ -77,13 +77,14 @@ steps:
       <<: *dind_env
     volumes: *dind_volumes
     commands:
-      - DOCKER_BUILDKIT=1 docker build -f woodpecker-plugin/Dockerfile -twoodpecker-plugin:test .
+      - DOCKER_BUILDKIT=1 docker build -f woodpecker-plugin/Dockerfile -t registry:5000/woodpecker-plugin:test .
+      - docker push registry:5000/woodpecker-plugin:test
     depends_on:
       - test-env-parser
 
   # Test scenario 1: simple-node (image-based)
   - name: test-simple-node-build
-    image: woodpecker-plugin:test
+    image: registry:5000/woodpecker-plugin:test
     environment:
       <<: *dind_env
       PLUGIN_SUB_FOLDER: woodpecker-plugin-tests/simple-node
@@ -103,7 +104,7 @@ steps:
       - test-simple-node-build
 
   - name: test-simple-node-run-cmd
-    image: woodpecker-plugin:test
+    image: registry:5000/woodpecker-plugin:test
     environment:
       <<: *dind_env
       PLUGIN_SUB_FOLDER: woodpecker-plugin-tests/simple-node
@@ -114,7 +115,7 @@ steps:
 
   # Test scenario 2: with-dockerfile
   - name: test-dockerfile-build
-    image: woodpecker-plugin:test
+    image: registry:5000/woodpecker-plugin:test
     environment:
       <<: *dind_env
       PLUGIN_SUB_FOLDER: woodpecker-plugin-tests/with-dockerfile
@@ -135,7 +136,7 @@ steps:
 
   # Test scenario 3: with-features (features + build args)
   - name: test-features-build
-    image: woodpecker-plugin:test
+    image: registry:5000/woodpecker-plugin:test
     environment:
       <<: *dind_env
       PLUGIN_SUB_FOLDER: woodpecker-plugin-tests/with-features
@@ -156,7 +157,7 @@ steps:
       - test-features-build
 
   - name: test-features-run-cmd
-    image: woodpecker-plugin:test
+    image: registry:5000/woodpecker-plugin:test
     environment:
       <<: *dind_env
       PLUGIN_SUB_FOLDER: woodpecker-plugin-tests/with-features
