@@ -45,8 +45,8 @@ on:
         type: string
         required: false
         default: devcontainers.ci
-      publishAzdoExtension:
-        description: Whether to publish the AzDO extension
+      enableAzdo:
+        description: Whether to run AzDO steps (test pipeline and publish)
         type: boolean
         required: false
         default: true
@@ -299,7 +299,7 @@ jobs:
           (cd github-action/ && npm install && npm run build && npm run package)
 
       - name: Publish AzDO Task
-        if: ${{ inputs.publishAzdoExtension }}
+        if: ${{ inputs.enableAzdo }}
         uses: ./
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -351,7 +351,7 @@ jobs:
     name: Run AzDO test
     runs-on: ubuntu-latest
     needs: build
-    if: ${{ needs.build.outputs.image_push_option == 'filter' }}
+    if: ${{ inputs.enableAzdo && needs.build.outputs.image_push_option == 'filter' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4

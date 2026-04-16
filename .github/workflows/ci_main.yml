@@ -7,8 +7,8 @@ on:
     branches: [main]
   workflow_dispatch:
     inputs:
-      publishAzdoExtension:
-        description: Publish the AzDO extension
+      enableAzdo:
+        description: Run AzDO steps
         type: boolean
         default: true
 
@@ -25,6 +25,6 @@ jobs:
     uses: ./.github/workflows/ci_common.yml
     with:
       release: true
-      publishAzdoExtension: ${{ inputs.publishAzdoExtension == '' && true || inputs.publishAzdoExtension }}
+      enableAzdo: ${{ inputs.enableAzdo == '' && true || inputs.enableAzdo }}
     secrets:
       AZDO_TOKEN: ${{ secrets.AZDO_TOKEN }}
