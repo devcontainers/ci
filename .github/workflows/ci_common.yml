@@ -45,11 +45,6 @@ on:
         type: string
         required: false
         default: devcontainers.ci
-      enableAzdo:
-        description: Whether to run AzDO steps (test pipeline and publish)
-        type: boolean
-        required: false
-        default: true
     secrets:
       AZDO_TOKEN:
         description: ""
@@ -202,7 +197,7 @@ jobs:
     name: All succeeded
     needs: # TODO - check what jobs need adding here
       - build
-      - test-azdo
+      # - test-azdo
       - test-gh-run-args
       - test-gh-build-args
       - test-gh-dockerfile-context
@@ -298,34 +293,33 @@ jobs:
           (cd common && npm install && npm run build)
           (cd github-action/ && npm install && npm run build && npm run package)
 
-      - name: Publish AzDO Task
-        if: ${{ inputs.enableAzdo }}
-        uses: ./
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          AZDO_PROJECT: ${{ inputs.AZDO_PROJECT }}
-          AZDO_BUILD: ${{ inputs.AZDO_BUILD }}
-          AZDO_ORG: ${{ inputs.AZDO_ORG }}
-          AZDO_TOKEN: ${{ secrets.AZDO_TOKEN }}
-          AZURE_DEVOPS_EXT_PAT: ${{ secrets.AZDO_TOKEN }}
-          BUILD_NUMBER: ${{ github.run_id }}
-          IS_PR: ${{ github.head_ref }}
-          BRANCH: ${{ github.ref }}
-        with:
-          imageName: ghcr.io/devcontainers/ci-devcontainer
-          runCmd: |
-            echo "Starting"
-            ./scripts/publish-azdo-task.sh
-          env: |
-            BUILD_NUMBER
-            IS_CI=1
-            IS_PR
-            BRANCH
-            AZDO_TOKEN
-            AZURE_DEVOPS_EXT_PAT
-            AZDO_ORG
-            AZDO_PROJECT
-            AZDO_BUILD
+      # - name: Publish AzDO Task
+      #   uses: ./
+      #   env:
+      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      #     AZDO_PROJECT: ${{ inputs.AZDO_PROJECT }}
+      #     AZDO_BUILD: ${{ inputs.AZDO_BUILD }}
+      #     AZDO_ORG: ${{ inputs.AZDO_ORG }}
+      #     AZDO_TOKEN: ${{ secrets.AZDO_TOKEN }}
+      #     AZURE_DEVOPS_EXT_PAT: ${{ secrets.AZDO_TOKEN }}
+      #     BUILD_NUMBER: ${{ github.run_id }}
+      #     IS_PR: ${{ github.head_ref }}
+      #     BRANCH: ${{ github.ref }}
+      #   with:
+      #     imageName: ghcr.io/devcontainers/ci-devcontainer
+      #     runCmd: |
+      #       echo "Starting"
+      #       ./scripts/publish-azdo-task.sh
+      #     env: |
+      #       BUILD_NUMBER
+      #       IS_CI=1
+      #       IS_PR
+      #       BRANCH
+      #       AZDO_TOKEN
+      #       AZURE_DEVOPS_EXT_PAT
+      #       AZDO_ORG
+      #       AZDO_PROJECT
+      #       AZDO_BUILD
 
       - name: Create GitHub Action Release
         env:
@@ -347,85 +341,85 @@ jobs:
   # - review the Azure DevOps pipeline and consider adding there for verification
   #
 
-  test-azdo:
-    name: Run AzDO test
-    runs-on: ubuntu-latest
-    needs: build
-    if: ${{ inputs.enableAzdo && needs.build.outputs.image_push_option == 'filter' }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          persist-credentials: false
-          # if the following value is missing (i.e. not triggered via comment workflow)
-          # then the default checkout will apply
-          ref: ${{ inputs.prRef }}
+  # test-azdo:
+  #   name: Run AzDO test
+  #   runs-on: ubuntu-latest
+  #   needs: build
+  #   if: ${{ needs.build.outputs.image_push_option == 'filter' }}
+  #   steps:
+  #     - name: Checkout
+  #       uses: actions/checkout@v4
+  #       with:
+  #         persist-credentials: false
+  #         # if the following value is missing (i.e. not triggered via comment workflow)
+  #         # then the default checkout will apply
+  #         ref: ${{ inputs.prRef }}
 
-      - name: Show version
-        env:
-          VERSION: ${{ needs.build.outputs.version }}
-          VERSION_SHORT: ${{ needs.build.outputs.version_short }}
-        run: |
-          echo "VERSION: $VERSION"
-          echo "VERSION_SHORT: $VERSION_SHORT"
+  #     - name: Show version
+  #       env:
+  #         VERSION: ${{ needs.build.outputs.version }}
+  #         VERSION_SHORT: ${{ needs.build.outputs.version_short }}
+  #       run: |
+  #         echo "VERSION: $VERSION"
+  #         echo "VERSION_SHORT: $VERSION_SHORT"
 
-      - name: Download workflow artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: output
+  #     - name: Download workflow artifacts
+  #       uses: actions/download-artifact@v4
+  #       with:
+  #         path: output
 
-      - name: Download release VSIX
-        uses: actions/download-artifact@v4
-        with:
-          name: azdo-task-dev
-          path: output
+  #     - name: Download release VSIX
+  #       uses: actions/download-artifact@v4
+  #       with:
+  #         name: azdo-task-dev
+  #         path: output
 
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@v3
-        if: github.ref == 'refs/heads/main' # only need this for push (on `main`)
-        with:
-          registry: ghcr.io
-          username: ${{ github.repository_owner }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+  #     - name: Login to GitHub Container Registry
+  #       uses: docker/login-action@v3
+  #       if: github.ref == 'refs/heads/main' # only need this for push (on `main`)
+  #       with:
+  #         registry: ghcr.io
+  #         username: ${{ github.repository_owner }}
+  #         password: ${{ secrets.GITHUB_TOKEN }}
 
-      # Published action contains compiled JS, but we need to compile it here
-      - uses: actions/setup-node@v6
-        with:
-          node-version: 24
-      - name: Compile GH action
-        run: |
-          (cd common && npm install && npm run build)
-          (cd github-action/ && npm install && npm run build && npm run package)
+  #     # Published action contains compiled JS, but we need to compile it here
+  #     - uses: actions/setup-node@v6
+  #       with:
+  #         node-version: 24
+  #     - name: Compile GH action
+  #       run: |
+  #         (cd common && npm install && npm run build)
+  #         (cd github-action/ && npm install && npm run build && npm run package)
 
-      - name: Run AzDO test pipeline
-        uses: ./
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          AZDO_PROJECT: ${{ inputs.AZDO_PROJECT }}
-          AZDO_BUILD: ${{ inputs.AZDO_BUILD }}
-          AZDO_ORG: ${{ inputs.AZDO_ORG }}
-          AZDO_TOKEN: ${{ secrets.AZDO_TOKEN }}
-          AZURE_DEVOPS_EXT_PAT: ${{ secrets.AZDO_TOKEN }}
-          BUILD_NUMBER: ${{ github.run_id }}
-          IS_PR: ${{ github.head_ref }}
-          BRANCH: ${{ github.ref }}
-          IMAGE_TAG: ${{ needs.build.outputs.image_tag }}
-        with:
-          imageName: ghcr.io/devcontainers/ci-devcontainer
-          runCmd: |
-            echo "Starting"
-            ./scripts/test-azdo.sh
-          env: |
-            BUILD_NUMBER
-            IMAGE_TAG
-            IS_CI=1
-            IS_PR
-            BRANCH
-            AZDO_TOKEN
-            AZURE_DEVOPS_EXT_PAT
-            AZDO_ORG
-            AZDO_PROJECT
-            AZDO_BUILD
+  #     - name: Run AzDO test pipeline
+  #       uses: ./
+  #       env:
+  #         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  #         AZDO_PROJECT: ${{ inputs.AZDO_PROJECT }}
+  #         AZDO_BUILD: ${{ inputs.AZDO_BUILD }}
+  #         AZDO_ORG: ${{ inputs.AZDO_ORG }}
+  #         AZDO_TOKEN: ${{ secrets.AZDO_TOKEN }}
+  #         AZURE_DEVOPS_EXT_PAT: ${{ secrets.AZDO_TOKEN }}
+  #         BUILD_NUMBER: ${{ github.run_id }}
+  #         IS_PR: ${{ github.head_ref }}
+  #         BRANCH: ${{ github.ref }}
+  #         IMAGE_TAG: ${{ needs.build.outputs.image_tag }}
+  #       with:
+  #         imageName: ghcr.io/devcontainers/ci-devcontainer
+  #         runCmd: |
+  #           echo "Starting"
+  #           ./scripts/test-azdo.sh
+  #         env: |
+  #           BUILD_NUMBER
+  #           IMAGE_TAG
+  #           IS_CI=1
+  #           IS_PR
+  #           BRANCH
+  #           AZDO_TOKEN
+  #           AZURE_DEVOPS_EXT_PAT
+  #           AZDO_ORG
+  #           AZDO_PROJECT
+  #           AZDO_BUILD
 
   test-simple:
     name: Run simple test

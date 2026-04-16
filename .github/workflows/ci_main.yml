@@ -6,11 +6,6 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
-    inputs:
-      enableAzdo:
-        description: Run AzDO steps
-        type: boolean
-        default: true
 
 permissions:
   contents: write
@@ -25,6 +20,5 @@ jobs:
     uses: ./.github/workflows/ci_common.yml
     with:
       release: true
-      enableAzdo: ${{ inputs.enableAzdo == '' && true || inputs.enableAzdo }}
     secrets:
       AZDO_TOKEN: ${{ secrets.AZDO_TOKEN }}
