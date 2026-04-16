@@ -45,6 +45,11 @@ on:
         type: string
         required: false
         default: devcontainers.ci
+      publishAzdoExtension:
+        description: Whether to publish the AzDO extension
+        type: boolean
+        required: false
+        default: true
     secrets:
       AZDO_TOKEN:
         description: ""
@@ -294,6 +299,7 @@ jobs:
           (cd github-action/ && npm install && npm run build && npm run package)
 
       - name: Publish AzDO Task
+        if: ${{ inputs.publishAzdoExtension }}
         uses: ./
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

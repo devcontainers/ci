@@ -6,6 +6,11 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      publishAzdoExtension:
+        description: Publish the AzDO extension
+        type: boolean
+        default: true
 
 permissions:
   contents: write
@@ -20,5 +25,6 @@ jobs:
     uses: ./.github/workflows/ci_common.yml
     with:
       release: true
+      publishAzdoExtension: ${{ inputs.publishAzdoExtension == '' && true || inputs.publishAzdoExtension }}
     secrets:
       AZDO_TOKEN: ${{ secrets.AZDO_TOKEN }}
