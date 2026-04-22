@@ -64,6 +64,13 @@ export async function runMain(): Promise<void> {
 		const userDataFolder: string = core.getInput('userDataFolder');
 		const mounts: string[] = core.getMultilineInput('mounts');
 
+    // Make inputs available to the post step by saving them to state
+    // Otherwise they aren't available when this action is being used in a nested composite action
+    core.saveState('imageName', imageName);
+    core.saveState('imageTag', imageTag);
+    core.saveState('push', core.getInput('push'));
+    core.saveState('platform', platform);
+
 		if (platform) {
 			const skopeoInstalled = await isSkopeoInstalled();
 			if (!skopeoInstalled) {
@@ -211,8 +218,8 @@ export async function runMain(): Promise<void> {
 }
 
 export async function runPost(): Promise<void> {
-	const pushOption = emptyStringAsUndefined(core.getInput('push'));
-	const imageName = emptyStringAsUndefined(core.getInput('imageName'));
+	const pushOption = emptyStringAsUndefined(core.getState('push'));
+	const imageName = emptyStringAsUndefined(core.getState('imageName'));
 	const refFilterForPush: string[] = core.getMultilineInput('refFilterForPush');
 	const eventFilterForPush: string[] =
 		core.getMultilineInput('eventFilterForPush');
@@ -252,7 +259,7 @@ export async function runPost(): Promise<void> {
 	}
 
 	const imageTag =
-		emptyStringAsUndefined(core.getInput('imageTag')) ?? 'latest';
+		emptyStringAsUndefined(core.getState('imageTag')) ?? 'latest';
 	const imageTagArray = imageTag.split(/\s*,\s*/);
 	if (!imageName) {
 		if (pushOption) {
@@ -262,7 +269,7 @@ export async function runPost(): Promise<void> {
 		return;
 	}
 
-	const platform = emptyStringAsUndefined(core.getInput('platform'));
+	const platform = emptyStringAsUndefined(core.getState('platform'));
 	if (platform) {
 		for (const tag of imageTagArray) {
 			core.info(`Copying multiplatform image '${imageName}:${tag}'...`);
