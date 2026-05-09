@@ -83,7 +83,8 @@ In the example above, the devcontainer-build-run will perform the following step
 | cacheFrom                 | false    | Specify additional images to use for build caching                                                                                                                                                                                                               |
 | noCache                   | false    | Builds the image with `--no-cache` (takes precedence over `cacheFrom`)                                                                                                                                                                                           |
 | cacheTo                 | false    | Specify the image to cache the built image to                                                                                                                                                                                                               |
-| platform                  | false    | Platforms for which the image should be built. If omitted, defaults to the platform of the GitHub Actions Runner. Multiple platforms should be comma separated.                                                                                                  |
+| platform                  | false    | Platforms for which the image should be built. If omitted, defaults to the platform of the GitHub Actions Runner. Multiple platforms should be comma separated.                                                                                                                                                                          |
+| cliVersion                | false    | The version of the [devcontainers CLI](https://github.com/devcontainers/cli) to use                                                                                                                                                                           |
 
 ## Outputs
 
