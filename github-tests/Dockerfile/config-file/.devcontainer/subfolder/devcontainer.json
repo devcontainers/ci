@@ -1,6 +1,0 @@
-{
-	"name": "config-file",
-	"image": "mcr.microsoft.com/devcontainers/base:jammy",
-	"runArgs": [
-		"--hostname", "my-host"
-	]}
