@@ -1,0 +1,34 @@
+# Git
+.git/
+.gitignore
+
+# Dependencies (will be installed in container)
+node_modules/
+
+# Build artifacts (will be built in container)
+dist/
+lib/
+
+# Documentation
+README.md
+docs.md
+*.md
+
+# Testing
+coverage/
+.nyc_output/
+**/*.test.ts
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log

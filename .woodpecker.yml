@@ -1,0 +1,167 @@
+# Woodpecker CI configuration for testing the woodpecker-plugin
+# This config is only for testing purposes in local Woodpecker CI
+
+when:
+  event: [push, pull_request, manual]
+
+# YAML anchors for reusable configuration
+variables:
+  - &dind_env
+    DOCKER_HOST: tcp://docker:2376
+    DOCKER_CERT_PATH: /dind-certs/client
+    DOCKER_TLS_VERIFY: "1"
+  - &dind_volumes
+    - dind-certs:/dind-certs
+
+services:
+  - name: docker
+    image: docker:dind
+    privileged: true
+    environment:
+      DOCKER_TLS_CERTDIR: /dind-certs
+    commands: dockerd-entrypoint.sh --insecure-registry=registry:5000 --insecure-registry=localhost:5001
+    volumes:
+      - dind-certs:/dind-certs
+      - docker-cache:/var/lib/docker
+    ports:
+      - 2376
+
+steps:
+  # Install all dependencies once (cached for subsequent steps)
+  - name: install-dependencies
+    image: node:24-alpine3.23
+    volumes:
+      - npm-cache:/root/.npm
+    commands:
+      - cd common && npm ci
+      - cd ../woodpecker-plugin && npm ci
+
+  # Check code formatting (reuses installed node_modules)
+  - name: format-check
+    image: node:24-alpine3.23
+    commands:
+      - cd woodpecker-plugin && npm run format-check
+    depends_on:
+      - install-dependencies
+
+  # Lint TypeScript code (reuses installed node_modules)
+  - name: lint
+    image: node:24-alpine3.23
+    commands:
+      - cd woodpecker-plugin && npm run lint
+    depends_on:
+      - install-dependencies
+
+  # Build TypeScript (reuses installed node_modules)
+  - name: build-typescript
+    image: node:24-alpine3.23
+    commands:
+      - cd common && npm run build
+      - cd ../woodpecker-plugin && npm run build
+    depends_on:
+      - format-check
+      - lint
+
+  # Run unit tests for env-parser (reuses installed node_modules)
+  - name: test-env-parser
+    image: node:24-alpine3.23
+    commands:
+      - cd woodpecker-plugin && npm test
+    depends_on:
+      - build-typescript
+
+  # Build the plugin Docker image (with BuildKit for better layer caching)
+  - name: build-plugin-image
+    image: docker:cli
+    environment:
+      <<: *dind_env
+    volumes: *dind_volumes
+    commands:
+      - DOCKER_BUILDKIT=1 docker build -f woodpecker-plugin/Dockerfile -t registry:5000/woodpecker-plugin:test .
+      - docker push registry:5000/woodpecker-plugin:test
+    depends_on:
+      - test-env-parser
+
+  # Test scenario 1: simple-node (image-based)
+  - name: test-simple-node-build
+    image: registry:5000/woodpecker-plugin:test
+    environment:
+      <<: *dind_env
+      PLUGIN_SUB_FOLDER: woodpecker-plugin-tests/simple-node
+      PLUGIN_IMAGE_NAME: test-simple-node
+      PLUGIN_IMAGE_TAG: test
+    volumes: *dind_volumes
+    depends_on:
+      - build-plugin-image
+
+  - name: test-simple-node-run
+    image: test-simple-node:test
+    commands:
+      - echo "Testing simple-node DevContainer!"
+      - node --version
+      - npm --version
+    depends_on:
+      - test-simple-node-build
+
+  - name: test-simple-node-run-cmd
+    image: registry:5000/woodpecker-plugin:test
+    environment:
+      <<: *dind_env
+      PLUGIN_SUB_FOLDER: woodpecker-plugin-tests/simple-node
+      PLUGIN_RUN_CMD: echo "run_cmd test!" && node --version
+    volumes: *dind_volumes
+    depends_on:
+      - test-simple-node-build
+
+  # Test scenario 2: with-dockerfile
+  - name: test-dockerfile-build
+    image: registry:5000/woodpecker-plugin:test
+    environment:
+      <<: *dind_env
+      PLUGIN_SUB_FOLDER: woodpecker-plugin-tests/with-dockerfile
+      PLUGIN_IMAGE_NAME: test-dockerfile
+      PLUGIN_IMAGE_TAG: test
+    volumes: *dind_volumes
+    depends_on:
+      - build-plugin-image
+
+  - name: test-dockerfile-run
+    image: test-dockerfile:test
+    commands:
+      - echo "Testing with-dockerfile DevContainer!"
+      - node --version
+      - git --version
+    depends_on:
+      - test-dockerfile-build
+
+  # Test scenario 3: with-features (features + build args)
+  - name: test-features-build
+    image: registry:5000/woodpecker-plugin:test
+    environment:
+      <<: *dind_env
+      PLUGIN_SUB_FOLDER: woodpecker-plugin-tests/with-features
+      PLUGIN_IMAGE_NAME: test-features
+      PLUGIN_IMAGE_TAG: test
+    volumes: *dind_volumes
+    depends_on:
+      - build-plugin-image
+
+  - name: test-features-run
+    image: test-features:test
+    commands:
+      - echo "Testing with-features DevContainer!"
+      - node --version
+      - git --version
+      - python3 --version
+    depends_on:
+      - test-features-build
+
+  - name: test-features-run-cmd
+    image: registry:5000/woodpecker-plugin:test
+    environment:
+      <<: *dind_env
+      PLUGIN_SUB_FOLDER: woodpecker-plugin-tests/with-features
+      PLUGIN_RUN_CMD: echo "Features run_cmd test!" && node --version && git --version && python3 --version
+    volumes: *dind_volumes
+    depends_on:
+      - test-features-build

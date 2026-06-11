@@ -1,0 +1,24 @@
+{
+  "name": "Node with Features",
+  "dockerFile": "Dockerfile",
+  "build": {
+    "args": {
+      "VARIANT": "20",
+      "WELCOME_MESSAGE": "Hello from Woodpecker CI!"
+    }
+  },
+  "features": {
+    "ghcr.io/devcontainers/features/git:1": {
+      "version": "latest"
+    },
+    "ghcr.io/devcontainers/features/python:1": {
+      "version": "3.11"
+    }
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": []
+    }
+  },
+  "postCreateCommand": "echo 'Post-create command executed!' && node --version && git --version && python3 --version"
+}
