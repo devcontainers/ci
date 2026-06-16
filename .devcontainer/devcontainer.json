@@ -32,6 +32,6 @@
 		}
 	},
 	"features": {
-		"ghcr.io/devcontainers/features/github-cli:1": "latest"
+		"ghcr.io/devcontainers/features/github-cli:": "latest"
 	}
 }
