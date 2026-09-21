@@ -1,0 +1,51 @@
+{
+  "$schema": "https://raw.githubusercontent.com/microsoft/azure-pipelines-task-lib/master/tasks.schema.json",
+  "id": "31bfde32-3b03-443f-9e5b-e902b849b3b8",
+  "name": "DevcontainersMerge",
+  "friendlyName": "Devcontainers Merge Multi-Arch Images",
+  "description": "Merge per-platform dev container images into a multi-arch manifest",
+  "author": "Devcontainers",
+  "helpMarkDown": "",
+  "category": "Build",
+  "version": {
+    "Major": 0,
+    "Minor": 0,
+    "Patch": 0
+  },
+  "visibility": [
+    "Build",
+    "Release"
+  ],
+  "demands": [
+    "npm"
+  ],
+  "minimumAgentVersion": "1.83.0",
+  "instanceNameFormat": "Merge Multi-Platform Dev Container Images: $(imageName)",
+  "inputs": [
+    {
+      "name": "imageName",
+      "type": "string",
+      "label": "Image name (including registry)",
+      "required": true
+    },
+    {
+      "name": "imageTag",
+      "type": "string",
+      "label": "One or more comma-separated image tags (defaults to latest)",
+      "required": false,
+      "defaultValue": "latest"
+    },
+    {
+      "name": "platforms",
+      "type": "string",
+      "label": "Comma-separated list of platforms in standard format (e.g., 'linux/amd64,linux/arm64'). Tag suffixes are auto-derived.",
+      "required": true
+    }
+  ],
+  "execution": {
+    "Node16": {
+      "target": "run-main.js",
+      "argumentFormat": ""
+    }
+  }
+}

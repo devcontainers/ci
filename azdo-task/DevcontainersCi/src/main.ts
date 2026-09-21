@@ -12,10 +12,18 @@ import {
 import {isDockerBuildXInstalled, pushImage} from './docker';
 import {isSkopeoInstalled, copyImage} from './skopeo';
 import {exec} from './exec';
+import {
+	buildImageNames,
+	platformToTagSuffix,
+} from '../../../common/src/platform';
 
 export async function runMain(): Promise<void> {
 	try {
 		task.setTaskVariable('hasRunMain', 'true');
+
+		const useNativeRunner =
+			(task.getInput('useNativeRunner') ?? 'false') === 'true';
+
 		const buildXInstalled = await isDockerBuildXInstalled();
 		if (!buildXInstalled) {
 			console.log(
@@ -52,7 +60,31 @@ export async function runMain(): Promise<void> {
 		const skipContainerUserIdUpdate =
 			(task.getInput('skipContainerUserIdUpdate') ?? 'false') === 'true';
 
-		if (platform) {
+		if (useNativeRunner) {
+			if (!platform) {
+				task.setResult(
+					task.TaskResult.Failed,
+					'platform is required when useNativeRunner is true',
+				);
+				return;
+			}
+			if (platform.includes(',')) {
+				task.setResult(
+					task.TaskResult.Failed,
+					`useNativeRunner requires a single platform value, got '${platform}'`,
+				);
+				return;
+			}
+		}
+
+		let platformSuffix: string | undefined;
+		if (useNativeRunner) {
+			platformSuffix = platformToTagSuffix(platform!);
+			task.setTaskVariable('useNativeRunner', 'true');
+			task.setTaskVariable('platformSuffix', platformSuffix);
+		}
+
+		if (platform && !useNativeRunner) {
 			const skopeoInstalled = await isSkopeoInstalled();
 			if (!skopeoInstalled) {
 				console.log(
@@ -61,7 +93,10 @@ export async function runMain(): Promise<void> {
 				return;
 			}
 		}
-		const buildxOutput = platform ? 'type=oci,dest=/tmp/output.tar' : undefined;
+		let buildxOutput: string | undefined;
+		if (platform && !useNativeRunner) {
+			buildxOutput = 'type=oci,dest=/tmp/output.tar';
+		}
 
 		const log = (message: string): void => console.log(message);
 		const workspaceFolder = path.resolve(checkoutPath, subFolder);
@@ -70,10 +105,9 @@ export async function runMain(): Promise<void> {
 
 		const resolvedImageTag = imageTag ?? 'latest';
 		const imageTagArray = resolvedImageTag.split(/\s*,\s*/);
-		const fullImageNameArray: string[] = [];
-		for (const tag of imageTagArray) {
-			fullImageNameArray.push(`${imageName}:${tag}`);
-		}
+		const fullImageNameArray = imageName
+			? buildImageNames(imageName, imageTagArray, platformSuffix)
+			: [];
 		if (imageName) {
 			if (fullImageNameArray.length === 1) {
 				if (!noCache && !cacheFrom.includes(fullImageNameArray[0])) {
@@ -98,9 +132,9 @@ export async function runMain(): Promise<void> {
 			workspaceFolder,
 			configFile,
 			imageName: fullImageNameArray,
-			platform,
+			platform: useNativeRunner ? undefined : platform,
 			additionalCacheFroms: cacheFrom,
-			output: buildxOutput,
+			output: useNativeRunner ? undefined : buildxOutput,
 			noCache,
 			cacheTo,
 		};
@@ -192,6 +226,9 @@ export async function runPost(): Promise<void> {
 	const pushOnFailedBuild =
 		(task.getInput('pushOnFailedBuild') ?? 'false') === 'true';
 
+	const useNativeRunner = task.getTaskVariable('useNativeRunner') === 'true';
+	const platformSuffix = task.getTaskVariable('platformSuffix');
+
 	// default to 'never' if not set and no imageName
 	if (pushOption === 'never' || (!pushOption && !imageName)) {
 		console.log(`Image push skipped because 'push' is set to '${pushOption}'`);
@@ -259,8 +296,16 @@ export async function runPost(): Promise<void> {
 	}
 	const imageTag = task.getInput('imageTag') ?? 'latest';
 	const imageTagArray = imageTag.split(/\s*,\s*/);
+
 	const platform = task.getInput('platform');
-	if (platform) {
+	if (useNativeRunner && platformSuffix) {
+		for (const tag of imageTagArray) {
+			console.log(
+				`Pushing platform image '${imageName}:${tag}-${platformSuffix}'...`,
+			);
+			await pushImage(imageName, `${tag}-${platformSuffix}`);
+		}
+	} else if (platform) {
 		for (const tag of imageTagArray) {
 			console.log(`Copying multiplatform image '${imageName}:${tag}'...`);
 			const imageSource = `oci-archive:/tmp/output.tar:${tag}`;

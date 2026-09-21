@@ -1,5 +1,5 @@
 #!/bin/bash
-VERSION=${1:-"20.x"}
+VERSION=${1:-"24.x"}
 CMD=node
 NAME="Node.js"
 

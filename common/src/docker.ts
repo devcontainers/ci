@@ -337,6 +337,34 @@ export async function pushImage(
 	}
 }
 
+export async function createMultiPlatformImage(
+	exec: ExecFunction,
+	imageName: string,
+	tag: string,
+	platformSuffixes: string[],
+): Promise<void> {
+	platformSuffixes = platformSuffixes
+		.map(t => t.trim())
+		.filter(t => t.length > 0);
+	if (platformSuffixes.length === 0) {
+		throw new Error(
+			'platformSuffixes must contain at least one non-empty entry',
+		);
+	}
+
+	const args = ['buildx', 'imagetools', 'create'];
+	args.push('-t', `${imageName}:${tag}`);
+	for (const suffix of platformSuffixes) {
+		args.push(`${imageName}:${tag}-${suffix}`);
+	}
+
+	const {exitCode, stdout, stderr} = await exec('docker', args, {});
+
+	if (exitCode !== 0) {
+		throw new Error(`manifest creation failed with exit code ${exitCode}${stderr ? `: ${stderr}` : ''}${stdout ? `\nstdout: ${stdout}` : ''}`);
+	}
+}
+
 export interface DockerMount {
 	type: string;
 	source: string;

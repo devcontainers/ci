@@ -66,11 +66,15 @@ inputs:
   cacheTo:
     required: false
     description: Specify the image to cache the built image to
+  useNativeRunner:
+    required: false
+    default: 'false'
+    description: 'Set to true for native multi-platform builds. When true, platform must be a single value (e.g., linux/amd64) and the image tag suffix is auto-derived (linux/amd64 becomes linux-amd64). The --platform flag is not passed to devcontainer build, relying on the native runner architecture.'
 outputs:
   runCmdOutput:
     description: The output of the command specified in the runCmd input
 runs:
-  using: 'node20'
+  using: 'node24'
   main: 'github-action/run-main.js'
   post: 'github-action/run-post.js'
   post-if: 'success()'

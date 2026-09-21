@@ -16,11 +16,21 @@ cd "$script_dir/../github-action"
 npm install
 npm run all
 
+figlet GH Merge Action
+cd "$script_dir/../merge"
+npm install
+npm run all
+
 figlet AzDO Task
 cd "$script_dir/../azdo-task/DevcontainersCi"
 cp "$script_dir/../docs/azure-devops-task.md" "$script_dir/../azdo-task/README.md"
 cp "$script_dir/../LICENSE" "$script_dir/../azdo-task/LICENSE.md"
-npm install 
+npm install
+npm run all
+
+figlet AzDO Merge Task
+cd "$script_dir/../azdo-task/DevcontainersMerge"
+npm install
 npm run all
 cd "$script_dir/../azdo-task"
 
@@ -47,6 +57,7 @@ cd "$script_dir/.."
 # reset these before checking for changes
 git checkout azdo-task/vss-extension.json
 git checkout azdo-task/DevcontainersCi/task.json
+git checkout azdo-task/DevcontainersMerge/task.json
 # The GH action to generate the build number leaves a BUILD_NUMBER file behind
 if [[ -f BUILD_NUMBER ]]; then
     rm BUILD_NUMBER

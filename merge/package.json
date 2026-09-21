@@ -1,0 +1,31 @@
+{
+  "name": "devcontainer-merge-action",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Action to merge per-platform dev container images into a multi-arch manifest",
+  "main": "lib/main.js",
+  "scripts": {
+    "build": "tsc --build",
+    "format": "prettier --write **/*.ts",
+    "format-check": "prettier --check **/*.ts",
+    "lint": "eslint src/**/*.ts",
+    "package": "ncc build --source-map --license licenses.txt",
+    "all": "npm run build && npm run format && npm run lint && npm run package"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "@actions/core": "^1.11.1",
+    "@actions/exec": "^1.1.1"
+  },
+  "devDependencies": {
+    "@types/node": "^24.9.0",
+    "@typescript-eslint/eslint-plugin": "^8.46.2",
+    "@typescript-eslint/parser": "^8.46.2",
+    "@vercel/ncc": "^0.38.4",
+    "eslint": "^8.57.0",
+    "eslint-plugin-github": "^5.1.8",
+    "eslint-plugin-jest": "^29.0.1",
+    "prettier": "^3.6.2",
+    "typescript": "^5.9.3"
+  }
+}

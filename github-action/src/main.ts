@@ -12,6 +12,7 @@ import {
 import {isDockerBuildXInstalled, pushImage} from './docker';
 import {isSkopeoInstalled, copyImage} from './skopeo';
 import {populateDefaults} from '../../common/src/envvars';
+import {buildImageNames, platformToTagSuffix} from '../../common/src/platform';
 
 // List the env vars that point to paths to mount in the dev container
 // See https://docs.github.com/en/actions/learn-github-actions/variables
@@ -26,6 +27,9 @@ export async function runMain(): Promise<void> {
 	try {
 		core.info('Starting...');
 		core.saveState('hasRunMain', 'true');
+
+		const useNativeRunner = core.getBooleanInput('useNativeRunner');
+
 		const buildXInstalled = await isDockerBuildXInstalled();
 		if (!buildXInstalled) {
 			core.warning(
@@ -64,7 +68,27 @@ export async function runMain(): Promise<void> {
 		const userDataFolder: string = core.getInput('userDataFolder');
 		const mounts: string[] = core.getMultilineInput('mounts');
 
-		if (platform) {
+		if (useNativeRunner) {
+			if (!platform) {
+				core.setFailed('platform is required when useNativeRunner is true');
+				return;
+			}
+			if (platform.includes(',')) {
+				core.setFailed(
+					`useNativeRunner requires a single platform value, got '${platform}'`,
+				);
+				return;
+			}
+		}
+
+		let platformSuffix: string | undefined;
+		if (useNativeRunner) {
+			platformSuffix = platformToTagSuffix(platform!);
+			core.saveState('useNativeRunner', 'true');
+			core.saveState('platformSuffix', platformSuffix);
+		}
+
+		if (platform && !useNativeRunner) {
 			const skopeoInstalled = await isSkopeoInstalled();
 			if (!skopeoInstalled) {
 				core.warning(
@@ -73,7 +97,10 @@ export async function runMain(): Promise<void> {
 				return;
 			}
 		}
-		const buildxOutput = platform ? 'type=oci,dest=/tmp/output.tar' : undefined;
+		let buildxOutput: string | undefined;
+		if (platform && !useNativeRunner) {
+			buildxOutput = 'type=oci,dest=/tmp/output.tar';
+		}
 
 		const log = (message: string): void => core.info(message);
 		const workspaceFolder = path.resolve(checkoutPath, subFolder);
@@ -82,10 +109,9 @@ export async function runMain(): Promise<void> {
 
 		const resolvedImageTag = imageTag ?? 'latest';
 		const imageTagArray = resolvedImageTag.split(/\s*,\s*/);
-		const fullImageNameArray: string[] = [];
-		for (const tag of imageTagArray) {
-			fullImageNameArray.push(`${imageName}:${tag}`);
-		}
+		const fullImageNameArray = imageName
+			? buildImageNames(imageName, imageTagArray, platformSuffix)
+			: [];
 		if (imageName) {
 			if (fullImageNameArray.length === 1) {
 				if (!noCache && !cacheFrom.includes(fullImageNameArray[0])) {
@@ -117,10 +143,10 @@ export async function runMain(): Promise<void> {
 				workspaceFolder,
 				configFile,
 				imageName: fullImageNameArray,
-				platform,
+				platform: useNativeRunner ? undefined : platform,
 				additionalCacheFroms: cacheFrom,
 				userDataFolder,
-				output: buildxOutput,
+				output: useNativeRunner ? undefined : buildxOutput,
 				noCache,
 				cacheTo,
 			};
@@ -217,6 +243,11 @@ export async function runPost(): Promise<void> {
 	const eventFilterForPush: string[] =
 		core.getMultilineInput('eventFilterForPush');
 
+	const useNativeRunner = core.getState('useNativeRunner') === 'true';
+	const platformSuffix = emptyStringAsUndefined(
+		core.getState('platformSuffix'),
+	);
+
 	// default to 'never' if not set and no imageName
 	if (pushOption === 'never' || (!pushOption && !imageName)) {
 		core.info(`Image push skipped because 'push' is set to '${pushOption}'`);
@@ -263,7 +294,14 @@ export async function runPost(): Promise<void> {
 	}
 
 	const platform = emptyStringAsUndefined(core.getInput('platform'));
-	if (platform) {
+	if (useNativeRunner && platformSuffix) {
+		for (const tag of imageTagArray) {
+			core.info(
+				`Pushing platform image '${imageName}:${tag}-${platformSuffix}'...`,
+			);
+			await pushImage(imageName, `${tag}-${platformSuffix}`);
+		}
+	} else if (platform) {
 		for (const tag of imageTagArray) {
 			core.info(`Copying multiplatform image '${imageName}:${tag}'...`);
 			const imageSource = `oci-archive:/tmp/output.tar:${tag}`;

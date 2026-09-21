@@ -11,6 +11,7 @@ find -maxdepth 1 \
 	-not -name '.git' \
 	-not -name action.yml \
 	-not -name github-action \
+	-not -name merge \
 	| xargs rm -rf
 
 # Leave just the dist folder in github-action
@@ -20,6 +21,15 @@ find -maxdepth 1 \
 	-not -name 'dist' \
 	-not -name 'run-main.js' \
 	-not -name 'run-post.js' \
+	| xargs rm -rf )
+
+# Leave just the dist folder, run-main.js and action.yml in merge
+(cd merge && find -maxdepth 1 \
+	-not -name '.' \
+	-not -name '..' \
+	-not -name 'action.yml' \
+	-not -name 'dist' \
+	-not -name 'run-main.js' \
 	| xargs rm -rf )
 
 

@@ -1,0 +1,20 @@
+name: 'Dev Container Merge Multi-Platform Images'
+description: 'Merge per-platform dev container images into a multi-arch manifest'
+author: 'devcontainers'
+branding:
+  color: purple
+  icon: box
+inputs:
+  imageName:
+    required: true
+    description: Image name (including registry)
+  imageTag:
+    required: false
+    default: 'latest'
+    description: One or more comma-separated image tags (defaults to latest)
+  platforms:
+    required: true
+    description: 'Comma-separated list of platforms in standard format (e.g., linux/amd64,linux/arm64). Tag suffixes are auto-derived.'
+runs:
+  using: 'node20'
+  main: 'run-main.js'

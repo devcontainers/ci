@@ -142,7 +142,8 @@ The [`devcontainers/ci` action](https://github.com/marketplace/actions/devcontai
 | cacheFrom                 | false    | Specify additional images to use for build caching                                                                                                                                                                                             |
 | noCache                   | false    | Builds the image with `--no-cache` (takes precedence over `cacheFrom`)                                                                                                                                                                         |
 | cacheTo                 | false    | Specify the image to cache the built image to                                                                                                                                                                                             |
-| platform                  | false    | Platforms for which the image should be built. If omitted, defaults to the platform of the GitHub Actions Runner. Multiple platforms should be comma separated.                                                                                |
+| platform                  | false    | Platforms for which the image should be built. If omitted, defaults to the platform of the GitHub Actions Runner. Multiple platforms should be comma separated. When `useNativeRunner` is true, this must be a single platform value.                                               |
+| useNativeRunner           | false    | Set to true for native multi-platform builds. When true, `platform` must be a single value and the image tag suffix is auto-derived (e.g., `linux/amd64` becomes `linux-amd64`). Defaults to `false`.                                                                              |
 
 ## Outputs
 
@@ -236,4 +237,6 @@ You should set the `HELLO` environment variable using the `env` property on the 
 
 ## Multi-Platform Builds
 
-Builds for multiple platforms have special considerations, detailed at [mutli-platform-builds.md](multi-platform-builds.md).
+Builds for multiple platforms have special considerations, detailed at [multi-platform-builds.md](multi-platform-builds.md).
+
+For native multi-platform builds using a matrix strategy, each build job uses `useNativeRunner: true` with a single `platform` value. A separate merge action (`devcontainers/ci/merge`) then combines the per-platform images into a multi-arch manifest. See the [native multi-platform builds](multi-platform-builds.md#native-multi-platform-builds-matrix-strategy) section for full examples.

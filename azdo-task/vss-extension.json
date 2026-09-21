@@ -44,6 +44,9 @@
     "files": [
         {
             "path": "DevcontainersCi"
+        },
+        {
+            "path": "DevcontainersMerge"
         }
     ],
     "contributions": [
@@ -55,6 +58,16 @@
             ],
             "properties": {
                 "name": "DevcontainersCi"
+            }
+        },
+        {
+            "id": "DevcontainersMerge",
+            "type": "ms.vss-distributed-task.task",
+            "targets": [
+                "ms.vss-distributed-task.tasks"
+            ],
+            "properties": {
+                "name": "DevcontainersMerge"
             }
         }
     ]
