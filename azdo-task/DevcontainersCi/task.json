@@ -142,13 +142,29 @@
     "description": "The output of the command specified in the runCmd input"
   }],
   "execution": {
-    "Node20": {
+    "Node24": {
+      "target": "run-main.js",
+      "argumentFormat": ""
+    },
+    "Node20_1": {
+      "target": "run-main.js",
+      "argumentFormat": ""
+    },
+    "Node16": {
       "target": "run-main.js",
       "argumentFormat": ""
     }
   },
   "postjobexecution": {
-    "Node20": {
+    "Node24": {
+      "target": "run-post.js",
+      "argumentFormat": ""
+    },
+    "Node20_1": {
+      "target": "run-post.js",
+      "argumentFormat": ""
+    },
+    "Node16": {
       "target": "run-post.js",
       "argumentFormat": ""
     }
