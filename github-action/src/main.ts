@@ -10,6 +10,7 @@ import {
 } from '../../common/src/dev-container-cli';
 
 import {isDockerBuildXInstalled, pushImage} from './docker';
+import {matchesRefGlob} from './ref-filter';
 import {isSkopeoInstalled, copyImage} from './skopeo';
 import {populateDefaults} from '../../common/src/envvars';
 import {buildImageNames, platformToTagSuffix} from '../../common/src/platform';
@@ -258,9 +259,21 @@ export async function runPost(): Promise<void> {
 	if (pushOption === 'filter' || (!pushOption && imageName)) {
 		// https://docs.github.com/en/actions/reference/environment-variables#default-environment-variables
 		const ref = process.env.GITHUB_REF;
+		const refFilterMode = core.getInput('refFilterForPushMode') || 'exact';
+		if (refFilterMode !== 'exact' && refFilterMode !== 'glob') {
+			core.setFailed(
+				`Unexpected refFilterForPushMode value ('${refFilterMode}'); expected 'exact' or 'glob'`,
+			);
+			return;
+		}
 		if (
 			refFilterForPush.length !== 0 && // empty filter allows all
-			!refFilterForPush.some(s => s === ref)
+			(ref === undefined ||
+				!refFilterForPush.some(filter =>
+					refFilterMode === 'glob'
+						? matchesRefGlob(filter, ref)
+						: filter === ref,
+				))
 		) {
 			core.info(
 				`Image push skipped because GITHUB_REF (${ref}) is not in refFilterForPush`,
