@@ -37,6 +37,10 @@ inputs:
     required: false
     default:
     description: Set the source branches (e.g. refs/heads/main) that are allowed to trigger a push of the dev container image. Leave empty to allow all.
+  refFilterForPushMode:
+    required: false
+    default: exact
+    description: Match full refs in refFilterForPush exactly (default) or set glob to let '*' match within one slash-delimited segment.
   eventFilterForPush:
     required: false
     default: push

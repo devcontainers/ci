@@ -137,6 +137,7 @@ The [`devcontainers/ci` action](https://github.com/marketplace/actions/devcontai
 | checkoutPath              | false    | Only used for development/testing                                                                                                                                                                                                              |
 | push                      | false    | Control when images are pushed. Options are `never`, `filter`, `always`. For `filter`, images are pushed if the `refFilterForPush` and `eventFilterForPush` conditions are met. Defaults to `filter` if `imageName` is set, `never` otherwise. |
 | refFilterForPush          | false    | Set the source branches (e.g. `refs/heads/main`) that are allowed to trigger a push of the dev container image. Leave empty to allow all (default)                                                                                             |
+| refFilterForPushMode      | false    | Match whole refs in `refFilterForPush` exactly (default) or set `glob` to enable `*` within a single segment. |
 | eventFilterForPush        | false    | Set the event names (e.g. `pull_request`, `push`) that are allowed to trigger a push of the dev container image. Defaults to `push`. Leave empty for all                                                                                       |
 | skipContainerUserIdUpdate | false    | For non-root Dev Containers (i.e. where `remoteUser` is specified), the action attempts to make the container user UID and GID match those of the host user. Set this to true to skip this step (defaults to false)                            |
 | cacheFrom                 | false    | Specify additional images to use for build caching                                                                                                                                                                                             |
@@ -144,6 +145,21 @@ The [`devcontainers/ci` action](https://github.com/marketplace/actions/devcontai
 | cacheTo                 | false    | Specify the image to cache the built image to                                                                                                                                                                                             |
 | platform                  | false    | Platforms for which the image should be built. If omitted, defaults to the platform of the GitHub Actions Runner. Multiple platforms should be comma separated. When `useNativeRunner` is true, this must be a single platform value.                                               |
 | useNativeRunner           | false    | Set to true for native multi-platform builds. When true, `platform` must be a single value and the image tag suffix is auto-derived (e.g., `linux/amd64` becomes `linux-amd64`). Defaults to `false`.                                                                              |
+
+### Matching source refs with wildcards
+
+With `push: filter`, `refFilterForPush` matches complete, case-sensitive refs exactly by default. To match release branches without listing each one, opt into glob mode:
+
+```yaml
+with:
+  imageName: ghcr.io/example/devcontainer
+  refFilterForPushMode: glob
+  refFilterForPush: |
+    refs/heads/main
+    refs/heads/releases/v*
+```
+
+This allows `refs/heads/main` and `refs/heads/releases/v1.4` but not `refs/heads/releases/v1/patch`. A `*` matches zero or more characters within one slash-delimited segment. Consecutive stars also stay within one segment; there is no recursive `**` or other glob syntax. An empty list still allows all refs, and the event filter still applies. The mode does not affect `push: always` or `push: never`.
 
 ## Outputs
 
